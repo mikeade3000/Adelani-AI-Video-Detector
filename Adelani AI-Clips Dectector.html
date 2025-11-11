@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Adelani AI Video/Clip Detector — Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+
+    .app-container {
+      background: #ffffff;
+      margin: 20px;
+      padding: 20px;
+      max-width: 1000px;
+      width: 100%;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+    }
+
+    h1 {
+      margin-top: 0;
+      text-align: center;
+      color: #222;
+    }
+
+    .warning-box {
+      background: #fff3cd;
+      border: 1px solid #ffeeba;
+      color: #856404;
+      padding: 10px 15px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      margin-bottom: 15px;
+    }
+
+    .section {
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: #333;
+    }
+
+    .file-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    input[type="file"] {
+      padding: 4px;
+    }
+
+    button {
+      padding: 8px 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    button.primary {
+      background: #007bff;
+      color: #fff;
+    }
+
+    button.primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    button.secondary {
+      background: #e2e6ea;
+      color: #333;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.2fr 1.3fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .video-panel {
+      background: #fafafa;
+      border-radius: 8px;
+      padding: 10px;
+      border: 1px solid #e0e0e0;
+    }
+
+    video {
+      width: 100%;
+      border-radius: 6px;
+      background: #000;
+      max-height: 300px;
+    }
+
+    .meta-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
+
+    .meta-table td {
+      padding: 4px 6px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .meta-table td.label {
+      font-weight: 600;
+      width: 35%;
+      color: #555;
+    }
+
+    .result-panel {
+      background: #fafafa;
+      border-radius: 8px;
+      padding: 10px;
+      border: 1px solid #e0e0e0;
+      font-size: 0.95rem;
+    }
+
+    .confidence-badge {
+      display: inline-block;
+      margin-top: 5px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .confidence-low {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .confidence-medium {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .confidence-high {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .meter-container {
+      margin-top: 10px;
+    }
+
+    .meter-label {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .meter-bar {
+      position: relative;
+      width: 100%;
+      height: 18px;
+      border-radius: 999px;
+      background: #e9ecef;
+      overflow: hidden;
+    }
+
+    .meter-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #ffc107, #dc3545);
+      transition: width 0.4s ease;
+    }
+
+    .meter-text {
+      text-align: right;
+      font-size: 0.8rem;
+      margin-top: 2px;
+      color: #444;
+    }
+
+    .reasons-list {
+      margin-top: 8px;
+      padding-left: 20px;
+    }
+
+    .reasons-list li {
+      margin-bottom: 4px;
+    }
+
+    .status {
+      font-size: 0.85rem;
+      color: #555;
+      margin-top: 6px;
+    }
+
+    .status span.spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid #ccc;
+      border-top-color: #007bff;
+      animation: spin 0.7s linear infinite;
+      margin-right: 4px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .tech-notes {
+      font-size: 0.8rem;
+      color: #666;
+      margin-top: 10px;
+      border-top: 1px dashed #ddd;
+      padding-top: 8px;
+    }
+
+    code {
+      background: #f1f1f1;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-family: Consolas, monospace;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <h1>Adelani AI Video / Clip Detector (Demo Shell)</h1>
+
+  <div class="warning-box">
+    <strong>Important:</strong> This tool is a <strong>demonstration interface</strong> with simple metadata-based heuristics only.
+    It <strong>cannot reliably prove</strong> whether a video is AI-generated or not. For forensic work,
+    you must integrate a proper machine-learning model or external API and interpret results with expert judgment.
+  </div>
+
+  <div class="section">
+    <div class="section-title">1. Upload video / clip</div>
+    <div class="file-input-wrapper">
+      <input id="videoInput" type="file" accept="video/*" />
+      <button id="analyzeBtn" class="primary" disabled>Analyze for AI Generation</button>
+      <button id="resetBtn" class="secondary">Reset</button>
+    </div>
+    <div id="status" class="status">No video loaded yet.</div>
+  </div>
+
+  <div class="layout">
+    <!-- Left: video + metadata -->
+    <div class="video-panel section">
+      <div class="section-title">2. Preview & basic metadata (for heuristics)</div>
+      <video id="videoPreview" controls></video>
+
+      <table class="meta-table">
+        <tr><td class="label">File name</td><td id="metaFileName">—</td></tr>
+        <tr><td class="label">File size</td><td id="metaFileSize">—</td></tr>
+        <tr><td class="label">Duration</td><td id="metaDuration">—</td></tr>
+        <tr><td class="label">Resolution</td><td id="metaResolution">—</td></tr>
+        <tr><td class="label">Aspect ratio</td><td id="metaAspectRatio">—</td></tr>
+        <tr><td class="label">Estimated bitrate</td><td id="metaBitrate">—</td></tr>
+      </table>
+    </div>
+
+    <!-- Right: analysis result -->
+    <div class="result-panel section">
+      <div class="section-title">3. Heuristic AI-likelihood result (demo)</div>
+
+      <div class="meter-container">
+        <div class="meter-label">Estimated likelihood this clip is AI-generated:</div>
+        <div class="meter-bar">
+          <div id="meterFill" class="meter-fill"></div>
+        </div>
+        <div id="meterText" class="meter-text">0% (no analysis yet)</div>
+      </div>
+
+      <div id="confidenceBadge" class="confidence-badge confidence-low" style="display:none;">
+        Confidence: —
+      </div>
+
+      <ul id="reasonsList" class="reasons-list"></ul>
+
+      <div class="tech-notes">
+        <strong>Technical note for integration:</strong><br />
+        Replace the logic in <code>runHeuristicAnalysis()</code> with:
+        <ul>
+          <li>A call to your own backend (FastAPI, Flask, etc.) that runs a trained model, or</li>
+          <li>An external AI-detection API, then map its score to 0–100%.</li>
+        </ul>
+        Keep a strict audit trail and treat all outputs as <em>indicators</em>, not final proof.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const videoInput    = document.getElementById('videoInput');
+  const videoPreview  = document.getElementById('videoPreview');
+  const analyzeBtn    = document.getElementById('analyzeBtn');
+  const resetBtn      = document.getElementById('resetBtn');
+  const statusEl      = document.getElementById('status');
+
+  const metaFileName  = document.getElementById('metaFileName');
+  const metaFileSize  = document.getElementById('metaFileSize');
+  const metaDuration  = document.getElementById('metaDuration');
+  const metaResolution= document.getElementById('metaResolution');
+  const metaAspect    = document.getElementById('metaAspectRatio');
+  const metaBitrate   = document.getElementById('metaBitrate');
+
+  const meterFill     = document.getElementById('meterFill');
+  const meterText     = document.getElementById('meterText');
+  const reasonsList   = document.getElementById('reasonsList');
+  const confidenceBadge = document.getElementById('confidenceBadge');
+
+  let currentFile = null;
+  let currentMeta = null;
+
+  // Utility: format bytes to human readable
+  function formatBytes(bytes) {
+    if (!bytes && bytes !== 0) return '—';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let i = 0;
+    let val = bytes;
+    while (val >= 1024 && i < units.length - 1) {
+      val /= 1024;
+      i++;
+    }
+    return `${val.toFixed(2)} ${units[i]}`;
+  }
+
+  function formatSeconds(sec) {
+    if (!sec || !isFinite(sec)) return '—';
+    const s = Math.floor(sec % 60);
+    const m = Math.floor((sec / 60) % 60);
+    const h = Math.floor(sec / 3600);
+    if (h > 0) return `${h}h ${m}m ${s}s`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+  }
+
+  function updateStatus(msg, spinner = false) {
+    if (spinner) {
+      statusEl.innerHTML = `<span class="spinner"></span> ${msg}`;
+    } else {
+      statusEl.textContent = msg;
+    }
+  }
+
+  function resetAll() {
+    currentFile = null;
+    currentMeta = null;
+
+    videoInput.value = '';
+    videoPreview.removeAttribute('src');
+    videoPreview.load();
+
+    metaFileName.textContent = '—';
+    metaFileSize.textContent = '—';
+    metaDuration.textContent = '—';
+    metaResolution.textContent = '—';
+    metaAspect.textContent = '—';
+    metaBitrate.textContent = '—';
+
+    meterFill.style.width = '0%';
+    meterText.textContent = '0% (no analysis yet)';
+    reasonsList.innerHTML = '';
+    confidenceBadge.style.display = 'none';
+
+    analyzeBtn.disabled = true;
+    updateStatus('No video loaded yet.');
+  }
+
+  resetBtn.addEventListener('click', resetAll);
+
+  videoInput.addEventListener('change', () => {
+    const file = videoInput.files && videoInput.files[0];
+    if (!file) {
+      resetAll();
+      return;
+    }
+    currentFile = file;
+    updateStatus('Video file loaded. Reading metadata…', true);
+
+    // Show basic file info now; video metadata will be added later.
+    metaFileName.textContent = file.name || 'Unknown';
+    metaFileSize.textContent = formatBytes(file.size);
+
+    const url = URL.createObjectURL(file);
+    videoPreview.src = url;
+
+    videoPreview.onloadedmetadata = () => {
+      const duration    = videoPreview.duration;
+      const width       = videoPreview.videoWidth;
+      const height      = videoPreview.videoHeight;
+      const aspectRatio = width && height ? (width / height) : null;
+      const fileSizeB   = file.size || 0;
+      const bitrateBps  = duration ? (fileSizeB * 8) / duration : null; // bits per second
+
+      currentMeta = {
+        fileName: file.name,
+        fileSizeBytes: fileSizeB,
+        durationSeconds: duration,
+        width,
+        height,
+        aspectRatio,
+        bitrateBps
+      };
+
+      metaDuration.textContent   = formatSeconds(duration);
+      metaResolution.textContent = (width && height) ? `${width} x ${height}` : '—';
+      metaAspect.textContent     = aspectRatio ? aspectRatio.toFixed(2) : '—';
+      metaBitrate.textContent    = bitrateBps
+        ? `${(bitrateBps / 1_000_000).toFixed(2)} Mbps`
+        : '—';
+
+      analyzeBtn.disabled = false;
+      updateStatus('Metadata ready. Click “Analyze for AI Generation” to run heuristics.');
+    };
+  });
+
+  analyzeBtn.addEventListener('click', () => {
+    if (!currentMeta) {
+      updateStatus('Load a video first before analysis.');
+      return;
+    }
+    analyzeBtn.disabled = true;
+    updateStatus('Running heuristic analysis (demo only)…', true);
+
+    // Simulate a small delay for UX
+    setTimeout(() => {
+      const result = runHeuristicAnalysis(currentMeta);
+      displayResult(result);
+      analyzeBtn.disabled = false;
+      updateStatus('Analysis complete. Interpret with caution — this is not a definitive detector.');
+    }, 700);
+  });
+
+  /**
+   * Demo heuristic AI-likelihood analysis.
+   * Returns: { scorePercent: number, confidenceLabel: 'Low'|'Medium'|'High', reasons: string[] }
+   *
+   * ⚠️ For real work, REPLACE this with:
+   *  - A backend call to a trained AI-detection model, or
+   *  - A call to an external API that returns a probability.
+   */
+  function runHeuristicAnalysis(meta) {
+    let score = 0.5;  // base 50% (undetermined)
+    const reasons = [];
+
+    const duration   = meta.durationSeconds || 0;
+    const width      = meta.width || 0;
+    const height     = meta.height || 0;
+    const aspect     = meta.aspectRatio || 0;
+    const bitrate    = meta.bitrateBps || 0;
+
+    // Heuristic 1: extremely short, highly compressed clips
+    if (duration > 0 && duration < 8 && bitrate > 0 && bitrate < 1_000_000) {
+      score += 0.12;
+      reasons.push(
+        'Very short clip with relatively low bitrate — many AI demos are short, compressed snippets.'
+      );
+    }
+
+    // Heuristic 2: very high resolution but suspiciously low bitrate
+    if (width >= 1920 && height >= 1080 && bitrate > 0 && bitrate < 2_000_000) {
+      score += 0.10;
+      reasons.push(
+        'High resolution but unusually low bitrate — could indicate heavy compression typical of generated previews.'
+      );
+    }
+
+    // Heuristic 3: “social media vertical” format (9:16) + short duration
+    const targetAspect = 9 / 16;
+    if (
+      aspect &&
+      Math.abs(aspect - targetAspect) < 0.05 &&
+      duration > 0 &&
+      duration < 20
+    ) {
+      score += 0.08;
+      reasons.push(
+        'Vertical 9:16 short-form clip — common format for AI-generated social media content.'
+      );
+    }
+
+    // Heuristic 4: tiny file size despite HD or above
+    if (width >= 1280 && height >= 720 && meta.fileSizeBytes < 2 * 1024 * 1024) {
+      score += 0.08;
+      reasons.push(
+        'HD or above resolution in a very small file — indicates strong compression, common in quick AI exports.'
+      );
+    }
+
+    // Heuristic 5: fallback note if no specific signals
+    if (reasons.length === 0) {
+      reasons.push(
+        'No strong metadata-based indicators either way. Treated as ambiguous baseline (50%).'
+      );
+    }
+
+    // Clamp to [0, 1]
+    score = Math.max(0, Math.min(1, score));
+
+    // Map to 0–100%
+    const scorePercent = Math.round(score * 100);
+
+    // Confidence label (NOTE: this is meta-confidence about the heuristics, not truth)
+    let confidenceLabel = 'Low';
+    if (scorePercent >= 40 && scorePercent <= 60) {
+      confidenceLabel = 'Low'; // ambiguous
+    } else if ((scorePercent > 60 && scorePercent <= 80) || (scorePercent < 40 && scorePercent >= 20)) {
+      confidenceLabel = 'Medium';
+    } else {
+      confidenceLabel = 'High'; // many heuristics triggered
+    }
+
+    return { scorePercent, confidenceLabel, reasons };
+  }
+
+  function displayResult(result) {
+    const { scorePercent, confidenceLabel, reasons } = result;
+
+    meterFill.style.width = `${scorePercent}%`;
+    meterText.textContent =
+      `${scorePercent}% estimated likelihood this clip is AI-generated (heuristic demo).`;
+
+    // Confidence badge styling
+    confidenceBadge.style.display = 'inline-block';
+    confidenceBadge.textContent = `Confidence (about this estimate): ${confidenceLabel}`;
+    confidenceBadge.classList.remove('confidence-low', 'confidence-medium', 'confidence-high');
+
+    if (confidenceLabel === 'Low') {
+      confidenceBadge.classList.add('confidence-low');
+    } else if (confidenceLabel === 'Medium') {
+      confidenceBadge.classList.add('confidence-medium');
+    } else {
+      confidenceBadge.classList.add('confidence-high');
+    }
+
+    // Reasons
+    reasonsList.innerHTML = '';
+    reasons.forEach(r => {
+      const li = document.createElement('li');
+      li.textContent = r;
+      reasonsList.appendChild(li);
+    });
+  }
+</script>
+</body>
+</html>
