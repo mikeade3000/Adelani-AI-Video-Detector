@@ -9,6 +9,8 @@
  *   - "Users"        -> login accounts, created by the super admin
  *   - "Sessions"     -> active login sessions (auto-expire after 8 hours)
  *   - "AdminConfig"  -> one-time bootstrap password/email for the first admin
+ *   - "Briefs"       -> Form A (Brief on Candidate) submitted by officers
+ *   - "Verifications"-> audit log of MDA checks of Form A against an uploaded Excel sheet
  */
 
 const SUBMISSIONS_SHEET = 'Submissions';
@@ -28,6 +30,10 @@ const RECORD_COLUMNS = [
 ];
 const USER_COLUMNS = ['id','email','passwordHash','salt','name','mda','role','createdAt','resetToken','resetTokenExpiry'];
 const SESSION_COLUMNS = ['token','email','role','name','mda','expiry'];
+const VERIFICATIONS_SHEET = 'Verifications';
+const VERIFICATION_COLUMNS = ['id','timestamp','checked_by','mda','source','file_name','officer_name',
+  'oracle_no','csc_file_no','record_id','status','match_method','fields_compared','fields_matched',
+  'discrepancies','discrepancy_details'];
 
 function doPost(e) {
   let body;
@@ -56,6 +62,8 @@ function doPost(e) {
       case 'listBriefs': return handleListBriefs(body);
       case 'updateBrief': return handleUpdateBrief(body);
       case 'authorizeBrief': return handleAuthorizeBrief(body);
+      case 'getVerificationData': return handleGetVerificationData(body);
+      case 'saveVerification': return handleSaveVerification(body);
       default: return jsonOut({ success: false, message: 'Unknown action: ' + body.action });
     }
   } catch (err) {
@@ -130,6 +138,29 @@ function requireUser(token) {
   if (!s) throw new Error('Session expired or invalid — please sign in again.');
   return s;
 }
+function isAdminSession(s) { return !!s && (s.role === 'admin' || s.role === 'superadmin'); }
+function sameMda(a, b) { return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase(); }
+
+// Sheets silently converts typed text: "08031234567" becomes the number 8031234567
+// (leading zero lost) and "01/07/2027" can become a date in the wrong locale.
+// Every record write goes through this so values are stored exactly as sent.
+function writeRowsAsText(sheet, startRow, rows, width) {
+  const range = sheet.getRange(startRow, 1, rows.length, width);
+  range.setNumberFormat('@');
+  range.setValues(rows.map(r => r.map(v => (v instanceof Date || v === null || v === undefined) ? (v || '') : String(v))));
+}
+
+// Serialise a cell for the client. Dates (including ones Sheets auto-converted
+// in rows saved before the plain-text fix) are formatted in the script time zone
+// so they never shift by a day; date-only values drop the "00:00".
+function fmtCell(v) {
+  if (v instanceof Date) {
+    const tz = Session.getScriptTimeZone();
+    const hm = Utilities.formatDate(v, tz, 'HH:mm');
+    return Utilities.formatDate(v, tz, hm === '00:00' ? 'yyyy-MM-dd' : 'yyyy-MM-dd HH:mm');
+  }
+  return v;
+}
 
 /* ========================================================================
    LOGIN / SESSIONS / PASSWORD RESET
@@ -156,10 +187,20 @@ function handleLogin(body) {
 
 function createSession(email, role, name, mda) {
   const sheet = getOrCreateSessionsSheet();
+  pruneExpiredSessions(sheet);
   const token = Utilities.getUuid();
   const expiry = new Date(Date.now() + SESSION_LIFETIME_MS);
   sheet.appendRow([token, email, role, name, mda, expiry]);
   return token;
+}
+
+// Remove expired sessions so the Sessions sheet does not grow forever.
+function pruneExpiredSessions(sheet) {
+  const values = sheet.getDataRange().getValues();
+  const now = new Date();
+  for (let i = values.length - 1; i >= 1; i--) {
+    if (values[i][5] && new Date(values[i][5]) < now) sheet.deleteRow(i + 1);
+  }
 }
 
 function handleLogout(body) {
@@ -324,7 +365,7 @@ function handleSubmit(body) {
     if (session.role !== 'admin' && session.role !== 'superadmin') rec.mda = session.mda; // non-admins can't spoof another MDA
     return RECORD_COLUMNS.map(c => rec[c] !== undefined ? rec[c] : '');
   });
-  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, RECORD_COLUMNS.length).setValues(rows);
+  writeRowsAsText(sheet, sheet.getLastRow() + 1, rows, RECORD_COLUMNS.length);
   return jsonOut({ success: true, inserted: rows.length });
 }
 
@@ -376,11 +417,7 @@ function handleGetAll(body) {
     // Hide any record submitted by a super-admin account.
     if (superEmails.indexOf(String(row[submittedByCol]).toLowerCase()) !== -1) return;
     const obj = {};
-    RECORD_COLUMNS.forEach((c, i) => {
-      let v = row[i];
-      if (v instanceof Date) v = Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm');
-      obj[c] = v;
-    });
+    RECORD_COLUMNS.forEach((c, i) => { obj[c] = fmtCell(row[i]); });
     records.push(obj);
   });
   return jsonOut({ success: true, records });
@@ -408,7 +445,7 @@ function handleAdminUpdateRecord(body) {
     if (values[i][idCol] === id) {
       RECORD_COLUMNS.forEach((c, ci) => {
         if (c === 'id' || c === 'timestamp' || c === 'submitted_by') return; // protected columns
-        if (fields[c] !== undefined) sheet.getRange(i + 1, ci + 1).setValue(fields[c]);
+        if (fields[c] !== undefined) sheet.getRange(i + 1, ci + 1).setNumberFormat('@').setValue(String(fields[c]));
       });
       return jsonOut({ success: true });
     }
@@ -574,7 +611,7 @@ function handleSubmitBrief(body) {
   // Write in the current header order so pre-existing sheets stay aligned.
   const headers = sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0].map(String);
   const row = headers.map(h => rowObj[h] !== undefined ? rowObj[h] : '');
-  sheet.appendRow(row);
+  writeRowsAsText(sheet, sheet.getLastRow() + 1, [row], headers.length);
   return jsonOut({ success: true, id: id, message: 'Brief on Candidate saved.' });
 }
 
@@ -592,11 +629,8 @@ function handleListBriefs(body) {
   const mdaIdx = headers.indexOf('Department/Ministry');
   const briefs = [];
   values.forEach(row => {
-    if (!isAdmin && String(row[mdaIdx]).trim() !== String(session.mda).trim()) return;
-    const o = briefRowToObj(headers, row);
-    if (o.timestamp instanceof Date) o.timestamp = Utilities.formatDate(o.timestamp, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm');
-    if (o['Authorized At'] instanceof Date) o['Authorized At'] = Utilities.formatDate(o['Authorized At'], Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm');
-    briefs.push(o);
+    if (!isAdmin && !sameMda(row[mdaIdx], session.mda)) return;
+    briefs.push(briefRowToObj(headers, row.map(fmtCell)));
   });
   return jsonOut({ success: true, briefs: briefs, isAdmin: isAdmin });
 }
@@ -611,6 +645,7 @@ function handleUpdateBrief(body) {
   const sheet = getOrCreateBriefsSheet();
   ensureBriefWorkflowColumns(sheet);
   const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return jsonOut({ success:false, message:'Form A record not found.' });
   const headers = sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0].map(String);
   const idIdx = headers.indexOf('id');
   const mdaIdx = headers.indexOf('Department/Ministry');
@@ -620,7 +655,7 @@ function handleUpdateBrief(body) {
     if (String(values[i][idIdx]) === id){
       const row = values[i];
       if (!isAdmin){
-        if (String(row[mdaIdx]).trim() !== String(session.mda).trim())
+        if (!sameMda(row[mdaIdx], session.mda))
           return jsonOut({ success:false, message:'You can only edit Form A records for your own MDA.' });
         if (String(row[statusIdx]) === 'Sent')
           return jsonOut({ success:false, message:'This Form A has already been sent to the Commission and can no longer be edited.' });
@@ -629,9 +664,12 @@ function handleUpdateBrief(body) {
       const locked = ['id','timestamp','Photo (data URL)','Status','Authorized By','Authorized MDA','Authorized At'];
       Object.keys(fields).forEach(k=>{
         const ci = headers.indexOf(k);
-        if (ci !== -1 && locked.indexOf(k) === -1){ row[ci] = String(fields[k]); }
+        // Only rewrite cells that actually changed (the client sends every field).
+        if (ci !== -1 && locked.indexOf(k) === -1 && String(fmtCell(row[ci])) !== String(fields[k])){
+          row[ci] = String(fields[k]);
+          sheet.getRange(i+2, ci+1).setNumberFormat('@').setValue(row[ci]);
+        }
       });
-      sheet.getRange(i+2,1,1,headers.length).setValues([row]);
       return jsonOut({ success:true });
     }
   }
@@ -647,21 +685,21 @@ function handleAuthorizeBrief(body) {
   const sheet = getOrCreateBriefsSheet();
   ensureBriefWorkflowColumns(sheet);
   const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return jsonOut({ success:false, message:'Form A record not found.' });
   const headers = sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0].map(String);
   const idIdx = headers.indexOf('id');
   const mdaIdx = headers.indexOf('Department/Ministry');
   const values = sheet.getRange(2,1,lastRow-1,sheet.getLastColumn()).getValues();
   for (let i=0;i<values.length;i++){
     if (String(values[i][idIdx]) === id){
-      const row = values[i];
-      if (!isAdmin && String(row[mdaIdx]).trim() !== String(session.mda).trim())
+      if (!isAdmin && !sameMda(values[i][mdaIdx], session.mda))
         return jsonOut({ success:false, message:'You can only authorize Form A records for your own MDA.' });
-      const set = (h,v)=>{ const ci=headers.indexOf(h); if(ci!==-1) row[ci]=v; };
+      // Write only the four workflow cells so the officer's own values are untouched.
+      const set = (h,v)=>{ const ci=headers.indexOf(h); if(ci!==-1) sheet.getRange(i+2, ci+1).setValue(v); };
       set('Status','Sent');
       set('Authorized By', session.name + ' (' + session.email + ')');
       set('Authorized MDA', session.mda);
       set('Authorized At', new Date());
-      sheet.getRange(i+2,1,1,headers.length).setValues([row]);
       return jsonOut({ success:true });
     }
   }
@@ -730,7 +768,7 @@ function handleMdaDownload(body) {
       if (superEmails.indexOf(String(row[subIdx]).toLowerCase()) !== -1) return;
       if (String(row[mdaIdx]).trim().toLowerCase() !== mda.toLowerCase()) return;
       const o = {};
-      RECORD_COLUMNS.forEach((c,i)=>{ let v=row[i]; if(v instanceof Date) v=Utilities.formatDate(v,Session.getScriptTimeZone(),'yyyy-MM-dd HH:mm'); o[c]=v; });
+      RECORD_COLUMNS.forEach((c,i)=>{ o[c]=fmtCell(row[i]); });
       eligibility.push(o);
     });
   }
@@ -747,10 +785,87 @@ function handleMdaDownload(body) {
       if (String(row[bMdaIdx]).trim().toLowerCase() !== mda.toLowerCase()) return;
       const o = {};
       headers.forEach((h,i)=>{ if (h==='Photo (data URL)') return; // omit bulky photo from the export
-        let v=row[i]; if(v instanceof Date) v=Utilities.formatDate(v,Session.getScriptTimeZone(),'yyyy-MM-dd HH:mm'); o[h]=v; });
+        o[h]=fmtCell(row[i]); });
       briefs.push(o);
     });
   }
 
   return jsonOut({ success:true, mda:mda, eligibility:eligibility, briefs:briefs });
+}
+
+/* ========================================================================
+   VERIFICATION — MDA checks what officers submitted online (Form A, and the
+   eligibility records) against an Excel sheet of the officers' details.
+   The comparison itself runs in the browser; the backend supplies the
+   online records (scoped to the user's MDA) and keeps an audit log.
+   ======================================================================== */
+function getOrCreateVerificationsSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(VERIFICATIONS_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(VERIFICATIONS_SHEET);
+    sheet.getRange(1, 1, 1, VERIFICATION_COLUMNS.length).setValues([VERIFICATION_COLUMNS]).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+// Returns the Form A submissions (with photos, for the individual summaries) and
+// the eligibility records for one MDA. MDA users always get their own MDA;
+// administrators may pass body.mda, or leave it blank for every MDA.
+function handleGetVerificationData(body) {
+  const session = requireUser(body.token);
+  const isAdmin = isAdminSession(session);
+  const mda = isAdmin ? String(body.mda || '').trim() : String(session.mda || '').trim();
+  const inScope = v => !mda || sameMda(v, mda);
+  const superEmails = getSuperAdminEmails();
+
+  const briefs = [];
+  const briefSheet = getOrCreateBriefsSheet();
+  ensureBriefWorkflowColumns(briefSheet);
+  if (briefSheet.getLastRow() >= 2) {
+    const headers = briefSheet.getRange(1, 1, 1, briefSheet.getLastColumn()).getValues()[0].map(String);
+    const mdaIdx = headers.indexOf('Department/Ministry');
+    briefSheet.getRange(2, 1, briefSheet.getLastRow() - 1, briefSheet.getLastColumn()).getValues().forEach(row => {
+      if (inScope(row[mdaIdx])) briefs.push(briefRowToObj(headers, row.map(fmtCell)));
+    });
+  }
+
+  const eligibility = [];
+  const recSheet = getOrCreateSubmissionsSheet();
+  if (recSheet.getLastRow() >= 2) {
+    const mdaIdx = RECORD_COLUMNS.indexOf('mda');
+    const subIdx = RECORD_COLUMNS.indexOf('submitted_by');
+    recSheet.getRange(2, 1, recSheet.getLastRow() - 1, RECORD_COLUMNS.length).getValues().forEach(row => {
+      if (superEmails.indexOf(String(row[subIdx]).toLowerCase()) !== -1) return;
+      if (!inScope(row[mdaIdx])) return;
+      const o = {};
+      RECORD_COLUMNS.forEach((c, i) => { o[c] = fmtCell(row[i]); });
+      eligibility.push(o);
+    });
+  }
+  return jsonOut({ success: true, mda: mda, isAdmin: isAdmin, briefs: briefs, eligibility: eligibility });
+}
+
+// Appends one audit row per officer checked. MDA users can only log results for
+// their own MDA.
+function handleSaveVerification(body) {
+  const session = requireUser(body.token);
+  const results = Array.isArray(body.results) ? body.results : [];
+  if (!results.length) return jsonOut({ success: false, message: 'No verification results supplied.' });
+  const mda = isAdminSession(session) ? String(body.mda || session.mda || '') : String(session.mda || '');
+  const now = new Date();
+  const checkedBy = session.name + ' (' + session.email + ')';
+  const rows = results.map(r => {
+    const rec = {
+      id: Utilities.getUuid(), timestamp: now, checked_by: checkedBy,
+      mda: isAdminSession(session) ? String(r.mda || mda) : mda,
+      source: body.source || '', file_name: body.fileName || ''
+    };
+    VERIFICATION_COLUMNS.forEach(c => { if (rec[c] === undefined) rec[c] = r[c] === undefined ? '' : r[c]; });
+    return VERIFICATION_COLUMNS.map(c => rec[c]);
+  });
+  const sheet = getOrCreateVerificationsSheet();
+  writeRowsAsText(sheet, sheet.getLastRow() + 1, rows, VERIFICATION_COLUMNS.length);
+  return jsonOut({ success: true, saved: rows.length });
 }

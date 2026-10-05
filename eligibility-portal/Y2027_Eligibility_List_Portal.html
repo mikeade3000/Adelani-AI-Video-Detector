@@ -201,6 +201,26 @@
   .req::after{content:" *";color:var(--err);}
   .action-btns{display:flex;gap:6px;}
   .action-btns button{padding:4px 9px;font-size:11px;}
+  /* Verification */
+  .vsrc{display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 14px;}
+  .vsrc label{display:flex;gap:8px;align-items:flex-start;text-transform:none;letter-spacing:0;font-size:13px;font-weight:400;color:var(--ink);
+    border:1px solid var(--paper-line);border-radius:6px;padding:10px 12px;cursor:pointer;flex:1 1 280px;background:#fff;margin:0;}
+  .vsrc label b{color:var(--navy);}
+  .vsrc input{margin-top:3px;}
+  .vstat{display:inline-block;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:10px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;}
+  .vstat.matched{background:var(--ok-bg);color:var(--ok);}
+  .vstat.discrepancy{background:var(--err-bg);color:var(--err);}
+  .vstat.not_in_sheet{background:var(--warn-bg);color:var(--warn);}
+  .vstat.not_online{background:#EEF1F5;color:var(--slate);}
+  .kpi.matched .n{color:var(--ok);} .kpi.discrepancy .n{color:var(--err);} .kpi.not_in_sheet .n{color:var(--warn);} .kpi.not_online .n{color:var(--slate);}
+  .vfield-table td.res-match{color:var(--ok);font-weight:700;}
+  .vfield-table td.res-mismatch{color:var(--err);font-weight:700;}
+  .vfield-table tr.row-mismatch td{background:var(--err-bg);}
+  .vfield-table td.res-skip{color:var(--ink-soft);}
+  .vmap{font-size:12px;color:var(--ink-soft);margin:6px 0 12px;line-height:1.6;}
+  .vmap .tag{margin:0 3px 3px 0;display:inline-block;}
+  .vtools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
+  .vtools select,.vtools input{width:auto;min-width:200px;}
 </style>
 </head>
 <body>
@@ -222,6 +242,7 @@
     <button class="tabbtn" data-tab="single" id="tab-single" hidden>Single Entry</button>
     <button class="tabbtn" data-tab="bulk" id="tab-bulk" hidden>Bulk Upload</button>
     <button class="tabbtn" data-tab="review" id="tab-review" hidden>Form A Review</button>
+    <button class="tabbtn" data-tab="verify" id="tab-verify" hidden>Verification</button>
     <button class="tabbtn" data-tab="reports" id="tab-reports" hidden>Reports</button>
     <button class="tabbtn" data-tab="admin" id="tab-admin" hidden>Admin Dashboard</button>
   </nav>
@@ -462,6 +483,60 @@
         <button class="btn btn-ghost" id="bulk-cancel">Discard Upload</button>
       </div>
       <div id="bulk-submit-msg" class="msgbox"></div>
+    </div>
+  </section>
+
+  <!-- =================== VERIFICATION (MDA checks online submissions against its Excel sheet) =================== -->
+  <section class="panel" id="panel-verify">
+    <div class="card">
+      <h2><span class="idx">01</span>Verify Officers' Online Submissions</h2>
+      <p class="hint">Upload the Excel sheet that holds your officers' official details (for example from your HR records or nominal roll). Every detail each officer submitted online is checked against that sheet, field by field. Officers are matched by <b>Oracle No</b>, then <b>CSC File No</b>, then <b>Name</b>. Only columns present in your sheet are compared, so you can use the verification template below or your own sheet with recognisable column headings.</p>
+      <div id="verify-admin-mda" style="display:none;margin:0 0 12px;">
+        <label>Department/Ministry (MDA) to verify</label>
+        <select id="verify-mda-select" style="max-width:420px;"></select>
+      </div>
+      <div id="verify-user-mda" class="hint" style="display:none;"></div>
+      <label>Check the uploaded sheet against</label>
+      <div class="vsrc">
+        <label><input type="radio" name="verify-source" value="briefs" checked><span><b>Form A — Brief on Candidate</b><br>Details submitted online by the eligible officers themselves.</span></label>
+        <label><input type="radio" name="verify-source" value="eligibility"><span><b>Eligibility List records</b><br>Records entered through Single Entry / Bulk Upload.</span></label>
+      </div>
+      <label class="filebox" for="verify-file">
+        <input type="file" id="verify-file" accept=".xlsx,.xls,.csv">
+        <div>📄 <strong>Click to choose the officers' details sheet</strong> (.xlsx, .xls, .csv)</div>
+        <p id="verify-file-hint">The first sheet in the workbook is used. The heading row is detected automatically.</p>
+      </label>
+      <div class="btnbar">
+        <button class="btn btn-ghost" id="verify-template">Download Verification Template (.xlsx)</button>
+      </div>
+      <div id="verify-msg" class="msgbox" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="card" id="verify-results-card" style="display:none;">
+      <div class="staging-toolbar">
+        <h2 style="margin:0"><span class="idx">02</span>Verification Results</h2>
+        <span id="verify-stamp" class="stamp">✕ Discrepancies</span>
+      </div>
+      <p class="hint" id="verify-context"></p>
+      <div class="kpi-row" id="verify-kpis"></div>
+      <div class="vmap" id="verify-map"></div>
+      <div class="btnbar" style="margin-bottom:14px;">
+        <button class="btn btn-primary" id="verify-dl-all">Download All Individual Summaries (.doc)</button>
+        <button class="btn btn-gold" id="verify-dl-xlsx">Download Results Workbook (.xlsx)</button>
+        <button class="btn btn-ghost" id="verify-print-all">Print All Summaries</button>
+      </div>
+      <div class="vtools">
+        <select id="verify-filter">
+          <option value="">All officers</option>
+          <option value="discrepancy">With discrepancies</option>
+          <option value="matched">Fully matched</option>
+          <option value="not_in_sheet">Submitted online — not in sheet</option>
+          <option value="not_online">In sheet — not submitted online</option>
+        </select>
+        <input type="text" id="verify-search" placeholder="Search name, Oracle No or File No…">
+        <span class="count-badge" id="verify-count"></span>
+      </div>
+      <div class="tablewrap"><table id="verify-table"><thead></thead><tbody></tbody></table></div>
     </div>
   </section>
 
@@ -994,8 +1069,8 @@ function parseFlexibleDate(v){
   if (!s) return null;
   let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (m) return new Date(Date.UTC(+m[1],+m[2]-1,+m[3]));
-  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (m) return new Date(Date.UTC(+m[3],+m[2]-1,+m[1]));
+  m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4}|\d{2})$/);
+  if (m){ let yr=+m[3]; if (m[3].length===2) yr+=(yr<70?2000:1900); return new Date(Date.UTC(yr,+m[2]-1,+m[1])); }
   m = s.match(/^(\d{1,2})[\s\-]([A-Za-z]{3,9})[\s\-](\d{2,4})$/);
   if (m){
     const months=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
@@ -1039,6 +1114,7 @@ function normalizePhone(v){
   let s = String(v||'').trim().replace(/[\s\-()]/g,'');
   if (/^\+234\d{10}$/.test(s)) return '0'+s.slice(4);
   if (/^234\d{10}$/.test(s)) return '0'+s.slice(3);
+  if (/^[789]\d{9}$/.test(s)) return '0'+s; // leading zero dropped by a spreadsheet (e.g. 8031234567)
   return s;
 }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1144,7 +1220,7 @@ async function callScript(payload){
   if (!res.ok) throw new Error('HTTP '+res.status);
   return res.json();
 }
-function tickClock(){ document.getElementById('clock').textContent = new Date().toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'}); }
+function tickClock(){ const el=document.getElementById('clock'); if (el) el.textContent = new Date().toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'}); } // #clock is removed from the header while signed in
 tickClock(); setInterval(tickClock,30000);
 
 function showPanel(id){
@@ -1159,6 +1235,7 @@ document.getElementById('tabbar').addEventListener('click', e=>{
   if (btn.dataset.tab==='admin') loadAdminData();
   if (btn.dataset.tab==='review') loadReviewData();
   if (btn.dataset.tab==='reports') loadReportsData();
+  if (btn.dataset.tab==='verify') initVerifyPanel();
 });
 
 /* =========================================================================
@@ -1170,6 +1247,7 @@ function updateAuthUI(){
   document.getElementById('tab-single').hidden = !loggedIn;
   document.getElementById('tab-bulk').hidden = !loggedIn;
   document.getElementById('tab-review').hidden = !loggedIn;
+  document.getElementById('tab-verify').hidden = !loggedIn;
   document.getElementById('tab-reports').hidden = !(loggedIn && admin);
   document.getElementById('tab-admin').hidden = !(loggedIn && admin);
   document.getElementById('tab-login').hidden = loggedIn;
@@ -1488,7 +1566,7 @@ function downloadBriefDoc(d, photo){
   <h3>9–11. Service Record</h3><table>
   ${row('Date issued last query',d['Date issued last query'])}${row('Facing disciplinary action?',d['Facing disciplinary action?'])}
   ${row('Pending request/appeal/appraisal',d['Pending request/appeal/appraisal'])}</table>
-  <h3>12. Performance Appraisal (last 3 years)</h3><table>
+  <h3>12. Performance Appraisal (last 4 years)</h3><table>
   ${row('2023 Score',d['Appraisal 2023 Score'])}${row('2024 Score',d['Appraisal 2024 Score'])}${row('2025 Score',d['Appraisal 2025 Score'])}${row('2026 Score',d['Appraisal 2026 Score'])}</table>
   <div class="cert"><h3 style="margin-top:0">13. Certification — Director, Admin. &amp; Human Resource</h3>
   <p class="note">D(A&amp;HR) is to endorse and stamp ONLY after verifying correctness and completeness of the officer's information.</p>
@@ -1671,10 +1749,11 @@ function downloadMDACsv(mda){ downloadBriefsCsv(REVIEW_BRIEFS.filter(b=>(b['Depa
 
 // Print one or more briefs (opens a print window with each Form A on its own page).
 function printBriefs(briefs){
-  if (!briefs.length){ showMsg('review-msg','warn','Nothing to print.'); return; }
+  const msgId = document.getElementById('panel-brief').classList.contains('active') ? 'brief-msg' : 'review-msg';
+  if (!briefs.length){ showMsg(msgId,'warn','Nothing to print.'); return; }
   const pages = briefs.map(b=>briefPrintHTML(b)).join('<div style="page-break-after:always;"></div>');
   const w = window.open('', '_blank');
-  if (!w){ showMsg('review-msg','err','Please allow pop-ups to print.'); return; }
+  if (!w){ if (msgId==='review-msg') showMsg(msgId,'err','Please allow pop-ups to print.'); return; }
   w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Form A — Print</title>
     <style>${briefPrintCSS()}</style></head><body>${pages}
     <script>window.onload=function(){window.print();}<\/script></body></html>`);
@@ -1970,7 +2049,7 @@ document.getElementById('single-submit-batch').addEventListener('click', async (
     if (res && res.success){ showMsg('single-submit-msg','ok', `${queue.length} record(s) submitted to the database.`); queue=[]; renderQueue(); }
     else showMsg('single-submit-msg','err', 'Backend rejected the batch: '+(res && res.message ? res.message : 'unknown error'));
   }catch(err){ showMsg('single-submit-msg','err', 'Could not submit: '+err.message); }
-  btn.disabled=false; btn.textContent='Submit Queue to Database';
+  btn.textContent='Submit Queue to Database'; btn.disabled = queue.length===0;
 });
 
 /* =========================================================================
@@ -2624,6 +2703,551 @@ function mdaDownloadXlsx(kind){
 }
 document.getElementById('mdadl-dl-eligibility')?.addEventListener('click', ()=>mdaDownloadXlsx('eligibility'));
 document.getElementById('mdadl-dl-briefs')?.addEventListener('click', ()=>mdaDownloadXlsx('briefs'));
+/* =========================================================================
+   VERIFICATION — the MDA uploads an Excel sheet of its officers' details and
+   every detail the officers submitted online is checked against it. The
+   comparison runs here in the browser; the backend only supplies the online
+   records (scoped to the user's MDA) and keeps an audit log of each check.
+   ========================================================================= */
+// Field sets per online source. `aliases` are column headings recognised in the
+// uploaded sheet (compared after normAlias, so case/punctuation don't matter).
+const VERIFY_SOURCES = {
+  briefs: {
+    label: 'Form A — Brief on Candidate',
+    short: 'Form A',
+    fields: [
+      { key:'Name (Surname first)', label:'Name (Surname First)', type:'name', aliases:['names surname first','names','name','full name','officer name','name of officer','names of officer','surname first'] },
+      { key:'Department/Ministry', label:'Department/Ministry (MDA)', type:'text', aliases:['mda','department ministry','department ministry mda','department','ministry','ministry department agency'] },
+      { key:'CSC File No.', label:'CSC File No.', type:'fileno', aliases:['csc file no','csc file','file no','csc no'] },
+      { key:'Oracle No.', label:'Oracle No.', type:'idnum', aliases:['oracle no','oracle','oracle id','ippis no'] },
+      { key:'Date of 1st Appt', label:'Date of 1st Appt', type:'date', aliases:['date of 1st appt','1st appt date','date of 1st employment','date of employment'] },
+      { key:'Designation at 1st Appt', label:'Designation at 1st Appt', type:'post', aliases:['designation at 1st appt','post of 1st appt','post at 1st appt','rank at 1st appt','designation on 1st appt'] },
+      { key:'Date of Confirmation', label:'Date of Confirmation', type:'date', aliases:['date of confirmation','confirmation date','date confirmed'] },
+      { key:'Date of Present Appt', label:'Date of Present Appt', type:'date', aliases:['date of present appt','present appt date','date of last promotion'] },
+      { key:'Present Designation', label:'Present Designation', type:'post', aliases:['present designation','present post cadre','present post','present rank','current designation','current post'] },
+      { key:'Conversion Post', label:'Conversion Post', type:'post', aliases:['conversion post'] },
+      { key:'Date of Birth', label:'Date of Birth', type:'date', aliases:['date of birth','dob','birth date'] },
+      { key:'State of Origin', label:'State of Origin', type:'state', aliases:['state of origin','state'] },
+      { key:'Nationality', label:'Nationality', type:'text', aliases:['nationality'] },
+      { key:'Educ: Post Primary', label:'Educ: Post Primary', type:'text', aliases:['post primary','educ post primary'] },
+      { key:'Educ: Secondary School', label:'Educ: Secondary School', type:'text', aliases:['secondary school','educ secondary school'] },
+      { key:'Educ: University etc', label:'Educ: University etc', type:'text', aliases:['university etc','university','educ university etc'] },
+      { key:'Educ: Professional Certificates', label:'Educ: Professional Certificates', type:'text', aliases:['professional certificates','professional certificate','educ professional certificates'] },
+      { key:'Educ: Additional Qualification', label:'Educ: Additional Qualification', type:'text', aliases:['additional qualification','additional qualifications','educ additional qualification'] },
+      { key:'Date issued last query', label:'Date issued last query', type:'text', aliases:['date issued last query','last query','date of last query'] },
+      { key:'Facing disciplinary action?', label:'Facing disciplinary action?', type:'yesno', aliases:['facing disciplinary action','disciplinary action'] },
+    ],
+  },
+  eligibility: {
+    label: 'Eligibility List records',
+    short: 'Eligibility record',
+    fields: [
+      { key:'surname_first', label:'Names (Surname First)', type:'name', aliases:['names surname first','names','name','full name','officer name','name of officer','surname first'] },
+      { key:'mda', label:'Department/Ministry (MDA)', type:'text', aliases:['mda','department ministry','department ministry mda','department','ministry'] },
+      { key:'csc_file_no', label:'CSC File No', type:'fileno', aliases:['csc file no','csc file','file no','csc no'] },
+      { key:'oracle_no', label:'Oracle No', type:'idnum', aliases:['oracle no','oracle','oracle id','ippis no'] },
+      { key:'post_1st_appt', label:'Post of 1st Appt', type:'post', aliases:['post of 1st appt','designation at 1st appt','post at 1st appt','rank at 1st appt'] },
+      { key:'grade_1st', label:'Grade Level (1st Appt)', type:'grade', aliases:['grade level 1st appt','gl 1st appt','grade at 1st appt'], gradeAfter:'post_1st_appt' },
+      { key:'date_1st_appt', label:'Date of 1st Appt', type:'date', aliases:['date of 1st appt','1st appt date','date of employment'] },
+      { key:'date_confirmation', label:'Date of Confirmation', type:'date', aliases:['date of confirmation','confirmation date'] },
+      { key:'present_post', label:'Present Post/Cadre', type:'post', aliases:['present post cadre','present post','present designation','present rank','current post'] },
+      { key:'grade_present', label:'Grade Level (Present)', type:'grade', aliases:['grade level present','present grade level','present gl','gl present'], gradeAfter:'present_post' },
+      { key:'date_present_appt', label:'Date of Present Appt', type:'date', aliases:['date of present appt','present appt date','date of last promotion'] },
+      { key:'promotion_post', label:'Promotion Post/Cadre', type:'post', aliases:['promotion post cadre','promotion post','proposed post'] },
+      { key:'grade_promotion', label:'Grade Level (Promotion)', type:'grade', aliases:['grade level promotion','promotion grade level','promotion gl','gl promotion'], gradeAfter:'promotion_post' },
+      { key:'proposed_notional_date', label:'Proposed Notional Date', type:'date', aliases:['proposed notional date','notional date'] },
+      { key:'proposed_financial_date', label:'Proposed Financial Date', type:'date', aliases:['proposed financial date','financial date'] },
+      { key:'official_email', label:'Official Email', type:'email', aliases:['official functional email address','official email','functional email','email','email address','official functional email'] },
+      { key:'mobile_no', label:'Mobile No', type:'phone', aliases:['mobile no whatsapp','mobile no','phone no','phone','mobile','telephone','gsm no'] },
+      { key:'disability', label:'People Living with Disability', type:'text', aliases:['people living with disability type','disability','plwd'] },
+    ],
+  },
+};
+const VERIFY_STATUS = {
+  matched:      { label:'Verified — all match', short:'Matched' },
+  discrepancy:  { label:'Discrepancies found', short:'Discrepancy' },
+  not_in_sheet: { label:'Not found in MDA sheet', short:'Not in sheet' },
+  not_online:   { label:'No online submission', short:'Not submitted' },
+};
+let VERIFY = { data:null, dataKey:'', results:[], source:'briefs', fileName:'', sheetMDA:'', mapped:[], unmapped:[], checkedAt:null, mda:'' };
+
+function normAlias(s){
+  return String(s||'').toLowerCase()
+    .replace(/appointment/g,'appt').replace(/\bfirst\b/g,'1st').replace(/number/g,'no').replace(/\bnum\b/g,'no')
+    .replace(/[^a-z0-9]/g,'');
+}
+function verifyFields(){ return VERIFY_SOURCES[VERIFY.source].fields; }
+
+// --- value normalisers used for comparison ---
+function vNorm(type, v){
+  if (v===null || v===undefined) return '';
+  if (v instanceof Date) v = fmtDate(parseFlexibleDate(v));
+  let s = String(v).trim();
+  if (!s) return '';
+  switch(type){
+    case 'name': return s.toUpperCase().replace(/[.,'’\-]/g,' ').split(/\s+/).filter(Boolean).sort().join(' ');
+    case 'idnum': { const d=s.replace(/\D/g,'').replace(/^0+/,''); return d || s.toUpperCase(); }
+    case 'fileno': return s.toUpperCase().replace(/[\s.,]/g,'');
+    case 'date': { const d=parseFlexibleDate(s.replace(/\s+\d{1,2}:\d{2}(:\d{2})?$/,'')); return d ? fmtDate(d) : s.toLowerCase(); }
+    case 'grade': return normalizeGrade(s) || s;
+    case 'phone': return normalizePhone(s);
+    case 'email': return s.toLowerCase();
+    case 'yesno': return /^y/i.test(s) ? 'yes' : (/^n/i.test(s) ? 'no' : s.toLowerCase());
+    case 'state': { const t=s.toLowerCase().replace(/\bstate\b/g,'').replace(/[^a-z]/g,''); return /^(fct|abuja|fctabuja)$/.test(t) ? 'fct' : t; }
+    case 'post':
+    case 'text':
+    default: return s.toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9]+/g,' ').trim();
+  }
+}
+// Value as shown in the summaries (dates as DD/MM/YYYY, everything else as given).
+function vDisplay(type, v){
+  if (v===null || v===undefined) return '';
+  if (type==='date'){
+    const d = parseFlexibleDate(v instanceof Date ? v : String(v).trim().replace(/\s+\d{1,2}:\d{2}(:\d{2})?$/,''));
+    return d ? fmtDate(d) : String(v).trim();
+  }
+  if (type==='grade'){ const g=normalizeGrade(v); return g ? 'GL'+g : String(v).trim(); }
+  if (type==='phone') return normalizePhone(v);
+  return String(v).trim();
+}
+function compareField(f, onlineVal, sheetVal){
+  const o = vNorm(f.type, onlineVal), s = vNorm(f.type, sheetVal);
+  const res = { key:f.key, label:f.label, online:vDisplay(f.type, onlineVal), sheet:vDisplay(f.type, sheetVal), result:'', note:'' };
+  if (!s){ res.result = 'skip'; res.note = 'Blank in MDA sheet — not compared'; return res; }
+  if (!o){ res.result = 'mismatch'; res.note = 'Not supplied online'; return res; }
+  if (o === s){
+    res.result = 'match';
+    if (f.type==='name' && res.online.toUpperCase().replace(/\s+/g,' ') !== res.sheet.toUpperCase().replace(/\s+/g,' ')) res.note = 'Same names, different order/format';
+    return res;
+  }
+  res.result = 'mismatch';
+  if (f.type==='name'){
+    const a=o.split(' '), b=s.split(' ');
+    const missingOnline = b.filter(x=>a.indexOf(x)===-1), extraOnline = a.filter(x=>b.indexOf(x)===-1);
+    const bits = [];
+    if (missingOnline.length) bits.push('missing online: '+missingOnline.join(' '));
+    if (extraOnline.length) bits.push('not in sheet: '+extraOnline.join(' '));
+    res.note = 'Name differs ('+bits.join('; ')+')';
+  } else if (f.type==='date'){
+    res.note = 'Dates differ';
+  } else res.note = 'Values differ';
+  return res;
+}
+function fieldOf(key){ return verifyFields().find(f=>f.key===key); }
+function identityKeys(get){
+  return {
+    oracle: vNorm('idnum', get('idnum')),
+    csc: vNorm('fileno', get('fileno')),
+    name: vNorm('name', get('name')),
+  };
+}
+function onlineIdentity(rec){
+  const F = verifyFields();
+  const byType = t => { const f=F.find(x=>x.type===t); return f ? rec[f.key] : ''; };
+  return identityKeys(byType);
+}
+
+// --- reading the uploaded sheet ---
+// Finds the heading row (the one in the first 25 rows matching the most known
+// headings), maps each column to a field, and returns the officer rows.
+function parseVerifySheet(grid){
+  const F = verifyFields();
+  const aliasMap = {};
+  F.forEach(f=>{ [f.label, f.key].concat(f.aliases).forEach(a=>{ const k=normAlias(a); if(k && !(k in aliasMap)) aliasMap[k]=f.key; }); });
+  const isGradeHeader = h => /^(gradelevel|gl|grade|gradelevelgl)$/.test(h);
+  let best = {idx:-1, score:0};
+  for (let r=0; r<Math.min(grid.length,25); r++){
+    const used = new Set(); let score = 0;
+    (grid[r]||[]).forEach(c=>{ const k=aliasMap[normAlias(c)]; if(k && !used.has(k)){ used.add(k); score++; } });
+    if (score > best.score) best = {idx:r, score};
+  }
+  if (best.idx === -1 || best.score < 2) return { error:'Could not find a heading row with at least two recognised column headings (for example "Names (Surname First)" and "Oracle No"). Download the Verification Template to see the expected headings.' };
+  const header = grid[best.idx].map(c=>String(c==null?'':c).trim());
+  const colMap = {}; const mapped = []; const unmapped = [];
+  let lastPostKey = null;
+  header.forEach((h,ci)=>{
+    const n = normAlias(h);
+    if (!n) return;
+    if (n==='sn' || n==='sno' || n==='serialno') return;
+    let key = aliasMap[n];
+    // A bare "GRADE LEVEL" heading belongs to the post column just before it (Y2027 template layout).
+    if (!key && isGradeHeader(n) && lastPostKey){ const g=F.find(f=>f.gradeAfter===lastPostKey); if (g) key = g.key; }
+    if (key && !(key in colMap)){
+      colMap[key] = ci; mapped.push({ header:h, field:fieldOf(key).label });
+      if (fieldOf(key).type==='post') lastPostKey = key;
+    } else unmapped.push(h);
+  });
+  const sheetMDA = readSheetTitleMDA(grid, best.idx);
+  const mdaField = F.find(f=>f.key==='mda' || f.key==='Department/Ministry');
+  const rows = [];
+  for (let r=best.idx+1; r<grid.length; r++){
+    const row = grid[r]||[];
+    const rec = {};
+    let any = false;
+    Object.keys(colMap).forEach(k=>{ const v=row[colMap[k]]; rec[k] = (v instanceof Date) ? v : String(v==null?'':v).trim(); if (rec[k]!=='' ) any = true; });
+    if (!any) continue;
+    const id = identityKeys(t=>{ const f=F.find(x=>x.type===t); return f ? rec[f.key] : ''; });
+    if (!id.oracle && !id.csc && !id.name) continue; // e.g. a totals or notes row
+    if (mdaField && !(mdaField.key in colMap) && sheetMDA) rec[mdaField.key] = sheetMDA;
+    rec._rowNum = r+1;
+    rows.push(rec);
+  }
+  if (mdaField && !(mdaField.key in colMap) && sheetMDA) mapped.push({ header:'MDA: (title line)', field:mdaField.label });
+  return { rows, colMap, mapped, unmapped, sheetMDA, headerRow: best.idx+1 };
+}
+// Reads the MDA written beside an "MDA:" title line above the heading row.
+function readSheetTitleMDA(grid, headerIdx){
+  const cell = v => String(v==null?'':v).trim();
+  for (let r=0; r<headerIdx; r++){
+    const row = (grid[r]||[]).map(cell);
+    const ci = row.findIndex(c => /^mda\b/i.test(c));
+    if (ci === -1) continue;
+    const m = row[ci].match(/mda\s*:\s*(\S.*)$/i);
+    if (m && m[1].trim() && m[1].trim()!==':') return m[1].trim();
+    const after = row.slice(ci+1).find(c=>c && c!==':');
+    if (after) return after;
+    if (grid[r+1]){ const below = cell(grid[r+1][ci]); if (below && below!==':') return below; }
+  }
+  return '';
+}
+
+// --- matching + comparison ---
+function runVerification(sheetRows){
+  const F = verifyFields();
+  const comparable = F.filter(f=>sheetRows.colMapKeys.has(f.key));
+  const online = (VERIFY.source==='briefs' ? VERIFY.data.briefs : VERIFY.data.eligibility) || [];
+  // Keep the latest submission per officer; earlier duplicates are counted, not compared.
+  const latest = new Map(); const dupCount = new Map(); const singles = [];
+  online.forEach(rec=>{
+    const id = onlineIdentity(rec);
+    const k = id.oracle ? 'o:'+id.oracle : (id.csc ? 'c:'+id.csc : (id.name ? 'n:'+id.name : ''));
+    if (!k){ singles.push(rec); return; }
+    if (latest.has(k)){
+      dupCount.set(k, (dupCount.get(k)||0)+1);
+      if (String(rec.timestamp||'') >= String(latest.get(k).timestamp||'')) latest.set(k, rec);
+    } else latest.set(k, rec);
+  });
+  const onlineList = Array.from(latest.entries()).map(([k,rec])=>({rec, dups:dupCount.get(k)||0})).concat(singles.map(rec=>({rec,dups:0})));
+
+  const index = {oracle:new Map(), csc:new Map(), name:new Map()};
+  sheetRows.rows.forEach((row,i)=>{
+    const id = identityKeys(t=>{ const f=F.find(x=>x.type===t); return f ? row[f.key] : ''; });
+    row._id = id;
+    ['oracle','csc','name'].forEach(k=>{ if(id[k]){ if(!index[k].has(id[k])) index[k].set(id[k],[]); index[k].get(id[k]).push(i); } });
+  });
+  const used = new Set();
+  const take = (k,val)=>{ if(!val || !index[k].has(val)) return -1; const i=index[k].get(val).find(x=>!used.has(x)); return i===undefined ? -1 : i; };
+  const results = [];
+  // Pass 1 matches on Oracle No for everyone, then CSC File No, then name — so a
+  // strong identifier is never "stolen" by a weaker name match.
+  const pending = onlineList.map(o=>({...o, id:onlineIdentity(o.rec), rowIdx:-1, matchBy:''}));
+  [['oracle','Oracle No'],['csc','CSC File No'],['name','Name']].forEach(([k,label])=>{
+    pending.forEach(p=>{ if (p.rowIdx!==-1) return; const i=take(k,p.id[k]); if(i!==-1){ used.add(i); p.rowIdx=i; p.matchBy=label; } });
+  });
+  pending.forEach(p=>{
+    const r = { online:p.rec, sheet:null, sheetRowNum:'', matchBy:p.matchBy, duplicates:p.dups, fields:[], compared:0, matched:0, mismatches:0 };
+    if (p.rowIdx===-1){ r.status='not_in_sheet'; results.push(r); return; }
+    const row = sheetRows.rows[p.rowIdx];
+    r.sheet = row; r.sheetRowNum = row._rowNum;
+    r.fields = comparable.map(f=>compareField(f, p.rec[f.key], row[f.key]));
+    r.compared = r.fields.filter(x=>x.result!=='skip').length;
+    r.matched = r.fields.filter(x=>x.result==='match').length;
+    r.mismatches = r.fields.filter(x=>x.result==='mismatch').length;
+    r.status = r.mismatches ? 'discrepancy' : 'matched';
+    results.push(r);
+  });
+  sheetRows.rows.forEach((row,i)=>{
+    if (used.has(i)) return;
+    results.push({ online:null, sheet:row, sheetRowNum:row._rowNum, matchBy:'', duplicates:0, status:'not_online',
+      fields: comparable.map(f=>({key:f.key,label:f.label,online:'',sheet:vDisplay(f.type,row[f.key]),result:'skip',note:''})), compared:0, matched:0, mismatches:0 });
+  });
+  const order = {discrepancy:0, not_in_sheet:1, not_online:2, matched:3};
+  results.sort((a,b)=> (order[a.status]-order[b.status]) || verifyName(a).localeCompare(verifyName(b)));
+  results.forEach((r,i)=>r.idx=i);
+  return results;
+}
+function verifyVal(r, type){
+  const f = verifyFields().find(x=>x.type===type); if (!f) return '';
+  const v = (r.online && r.online[f.key]) || (r.sheet && r.sheet[f.key]) || '';
+  return String(v instanceof Date ? fmtDate(parseFlexibleDate(v)) : v).trim();
+}
+function verifyName(r){ return verifyVal(r,'name').toUpperCase(); }
+function verifyMdaOf(r){
+  const f = verifyFields().find(x=>x.key==='mda' || x.key==='Department/Ministry');
+  return String((r.online && r.online[f.key]) || (r.sheet && r.sheet[f.key]) || VERIFY.mda || '').trim();
+}
+
+// --- UI ---
+function initVerifyPanel(){
+  const admin = isAdminRole();
+  document.getElementById('verify-admin-mda').style.display = admin ? '' : 'none';
+  const userMda = document.getElementById('verify-user-mda');
+  userMda.style.display = admin ? 'none' : '';
+  if (!admin && CURRENT_USER) userMda.innerHTML = `Verifying officers of <b>${escapeHtml(CURRENT_USER.mda)}</b>. Only your MDA's online submissions are checked.`;
+  const sel = document.getElementById('verify-mda-select');
+  if (admin && !sel.options.length) sel.innerHTML = mdaOptionsHTML('').replace('<option value="">Select MDA…</option>','<option value="">All MDAs</option>');
+}
+document.getElementById('verify-file').addEventListener('change', async e=>{
+  const file = e.target.files[0]; if (!file) return;
+  e.target.value = ''; // allow re-selecting the same file after edits
+  VERIFY.source = (document.querySelector('input[name="verify-source"]:checked')||{}).value || 'briefs';
+  VERIFY.fileName = file.name;
+  showMsg('verify-msg','warn',`Reading “${file.name}” and loading your officers' online submissions…`);
+  try{
+    const wb = XLSX.read(await file.arrayBuffer(), {type:'array', cellDates:true});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const grid = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true, blankrows:true});
+    if (!grid.length){ showMsg('verify-msg','err','That file has no data on its first sheet.'); return; }
+    const parsed = parseVerifySheet(grid);
+    if (parsed.error){ showMsg('verify-msg','err', parsed.error); return; }
+    if (!parsed.rows.length){ showMsg('verify-msg','err',`Found the heading row (row ${parsed.headerRow}) but no officer rows beneath it.`); return; }
+    const mda = isAdminRole() ? document.getElementById('verify-mda-select').value : (CURRENT_USER ? CURRENT_USER.mda : '');
+    const res = await callScript({action:'getVerificationData', token:AUTH_TOKEN, mda});
+    if (!res || !res.success){ showMsg('verify-msg','err',(res&&res.message)||'Could not load the online submissions.'); return; }
+    VERIFY.data = res; VERIFY.mda = res.mda || '';
+    VERIFY.sheetMDA = parsed.sheetMDA; VERIFY.mapped = parsed.mapped; VERIFY.unmapped = parsed.unmapped;
+    parsed.colMapKeys = new Set(Object.keys(parsed.colMap));
+    if (VERIFY.sheetMDA && !(['mda','Department/Ministry'].some(k=>k in parsed.colMap))) parsed.colMapKeys.add(VERIFY.source==='briefs'?'Department/Ministry':'mda');
+    VERIFY.results = runVerification(parsed);
+    VERIFY.checkedAt = new Date();
+    const online = VERIFY.source==='briefs' ? res.briefs : res.eligibility;
+    if (!online.length) showMsg('verify-msg','warn',`No ${VERIFY_SOURCES[VERIFY.source].label} have been submitted online${VERIFY.mda?' for '+VERIFY.mda:''} yet — every row in the sheet is shown as “not submitted online”.`);
+    else showMsg('verify-msg','ok',`Checked ${parsed.rows.length} officer row(s) in “${file.name}” against ${online.length} online submission(s). Results are below — download individual summaries from each row.`);
+    document.getElementById('verify-filter').value=''; document.getElementById('verify-search').value='';
+    renderVerifyResults();
+    saveVerificationLog();
+  }catch(err){ showMsg('verify-msg','err','Could not complete the check: '+err.message); }
+});
+function verifyCounts(){
+  const c = {matched:0, discrepancy:0, not_in_sheet:0, not_online:0};
+  VERIFY.results.forEach(r=>c[r.status]++);
+  return c;
+}
+function renderVerifyResults(){
+  document.getElementById('verify-results-card').style.display='block';
+  const c = verifyCounts();
+  const checked = c.matched + c.discrepancy;
+  const stamp = document.getElementById('verify-stamp');
+  const clean = !c.discrepancy && !c.not_in_sheet && !c.not_online;
+  stamp.textContent = clean ? '✓ All Verified' : `✕ ${c.discrepancy + c.not_in_sheet + c.not_online} Officer(s) Need Attention`;
+  stamp.classList.toggle('ok', clean);
+  document.getElementById('verify-context').innerHTML =
+    `Source: <b>${escapeHtml(VERIFY_SOURCES[VERIFY.source].label)}</b> · Sheet: <b>${escapeHtml(VERIFY.fileName)}</b> · MDA: <b>${escapeHtml(VERIFY.mda||'All MDAs')}</b> · Checked ${escapeHtml(VERIFY.checkedAt.toLocaleString('en-GB'))}`;
+  const kpis = [
+    {n:checked, l:'Officers compared', cls:''},
+    {n:c.matched, l:'Fully matched', cls:'matched'},
+    {n:c.discrepancy, l:'With discrepancies', cls:'discrepancy'},
+    {n:c.not_in_sheet, l:'Online — not in sheet', cls:'not_in_sheet'},
+    {n:c.not_online, l:'In sheet — not online', cls:'not_online'},
+  ];
+  document.getElementById('verify-kpis').innerHTML = kpis.map(k=>`<div class="kpi ${k.cls}"><div class="n">${k.n}</div><div class="l">${k.l}</div></div>`).join('');
+  const notCompared = verifyFields().filter(f=>!VERIFY.mapped.some(m=>m.field===f.label)).map(f=>f.label);
+  document.getElementById('verify-map').innerHTML =
+    `<b>Columns compared (${VERIFY.mapped.length}):</b> ${VERIFY.mapped.map(m=>`<span class="tag">${escapeHtml(m.header)} → ${escapeHtml(m.field)}</span>`).join('')}`
+    + (VERIFY.unmapped.length ? `<br><b>Columns in your sheet not used:</b> ${VERIFY.unmapped.map(h=>`<span class="tag">${escapeHtml(h)}</span>`).join('')}` : '')
+    + (notCompared.length ? `<br><b>Online fields not in your sheet (not checked):</b> ${notCompared.map(h=>escapeHtml(h)).join(', ')}` : '');
+  renderVerifyTable();
+}
+function filteredVerifyResults(){
+  const st = document.getElementById('verify-filter').value;
+  const q = document.getElementById('verify-search').value.trim().toLowerCase();
+  return VERIFY.results.filter(r=>{
+    if (st && r.status!==st) return false;
+    if (q){ const hay = [verifyName(r), verifyVal(r,'idnum'), verifyVal(r,'fileno')].join(' ').toLowerCase(); if (hay.indexOf(q)===-1) return false; }
+    return true;
+  });
+}
+function renderVerifyTable(){
+  const rows = filteredVerifyResults();
+  const table = document.getElementById('verify-table');
+  table.querySelector('thead').innerHTML = '<tr><th>#</th><th>Officer</th><th>Oracle No</th><th>CSC File No</th><th>Sheet Row</th><th>Matched By</th><th>Fields Checked</th><th>Discrepancies</th><th>Status</th><th>Actions</th></tr>';
+  table.querySelector('tbody').innerHTML = rows.length ? rows.map((r,i)=>{
+    const issues = r.fields.filter(f=>f.result==='mismatch').map(f=>f.label);
+    return `<tr class="${r.status==='discrepancy'?'row-has-err':''}">
+      <td>${i+1}</td>
+      <td><b>${escapeHtml(verifyName(r)||'(no name)')}</b>${r.duplicates?`<div class="hint" style="margin:2px 0 0;">${r.duplicates} earlier duplicate submission(s) ignored</div>`:''}</td>
+      <td>${escapeHtml(verifyVal(r,'idnum'))}</td><td>${escapeHtml(verifyVal(r,'fileno'))}</td>
+      <td>${escapeHtml(String(r.sheetRowNum||'—'))}</td><td>${escapeHtml(r.matchBy||'—')}</td>
+      <td>${r.status==='matched'||r.status==='discrepancy' ? `${r.matched}/${r.compared} match` : '—'}</td>
+      <td>${issues.length ? `<ul class="err-list">${issues.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>` : (r.status==='matched'?'<span class="ok-badge">None</span>':'—')}</td>
+      <td><span class="vstat ${r.status}">${VERIFY_STATUS[r.status].short}</span></td>
+      <td class="action-btns"><button class="btn btn-ghost" onclick="openVerifyModal(${r.idx})">View</button><button class="btn btn-primary" onclick="downloadVerifySummary(${r.idx})">Download Summary</button></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="10" class="hint">No officers match this filter.</td></tr>';
+  document.getElementById('verify-count').textContent = `${rows.length} of ${VERIFY.results.length} officer(s)`;
+}
+document.getElementById('verify-filter').addEventListener('change', renderVerifyTable);
+document.getElementById('verify-search').addEventListener('input', renderVerifyTable);
+document.querySelectorAll('input[name="verify-source"]').forEach(r=>r.addEventListener('change', ()=>{
+  if (VERIFY.results.length) showMsg('verify-msg','warn','Source changed — choose the sheet again to re-run the check against '+VERIFY_SOURCES[r.value].label+'.');
+}));
+document.getElementById('verify-mda-select').addEventListener('change', ()=>{
+  if (VERIFY.results.length) showMsg('verify-msg','warn','MDA changed — choose the sheet again to re-run the check for the selected MDA.');
+});
+
+function verifyResultByIdx(i){ return VERIFY.results.find(r=>r.idx===i); }
+function verifyFieldTableHTML(r, cls){
+  if (!r.fields.length) return '<p>No comparable columns.</p>';
+  const showOnline = r.status!=='not_online', showSheet = r.status!=='not_in_sheet';
+  const head = `<tr><th>Field</th>${showOnline?'<th>Submitted online</th>':''}${showSheet?'<th>MDA sheet</th>':''}${showOnline&&showSheet?'<th>Result</th>':''}</tr>`;
+  const resText = f => f.result==='match' ? '✓ Match' : (f.result==='mismatch' ? '✗ Mismatch' : '— Not compared');
+  const fields = r.status==='not_in_sheet' ? verifyFields().map(f=>({label:f.label, online:vDisplay(f.type, r.online[f.key]), result:'skip', note:''})) : r.fields;
+  return `<table class="${cls||''}">${head}${fields.map(f=>`<tr class="${f.result==='mismatch'?'row-mismatch':''}"><td>${escapeHtml(f.label)}</td>`
+    + (showOnline?`<td>${escapeHtml(f.online||'')}</td>`:'') + (showSheet?`<td>${escapeHtml(f.sheet||'')}</td>`:'')
+    + (showOnline&&showSheet?`<td class="res-${f.result}">${resText(f)}${f.note?`<br><span style="font-weight:400;font-size:11px;">${escapeHtml(f.note)}</span>`:''}</td>`:'')
+    + '</tr>').join('')}</table>`;
+}
+function verifyStatusSentence(r){
+  if (r.status==='matched') return `All ${r.compared} compared field(s) match the MDA sheet.`;
+  if (r.status==='discrepancy') return `${r.mismatches} of ${r.compared} compared field(s) do not match the MDA sheet.`;
+  if (r.status==='not_in_sheet') return 'This officer submitted online, but no matching row (by Oracle No, CSC File No or Name) was found in the uploaded MDA sheet.';
+  return 'This officer is in the uploaded MDA sheet, but no matching online submission was found.';
+}
+function openVerifyModal(i){
+  const r = verifyResultByIdx(i); if (!r) return;
+  document.getElementById('brief-modal-title').textContent = 'Verification · ' + (verifyName(r)||'(no name)');
+  const photo = VERIFY.source==='briefs' && r.online ? r.online['Photo (data URL)'] : '';
+  document.getElementById('brief-modal-body').innerHTML =
+    (photo ? `<div style="float:right;margin:0 0 10px 12px;"><img src="${photo}" style="width:96px;height:116px;object-fit:cover;border:2px solid var(--navy);border-radius:4px;"></div>` : '')
+    + `<p><span class="vstat ${r.status}">${VERIFY_STATUS[r.status].label}</span></p><p style="font-size:13px;">${escapeHtml(verifyStatusSentence(r))}</p>`
+    + `<p class="hint">Oracle No: <b>${escapeHtml(verifyVal(r,'idnum')||'—')}</b> · CSC File No: <b>${escapeHtml(verifyVal(r,'fileno')||'—')}</b> · Matched by: <b>${escapeHtml(r.matchBy||'—')}</b> · Sheet row: <b>${escapeHtml(String(r.sheetRowNum||'—'))}</b></p>`
+    + `<div style="clear:both;"></div>` + verifyFieldTableHTML(r, 'vfield-table');
+  document.getElementById('brief-modal-foot').innerHTML =
+    `<button class="btn btn-ghost" onclick="printVerifySummaries([${r.idx}])">Print</button><button class="btn btn-primary" onclick="downloadVerifySummary(${r.idx})">Download Summary</button><button class="btn btn-ghost" onclick="closeBriefModal()">Close</button>`;
+  document.getElementById('brief-modal').style.display='flex';
+}
+
+// --- individual summaries (Word-compatible HTML, same approach as Form A) ---
+function verifySummaryCSS(){
+  return `body{font-family:Georgia,serif;color:#1B2430;margin:0;}
+    .sheet{max-width:760px;margin:0 auto;padding:22px;}
+    .hd{text-align:center;border-bottom:2px solid #B9892E;padding-bottom:10px;margin-bottom:14px;}
+    .hd .o{font-weight:700;color:#0F2C4C;font-size:14px;line-height:1.5;}
+    .hd .t{font-weight:700;color:#0F2C4C;font-size:18px;margin-top:6px;}
+    h3{color:#0F2C4C;border-left:3px solid #B9892E;padding-left:8px;font-size:13px;margin:16px 0 6px;text-transform:uppercase;}
+    table{width:100%;border-collapse:collapse;margin-bottom:6px;}
+    th{background:#0F2C4C;color:#fff;font-size:11.5px;padding:6px 8px;text-align:left;}
+    td{border:1px solid #C9CFD8;padding:5px 8px;font-size:12px;vertical-align:top;}
+    td.l{width:34%;background:#F6F5F1;font-weight:600;}
+    tr.row-mismatch td{background:#FBEAE8;}
+    td.res-match{color:#1E7145;font-weight:700;} td.res-mismatch{color:#B3261E;font-weight:700;} td.res-skip{color:#5B6572;}
+    .photo{float:right;width:96px;height:116px;object-fit:cover;border:2px solid #0F2C4C;border-radius:3px;margin:0 0 8px 12px;}
+    .banner{padding:10px 12px;border-radius:4px;font-size:13px;margin:10px 0;border:1px solid;}
+    .banner.matched{background:#E7F3EC;color:#1E7145;border-color:#bfe2cd;}
+    .banner.discrepancy{background:#FBEAE8;color:#B3261E;border-color:#f0c6c2;}
+    .banner.not_in_sheet{background:#FBF1DD;color:#8A5A00;border-color:#ecd9a8;}
+    .banner.not_online{background:#EEF1F5;color:#2C4A6E;border-color:#C9CFD8;}
+    ul{margin:4px 0;padding-left:18px;font-size:12px;}
+    .sig{margin-top:30px;display:flex;justify-content:space-between;gap:20px;font-size:12px;}
+    .sig div{flex:1;}
+    .note{font-size:10.5px;color:#5B6572;margin-top:10px;}
+    .pb{page-break-after:always;}`;
+}
+function verifySummaryHTML(r){
+  const who = CURRENT_USER ? `${CURRENT_USER.name} (${CURRENT_USER.email})` : '';
+  const photo = VERIFY.source==='briefs' && r.online ? r.online['Photo (data URL)'] : '';
+  const row = (l,v)=>`<tr><td class="l">${escapeHtml(l)}</td><td>${escapeHtml(v==null?'':String(v))}</td></tr>`;
+  const issues = r.fields.filter(f=>f.result==='mismatch');
+  const onlineWhen = r.online ? (r.online.timestamp || '') : '';
+  const extra = r.online && VERIFY.source==='briefs' ? row('Form A status', r.online.Status || 'Pending') : '';
+  return `<div class="sheet"><div class="hd"><div class="o">LAGOS STATE GOVERNMENT · CIVIL SERVICE COMMISSION<br>YEAR 2027 PROMOTION EXERCISE</div>
+    <div class="t">OFFICER VERIFICATION SUMMARY</div><div style="font-size:12px;margin-top:4px;">Online submission (${escapeHtml(VERIFY_SOURCES[VERIFY.source].label)}) checked against MDA records</div></div>
+    ${photo?`<img class="photo" src="${photo}">`:''}
+    <h3>1. Officer</h3><table>
+      ${row('Name (Surname first)', verifyName(r))}${row('Department/Ministry (MDA)', verifyMdaOf(r))}
+      ${row('Oracle No.', verifyVal(r,'idnum'))}${row('CSC File No.', verifyVal(r,'fileno'))}
+      ${row('Submitted online', onlineWhen || (r.online?'Yes':'No'))}${extra}
+      ${row('Row in MDA sheet', r.sheetRowNum ? 'Row '+r.sheetRowNum : 'Not found')}${row('Matched by', r.matchBy || '—')}
+      ${r.duplicates?row('Duplicate submissions', r.duplicates+' earlier submission(s) — the latest one was checked'):''}
+    </table>
+    <div class="banner ${r.status}"><b>RESULT: ${escapeHtml(VERIFY_STATUS[r.status].label.toUpperCase())}</b><br>${escapeHtml(verifyStatusSentence(r))}</div>
+    ${issues.length?`<h3>2. Discrepancies to resolve</h3><ul>${issues.map(f=>`<li><b>${escapeHtml(f.label)}</b>: submitted online “${escapeHtml(f.online||'(blank)')}”, MDA sheet “${escapeHtml(f.sheet||'(blank)')}”${f.note?' — '+escapeHtml(f.note):''}</li>`).join('')}</ul>`:''}
+    <h3>${issues.length?'3':'2'}. Field-by-field comparison</h3>${verifyFieldTableHTML(r)}
+    <div class="sig"><div>_______________________<br>Verified by (MDA officer)<br>${escapeHtml(who)}</div><div>_______________________<br>Officer's acknowledgement</div><div>_______________________<br>Date &amp; Official Stamp</div></div>
+    <p class="note">Checked ${escapeHtml(VERIFY.checkedAt ? VERIFY.checkedAt.toLocaleString('en-GB') : '')} by ${escapeHtml(who)} · MDA sheet: ${escapeHtml(VERIFY.fileName)} · Y2027 Promotion Exercise · Lagos State Civil Service Commission</p></div>`;
+}
+function verifyDocWrap(title, inner){
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${verifySummaryCSS()}</style></head><body>${inner}</body></html>`;
+}
+function downloadBlob(content, type, filename){
+  const blob = new Blob([content], {type});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+function safeFileName(s){ return String(s||'').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'officer'; }
+function downloadVerifySummary(i){
+  const r = verifyResultByIdx(i); if (!r) return;
+  const name = safeFileName(verifyName(r) || verifyVal(r,'idnum'));
+  downloadBlob(verifyDocWrap('Verification Summary — '+verifyName(r), verifySummaryHTML(r)), 'application/msword', `Verification_${name}.doc`);
+}
+function verifyCoverHTML(list){
+  const c = verifyCounts();
+  return `<div class="sheet"><div class="hd"><div class="o">LAGOS STATE GOVERNMENT · CIVIL SERVICE COMMISSION<br>YEAR 2027 PROMOTION EXERCISE</div><div class="t">VERIFICATION OF ONLINE SUBMISSIONS — SUMMARY</div></div>
+    <table><tr><td class="l">MDA</td><td>${escapeHtml(VERIFY.mda||'All MDAs')}</td></tr><tr><td class="l">Online source</td><td>${escapeHtml(VERIFY_SOURCES[VERIFY.source].label)}</td></tr>
+    <tr><td class="l">MDA sheet</td><td>${escapeHtml(VERIFY.fileName)}</td></tr><tr><td class="l">Checked</td><td>${escapeHtml(VERIFY.checkedAt.toLocaleString('en-GB'))} by ${escapeHtml(CURRENT_USER?CURRENT_USER.name+' ('+CURRENT_USER.email+')':'')}</td></tr>
+    <tr><td class="l">Fully matched</td><td>${c.matched}</td></tr><tr><td class="l">With discrepancies</td><td>${c.discrepancy}</td></tr>
+    <tr><td class="l">Submitted online — not in sheet</td><td>${c.not_in_sheet}</td></tr><tr><td class="l">In sheet — not submitted online</td><td>${c.not_online}</td></tr></table>
+    <h3>Officers</h3><table><tr><th>#</th><th>Name</th><th>Oracle No</th><th>Result</th><th>Discrepancies</th></tr>
+    ${list.map((r,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(verifyName(r))}</td><td>${escapeHtml(verifyVal(r,'idnum'))}</td><td>${escapeHtml(VERIFY_STATUS[r.status].label)}</td><td>${escapeHtml(r.fields.filter(f=>f.result==='mismatch').map(f=>f.label).join(', '))}</td></tr>`).join('')}</table></div>`;
+}
+document.getElementById('verify-dl-all').addEventListener('click', ()=>{
+  const list = filteredVerifyResults();
+  if (!list.length){ showMsg('verify-msg','warn','No officers in the current filter.'); return; }
+  const inner = verifyCoverHTML(list) + '<div class="pb"></div>' + list.map(verifySummaryHTML).join('<div class="pb"></div>');
+  downloadBlob(verifyDocWrap('Verification Summaries', inner), 'application/msword', `Verification_Summaries_${safeFileName(VERIFY.mda||'All_MDAs')}.doc`);
+});
+function printVerifySummaries(idxs){
+  const list = idxs.map(verifyResultByIdx).filter(Boolean);
+  if (!list.length) return;
+  const w = window.open('', '_blank');
+  if (!w){ showMsg('verify-msg','err','Please allow pop-ups to print.'); return; }
+  const inner = (list.length>1 ? verifyCoverHTML(list)+'<div class="pb"></div>' : '') + list.map(verifySummaryHTML).join('<div class="pb"></div>');
+  w.document.write(verifyDocWrap('Verification Summaries', inner).replace('</body>','<script>window.onload=function(){window.print();}<\/script></body>'));
+  w.document.close();
+}
+document.getElementById('verify-print-all').addEventListener('click', ()=>printVerifySummaries(filteredVerifyResults().map(r=>r.idx)));
+document.getElementById('verify-dl-xlsx').addEventListener('click', ()=>{
+  const list = filteredVerifyResults();
+  const summary = list.map((r,i)=>({
+    'S/N': i+1, 'Name (Surname First)': verifyName(r), 'MDA': verifyMdaOf(r), 'Oracle No': verifyVal(r,'idnum'), 'CSC File No': verifyVal(r,'fileno'),
+    'Result': VERIFY_STATUS[r.status].label, 'Matched By': r.matchBy, 'Sheet Row': r.sheetRowNum, 'Fields Compared': r.compared, 'Fields Matched': r.matched,
+    'Discrepancies': r.mismatches, 'Discrepancy Details': r.fields.filter(f=>f.result==='mismatch').map(f=>`${f.label}: online "${f.online}" vs sheet "${f.sheet}"`).join('; '),
+    'Submitted Online': r.online ? (r.online.timestamp||'Yes') : 'No', 'Duplicate Submissions': r.duplicates || 0,
+  }));
+  const detail = [];
+  list.forEach((r,i)=>r.fields.forEach(f=>detail.push({ 'S/N': i+1, 'Name (Surname First)': verifyName(r), 'Oracle No': verifyVal(r,'idnum'), 'Field': f.label,
+    'Submitted Online': f.online, 'MDA Sheet': f.sheet, 'Result': f.result==='match'?'Match':(f.result==='mismatch'?'Mismatch':'Not compared'), 'Note': f.note })));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary.length?summary:[{Note:'No officers in the current filter'}]), 'Summary');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detail.length?detail:[{Note:'No field comparisons'}]), 'Field Details');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['MDA', VERIFY.mda||'All MDAs'],['Online source', VERIFY_SOURCES[VERIFY.source].label],['MDA sheet', VERIFY.fileName],
+    ['Checked', VERIFY.checkedAt.toLocaleString('en-GB')],['Checked by', CURRENT_USER?CURRENT_USER.name+' ('+CURRENT_USER.email+')':''],[],['Sheet column','Compared as']].concat(VERIFY.mapped.map(m=>[m.header,m.field]))), 'About');
+  XLSX.writeFile(wb, `Verification_Results_${safeFileName(VERIFY.mda||'All_MDAs')}.xlsx`);
+});
+document.getElementById('verify-template').addEventListener('click', ()=>{
+  const source = (document.querySelector('input[name="verify-source"]:checked')||{}).value || 'briefs';
+  const fields = VERIFY_SOURCES[source].fields.filter(f=>f.key!=='mda' && f.key!=='Department/Ministry');
+  const mda = isAdminRole() ? document.getElementById('verify-mda-select').value : (CURRENT_USER?CURRENT_USER.mda:'');
+  const aoa = [['MDA:', mda], [], ['S/N'].concat(fields.map(f=>f.label.toUpperCase()))];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:6}].concat(fields.map(f=>({wch:Math.max(14, Math.min(32, f.label.length+2))})));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Officers');
+  XLSX.writeFile(wb, `Verification_Template_${source==='briefs'?'FormA':'Eligibility'}.xlsx`);
+});
+// Audit log (best effort — a failure never blocks the downloads).
+async function saveVerificationLog(){
+  try{
+    const results = VERIFY.results.map(r=>({
+      mda: verifyMdaOf(r), officer_name: verifyName(r), oracle_no: verifyVal(r,'idnum'), csc_file_no: verifyVal(r,'fileno'),
+      record_id: r.online ? (r.online.id||'') : '', status: VERIFY_STATUS[r.status].label, match_method: r.matchBy,
+      fields_compared: r.compared, fields_matched: r.matched, discrepancies: r.mismatches,
+      discrepancy_details: r.fields.filter(f=>f.result==='mismatch').map(f=>`${f.label}: online "${f.online}" vs sheet "${f.sheet}"`).join('; '),
+    }));
+    const res = await callScript({action:'saveVerification', token:AUTH_TOKEN, source:VERIFY_SOURCES[VERIFY.source].label, fileName:VERIFY.fileName, mda:VERIFY.mda, results});
+    if (!res || !res.success) console.warn('Verification log not saved:', res && res.message);
+  }catch(err){ console.warn('Verification log not saved:', err.message); }
+}
 </script>
 </body>
 </html>
