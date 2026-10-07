@@ -1,0 +1,1740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Scholar &amp; ORCID Workshop</title>
+  <meta name="description" content="A practical demonstration: registering for Google Scholar and ORCID, plus a live poll on AI tools in research." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ================= Theme tokens ================= */
+    :root {
+      --bg: #ffffff;
+      --bg-2: #f4f6f5;
+      --card: #ffffff;
+      --card-solid: #ffffff;
+      --card-line: #e2e3e8;
+      --ink: #243141;
+      --ink-2: #4a5666;
+      --muted: #7f8794;
+      --grid: rgba(36, 49, 65, .08);
+      --kiu: #3ab658;
+      --kiu-dark: #2a8f43;
+      --scholar: #2f6bf0;
+      --orcid: #7aa31a;
+      --teal: #0f9f86;
+      --amber: #d48a00;
+      --rose: #e0335b;
+      --acc: var(--kiu);
+      --mock-bg: #ffffff;
+      --mock-ink: #202435;
+      --mock-muted: #6b7088;
+      --mock-line: #e6e8f0;
+      --shadow: 0 24px 50px -28px rgba(36, 49, 65, .35);
+      --orb-op: .10;
+    }
+    :root[data-theme="dark"] {
+      --bg: #1b2533;
+      --bg-2: #243141;
+      --card: #243141;
+      --card-solid: #243141;
+      --card-line: rgba(255, 255, 255, .1);
+      --ink: #f2f5f8;
+      --ink-2: #c3ccd8;
+      --muted: #8d99aa;
+      --grid: rgba(255, 255, 255, .07);
+      --kiu: #4cc86a;
+      --kiu-dark: #3ab658;
+      --scholar: #6e9bff;
+      --orcid: #a6ce39;
+      --teal: #35d0b5;
+      --amber: #ffbf47;
+      --rose: #ff6b8b;
+      --shadow: 0 30px 60px -30px rgba(0, 0, 0, .6);
+      --orb-op: .18;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      transition: background .5s ease;
+    }
+    h1, h2, h3, .display { font-family: Arial, Helvetica, sans-serif; letter-spacing: -.025em; margin: 0; }
+    .mono { font-family: 'JetBrains Mono', Consolas, monospace; }
+
+    /* ================= Ambient background ================= */
+    .ambient { position: fixed; inset: 0; overflow: hidden; z-index: 0; }
+    .ambient .orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: var(--orb-op); transition: background 1s ease; }
+    .orb.o1 { width: 46vw; height: 46vw; left: -10vw; top: -14vw; background: var(--acc); animation: drift1 22s ease-in-out infinite alternate; }
+    .orb.o2 { width: 38vw; height: 38vw; right: -10vw; bottom: -12vw; background: var(--teal); opacity: calc(var(--orb-op) * .6); animation: drift2 26s ease-in-out infinite alternate; }
+    .orb.o3 { width: 24vw; height: 24vw; right: 22vw; top: 8vh; background: var(--rose); opacity: calc(var(--orb-op) * .35); animation: drift1 30s ease-in-out infinite alternate-reverse; }
+    .ambient .gridbg {
+      position: absolute; inset: 0;
+      background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%);
+    }
+    @keyframes drift1 { to { transform: translate(10vw, 8vh) scale(1.15); } }
+    @keyframes drift2 { to { transform: translate(-8vw, -10vh) scale(1.1); } }
+
+    /* ================= Stage & slides ================= */
+    .viewport { position: fixed; inset: 0; z-index: 1; display: grid; place-items: center; }
+    .stage { position: relative; width: 1600px; height: 900px; flex: none; transform-origin: center center; }
+    .slide {
+      position: absolute; inset: 0; padding: 100px 80px 64px;
+      display: flex; flex-direction: column;
+      opacity: 0; visibility: hidden; transform: translateX(60px) scale(.985);
+      transition: opacity .6s ease, transform .8s cubic-bezier(.2, .8, .2, 1), visibility 0s linear .8s;
+    }
+    .slide.before { transform: translateX(-60px) scale(.985); }
+    .slide.active { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; z-index: 2; }
+    .slide[data-accent="scholar"] { --acc: var(--scholar); }
+    .slide[data-accent="orcid"] { --acc: var(--orcid); }
+    .slide[data-accent="teal"] { --acc: var(--teal); }
+
+    /* Reveal animations (replay each time a slide becomes active) */
+    .r { opacity: 0; }
+    .slide.active .r { animation: rUp .85s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--d, 0) * 110ms + 180ms); }
+    .slide.active .r.fl { animation-name: rLeft; }
+    .slide.active .r.fr { animation-name: rRight; }
+    .slide.active .r.zm { animation-name: rZoom; }
+    .slide.active .r.bl { animation-name: rBlur; animation-duration: 1.1s; }
+    @keyframes rUp { from { opacity: 0; transform: translateY(34px); } to { opacity: 1; transform: none; } }
+    @keyframes rLeft { from { opacity: 0; transform: translateX(-50px); } to { opacity: 1; transform: none; } }
+    @keyframes rRight { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: none; } }
+    @keyframes rZoom { from { opacity: 0; transform: scale(.88) translateY(20px); } to { opacity: 1; transform: none; } }
+    @keyframes rBlur { from { opacity: 0; filter: blur(14px); transform: scale(1.04); } to { opacity: 1; filter: none; transform: none; } }
+
+    /* ================= Typography & atoms ================= */
+    .kicker {
+      display: inline-flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; letter-spacing: .16em;
+      text-transform: uppercase; color: var(--acc);
+    }
+    .kicker::before { content: ""; width: 28px; height: 2px; background: currentColor; border-radius: 2px; }
+    .title { font-size: 58px; line-height: 1.08; margin-top: 14px; }
+    .sub { font-size: 26px; color: var(--ink-2); line-height: 1.55; margin-top: 16px; max-width: 900px; }
+    .grad {
+      background: linear-gradient(100deg, var(--acc), var(--teal) 60%, var(--acc));
+      background-size: 200% auto; -webkit-background-clip: text; background-clip: text; color: transparent;
+      animation: shine 6s linear infinite;
+    }
+    @keyframes shine { to { background-position: 200% center; } }
+    .card {
+      background: var(--card); border: 1px solid var(--card-line); border-radius: 22px; padding: 26px 28px;
+      backdrop-filter: blur(12px); box-shadow: var(--shadow);
+    }
+    .ic { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    .icbox {
+      width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center; flex: none;
+      color: var(--acc); background: color-mix(in srgb, var(--acc) 16%, transparent);
+    }
+    .icbox .ic { width: 28px; height: 28px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; font-weight: 600; font-size: 16px;
+      background: color-mix(in srgb, var(--acc) 14%, transparent); color: var(--ink); border: 1px solid color-mix(in srgb, var(--acc) 35%, transparent);
+    }
+    .row { display: flex; gap: 24px; }
+    .grow { flex: 1; min-width: 0; }
+    .spacer { flex: 1; }
+
+    /* ================= KIU template chrome ================= */
+    .chrome { position: absolute; left: 0; right: 0; top: 0; height: 90px; z-index: 5; pointer-events: none; }
+    .chrome .logo { position: absolute; right: 52px; top: 8px; height: 48px; transition: filter .5s ease; }
+    .chrome .bars { position: absolute; left: 56px; right: 56px; top: 64px; display: flex; gap: 12px; }
+    .chrome .bars i { flex: 1; height: 9px; border-radius: 2px; background: var(--kiu); box-shadow: 0 3px 5px rgba(0, 0, 0, .28); transform-origin: left; animation: barGrow 1s cubic-bezier(.2, .8, .2, 1) both; }
+    .chrome .bars i:nth-child(2) { animation-delay: .15s; }
+    .chrome .bars i:nth-child(3) { animation-delay: .3s; }
+    @keyframes barGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    .stage.band .chrome .logo { filter: brightness(0) invert(1); }
+    .stage.band .chrome .bars i:nth-child(3) { background: #fff; box-shadow: none; opacity: .0; }
+
+    /* ================= Title slide ================= */
+    .titleslide { padding: 0; }
+    .tpanel {
+      position: absolute; left: 22px; top: 96px; bottom: 22px; width: 790px; border-radius: 30px; padding: 60px 64px;
+      background: var(--kiu); color: #fff; display: flex; flex-direction: column; justify-content: center; overflow: hidden;
+    }
+    .tpanel::before, .tpanel::after { content: ""; position: absolute; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .18); }
+    .tpanel::before { width: 520px; height: 520px; right: -260px; bottom: -260px; }
+    .tpanel::after { width: 300px; height: 300px; right: -150px; bottom: -150px; border-color: rgba(255, 255, 255, .28); }
+    .slide.active .tpanel::before { animation: spin 50s linear infinite; }
+    .tpanel .kicker { color: #fff; }
+    .tpanel h1 { font-size: 64px; line-height: 1.07; margin-top: 22px; }
+    .tpanel h1 u { text-decoration: none; background: linear-gradient(transparent 70%, rgba(255, 255, 255, .3) 70%); }
+    .tpanel p { font-size: 26px; line-height: 1.5; margin: 26px 0 0; opacity: .94; max-width: 640px; }
+    .tright { position: absolute; left: 850px; right: 56px; top: 104px; bottom: 30px; display: flex; flex-direction: column; justify-content: center; }
+    .tright .duo { height: 560px; }
+
+    /* ================= Section band (KIU "objectives" layout) ================= */
+    .sband { position: absolute; top: 0; right: 0; bottom: 0; width: 250px; background: var(--kiu); }
+    .slide.active .sband { animation: bandIn .9s cubic-bezier(.2, .8, .2, 1) both; }
+    @keyframes bandIn { from { transform: translateX(100%); } to { transform: none; } }
+    .bcircle {
+      position: absolute; left: -130px; top: 50%; width: 260px; height: 260px; margin-top: -130px; border-radius: 50%;
+      background: var(--bg); border: 3px solid var(--kiu); display: grid; place-items: center;
+    }
+    .bcircle img { width: 150px; height: 150px; }
+    .bcircle::after { content: ""; position: absolute; inset: -18px; border-radius: 50%; border: 2px dashed var(--kiu); opacity: .5; }
+    .slide.active .bcircle::after { animation: spin 30s linear infinite; }
+    .slide.active .bcircle { animation: rZoom .8s .5s cubic-bezier(.2, .8, .2, 1) both; }
+
+    /* ================= Hero cards ================= */
+    .hero { display: grid; grid-template-columns: 1.15fr .85fr; gap: 40px; align-items: center; height: 100%; }
+    .hero h1 { font-size: 76px; line-height: 1.03; margin-top: 20px; }
+    .presenter { display: flex; align-items: center; gap: 16px; margin-top: 44px; }
+    .presenter .av {
+      width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 22px;
+      background: var(--kiu); color: #fff;
+    }
+    .presenter b { display: block; font-size: 20px; }
+    .presenter span { color: var(--muted); font-size: 16px; }
+    .duo { position: relative; height: 560px; }
+    .duo .card { position: absolute; width: 380px; }
+    .duo .c1 { top: 30px; left: 0; --acc: var(--scholar); animation: float 7s ease-in-out infinite; }
+    .duo .c2 { bottom: 20px; right: 0; --acc: var(--orcid); animation: float 7s 1.5s ease-in-out infinite; }
+    .duo svg.link { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+    .duo svg.link path { stroke: var(--ink-2); stroke-width: 2.5; fill: none; stroke-dasharray: 8 10; animation: dash 1.4s linear infinite; opacity: .55; }
+    @keyframes dash { to { stroke-dashoffset: -36; } }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+    .mini-prof { display: flex; gap: 16px; align-items: center; }
+    .mini-prof .ph { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--acc), var(--teal)); flex: none; }
+    .mini-prof b { font-size: 20px; display: block; }
+    .mini-prof small { color: var(--muted); font-size: 14px; }
+    .stats3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; text-align: center; }
+    .stats3 div { background: color-mix(in srgb, var(--acc) 10%, transparent); border-radius: 12px; padding: 10px 4px; }
+    .stats3 b { font-size: 24px; display: block; font-family: Arial; }
+    .stats3 small { font-size: 12px; color: var(--muted); }
+    .idbadge { display: flex; align-items: center; gap: 14px; }
+    .idlogo {
+      width: 56px; height: 56px; border-radius: 50%; background: var(--orcid); color: #fff; display: grid; place-items: center;
+      font-family: Arial; font-weight: 800; font-size: 22px; flex: none;
+    }
+    .idnum { font-size: 22px; font-weight: 700; letter-spacing: .02em; }
+
+    /* ================= Agenda ================= */
+    .agenda { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; margin-top: 56px; }
+    .agenda .card { min-height: 380px; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+    .agenda .num { font-family: Arial; font-size: 96px; font-weight: 800; line-height: 1; color: transparent; -webkit-text-stroke: 2px color-mix(in srgb, var(--acc) 70%, transparent); }
+    .agenda h3 { font-size: 30px; margin-top: auto; }
+    .agenda p { color: var(--ink-2); font-size: 20px; line-height: 1.5; margin: 12px 0 0; }
+    .agenda .card::after {
+      content: ""; position: absolute; left: 0; bottom: 0; height: 4px; width: 0; background: var(--acc);
+    }
+    .slide.active .agenda .card::after { animation: grow 1.2s cubic-bezier(.2, .8, .2, 1) forwards; animation-delay: calc(var(--d) * 110ms + 700ms); }
+    @keyframes grow { to { width: 100%; } }
+
+    /* ================= Feature grid ================= */
+    .fgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; margin-top: 44px; }
+    .feat { display: flex; gap: 22px; align-items: flex-start; }
+    .feat h3 { font-size: 28px; margin-bottom: 8px; }
+    .feat p { margin: 0; color: var(--ink-2); font-size: 21px; line-height: 1.5; }
+
+    /* ================= Comparison table ================= */
+    .cmp { margin-top: 36px; border-radius: 22px; overflow: hidden; border: 1px solid var(--card-line); background: var(--card); backdrop-filter: blur(10px); }
+    .cmp .tr { display: grid; grid-template-columns: 260px 1fr 1fr; border-top: 1px solid var(--card-line); }
+    .cmp .tr:first-child { border-top: none; }
+    .cmp .tr > div { padding: 15px 26px; font-size: 21px; color: var(--ink-2); line-height: 1.4; }
+    .cmp .tr > div:first-child { font-weight: 700; color: var(--ink); }
+    .cmp .th > div { font-family: Arial; font-weight: 700; font-size: 22px; color: var(--ink); display: flex; align-items: center; gap: 12px; }
+    .cmp .th .gs { color: var(--scholar); }
+    .cmp .th .oc { color: var(--orcid); }
+    .dot { width: 12px; height: 12px; border-radius: 50%; background: currentColor; box-shadow: 0 0 14px currentColor; }
+
+    /* ================= Section divider ================= */
+    .divider { justify-content: center; }
+    .divider .big {
+      font-family: Arial; font-weight: 800; font-size: 300px; line-height: .8; position: absolute; right: 400px; bottom: 60px;
+      color: transparent; -webkit-text-stroke: 3px color-mix(in srgb, var(--acc) 45%, transparent);
+    }
+    .divider h2 { font-size: 110px; line-height: 1; margin-top: 18px; }
+    .divider .sub { font-size: 26px; }
+    .urlpill {
+      display: inline-flex; align-items: center; gap: 12px; margin-top: 36px; padding: 16px 26px; border-radius: 18px; font-size: 26px;
+      background: var(--card); border: 1px solid var(--card-line); font-family: 'JetBrains Mono', Consolas, monospace; font-weight: 700; color: var(--ink);
+    }
+    .urlpill .ic { color: var(--acc); width: 28px; height: 28px; }
+    .ring {
+      position: absolute; right: 180px; top: 120px; width: 420px; height: 420px; border-radius: 50%;
+      border: 2px dashed color-mix(in srgb, var(--acc) 40%, transparent); animation: spin 40s linear infinite;
+    }
+    .ring::after { content: ""; position: absolute; width: 22px; height: 22px; border-radius: 50%; background: var(--acc); top: 40px; left: 52px; box-shadow: 0 0 30px var(--acc); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ================= Checklist ================= */
+    .checklist { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; margin-top: 48px; }
+    .checklist .card { text-align: left; padding: 28px 24px; min-height: 330px; display: flex; flex-direction: column; }
+    .checklist h3 { font-size: 24px; margin: 22px 0 10px; }
+    .checklist p { color: var(--ink-2); font-size: 19px; line-height: 1.5; margin: 0; }
+    .checklist .tick {
+      margin-top: auto; align-self: flex-start; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+      background: color-mix(in srgb, var(--teal) 18%, transparent); color: var(--teal); transform: scale(0);
+    }
+    .slide.active .checklist .tick { animation: pop .5s cubic-bezier(.3, 1.6, .5, 1) forwards; animation-delay: calc(var(--d) * 110ms + 900ms); }
+    @keyframes pop { to { transform: scale(1); } }
+    .note {
+      margin-top: 30px; display: flex; gap: 14px; align-items: center; font-size: 20px; color: var(--ink-2);
+      padding: 16px 22px; border-radius: 16px; background: color-mix(in srgb, var(--amber) 10%, transparent); border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
+    }
+    .note .ic { color: var(--amber); }
+    .note b { color: var(--ink); }
+
+    /* ================= Step slides ================= */
+    .step { display: grid; grid-template-columns: 560px 1fr; gap: 56px; height: 100%; align-items: center; }
+    .stepno { display: flex; align-items: center; gap: 14px; }
+    .stepno .n {
+      width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; font-family: Arial; font-weight: 800; font-size: 26px;
+      background: var(--acc); color: #fff;
+    }
+    .stepno .of { font-size: 15px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .step h2 { font-size: 46px; line-height: 1.1; margin-top: 22px; }
+    .actions { list-style: none; padding: 0; margin: 28px 0 0; display: grid; gap: 14px; }
+    .actions li { display: flex; gap: 14px; align-items: flex-start; font-size: 22px; line-height: 1.45; color: var(--ink-2); }
+    .actions li b { color: var(--ink); }
+    .actions li .k {
+      flex: none; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: 14px; font-weight: 800;
+      background: color-mix(in srgb, var(--acc) 18%, transparent); color: var(--acc); margin-top: 1px;
+    }
+    .tip {
+      margin-top: 26px; padding: 16px 20px; border-radius: 16px; font-size: 20px; line-height: 1.5; color: var(--ink-2);
+      background: color-mix(in srgb, var(--acc) 9%, transparent); border-left: 4px solid var(--acc);
+    }
+    .tip b { color: var(--ink); }
+    kbd {
+      font-family: 'JetBrains Mono', Consolas, monospace; font-size: .85em; padding: 2px 8px; border-radius: 7px; color: var(--ink);
+      background: color-mix(in srgb, var(--ink) 10%, transparent); border: 1px solid var(--card-line);
+    }
+
+    /* ================= Mock browser ================= */
+    .browser {
+      position: relative; border-radius: 18px; overflow: visible; background: var(--mock-bg); color: var(--mock-ink);
+      box-shadow: var(--shadow), 0 0 0 1px var(--card-line); --cd: 1.4s;
+    }
+    .bbar { display: flex; align-items: center; gap: 8px; padding: 14px 18px; background: #eef0f6; border-radius: 18px 18px 0 0; border-bottom: 1px solid var(--mock-line); }
+    .bbar i { width: 12px; height: 12px; border-radius: 50%; background: #ff5f57; }
+    .bbar i:nth-child(2) { background: #febc2e; }
+    .bbar i:nth-child(3) { background: #28c840; }
+    .bbar .url {
+      margin-left: 14px; flex: 1; background: #fff; border-radius: 10px; padding: 8px 14px; font-size: 15px; color: var(--mock-muted);
+      font-family: 'JetBrains Mono', Consolas, monospace; display: flex; align-items: center; gap: 8px;
+    }
+    .bbar .url .ic { width: 15px; height: 15px; color: #28a745; }
+    .bbody { position: relative; padding: 28px 32px; min-height: 520px; font-size: 16px; }
+    .mock-top { display: flex; align-items: center; justify-content: space-between; }
+    .burger { width: 42px; height: 42px; border-radius: 10px; display: grid; place-items: center; color: var(--mock-ink); }
+    .signin { padding: 9px 20px; border-radius: 8px; background: #1a73e8; color: #fff; font-weight: 600; font-size: 15px; }
+    .gs-word { font-family: Arial; font-size: 42px; font-weight: 600; text-align: center; margin: 54px 0 22px; color: #4a4f63; letter-spacing: -.03em; }
+    .gs-word span { color: #4285f4; }
+    .searchbox {
+      margin: 0 auto; max-width: 520px; border: 1px solid #dfe1e5; border-radius: 26px; padding: 14px 20px; display: flex; gap: 12px;
+      align-items: center; color: var(--mock-muted); box-shadow: 0 2px 8px rgba(32, 33, 36, .08);
+    }
+    .tagline { text-align: center; color: var(--mock-muted); margin-top: 18px; font-style: italic; }
+    .menu {
+      position: absolute; top: 76px; left: 26px; width: 250px; background: #fff; border-radius: 12px; padding: 10px 0;
+      box-shadow: 0 18px 40px -12px rgba(20, 25, 60, .35); border: 1px solid var(--mock-line); z-index: 3;
+    }
+    .menu div { padding: 11px 20px; display: flex; gap: 12px; align-items: center; color: var(--mock-ink); font-size: 15.5px; }
+    .menu .ic { width: 19px; height: 19px; color: var(--mock-muted); }
+    .slide.active .menu { animation: rZoom .5s cubic-bezier(.2, .8, .2, 1) both; animation-delay: .9s; transform-origin: top left; }
+    .slide .menu { opacity: 0; }
+    .hl { border-radius: 10px; position: relative; }
+    .slide.active .hl { animation: hl 1.4s ease-out 2; animation-delay: calc(var(--cd) + 1s); }
+    @keyframes hl {
+      0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--acc) 70%, transparent); }
+      100% { box-shadow: 0 0 0 16px transparent; }
+    }
+    .hl.keep { background: color-mix(in srgb, var(--acc) 12%, transparent); }
+    .cursor { position: absolute; width: 30px; height: 30px; z-index: 6; pointer-events: none; opacity: 0; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .35)); }
+    .cursor svg { width: 30px; height: 30px; display: block; }
+    .slide.active .cursor { animation: curIn 1.2s cubic-bezier(.3, .7, .2, 1) both; animation-delay: var(--cd); }
+    .cursor::before {
+      content: ""; position: absolute; left: -16px; top: -16px; width: 32px; height: 32px; border-radius: 50%;
+      border: 3px solid var(--acc); opacity: 0;
+    }
+    .slide.active .cursor::before { animation: ripple .8s ease-out 2; animation-delay: calc(var(--cd) + 1.05s); }
+    @keyframes curIn { 0% { opacity: 0; transform: translate(180px, 160px); } 25% { opacity: 1; } 85% { transform: translate(0, 0); } 92% { transform: scale(.82); } 100% { opacity: 1; transform: none; } }
+    @keyframes ripple { 0% { opacity: 1; transform: scale(.3); } 100% { opacity: 0; transform: scale(1.8); } }
+
+    /* Mock form */
+    .mform h4 { margin: 0 0 6px; font-size: 22px; font-family: Arial; }
+    .mform .hint { color: var(--mock-muted); font-size: 14px; margin-bottom: 18px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 13px; color: var(--mock-muted); margin-bottom: 5px; font-weight: 600; }
+    .field .in {
+      border: 1.5px solid var(--mock-line); border-radius: 10px; padding: 11px 14px; min-height: 45px; font-size: 16px; color: var(--mock-ink);
+      transition: border-color .2s;
+    }
+    .field .in.typing { border-color: var(--acc); box-shadow: 0 0 0 4px color-mix(in srgb, var(--acc) 18%, transparent); }
+    .field .in.typing::after { content: "|"; color: var(--acc); animation: blink .8s steps(1) infinite; margin-left: 1px; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .mbtn { display: inline-block; padding: 11px 26px; border-radius: 9px; background: #1a73e8; color: #fff; font-weight: 700; font-size: 15px; }
+    .mbtn.green { background: #7aa31a; }
+    .mbtn.ghost { background: transparent; color: #1a73e8; border: 1.5px solid #c9d7f5; }
+
+    /* Article picker */
+    .art { display: flex; gap: 14px; padding: 14px 6px; border-bottom: 1px solid var(--mock-line); align-items: flex-start; }
+    .cb {
+      flex: none; width: 22px; height: 22px; border-radius: 6px; border: 2px solid #b8bdd0; margin-top: 2px; display: grid; place-items: center; color: #fff;
+    }
+    .cb .ic { width: 15px; height: 15px; stroke-width: 3.5; opacity: 0; }
+    .slide.active .cb.tick { animation: cbOn .3s ease forwards; animation-delay: var(--t); }
+    .slide.active .cb.tick .ic { animation: fadeIn .2s ease forwards; animation-delay: var(--t); }
+    @keyframes cbOn { to { background: #1a73e8; border-color: #1a73e8; } }
+    @keyframes fadeIn { to { opacity: 1; } }
+    .art b { display: block; font-size: 15.5px; color: #1a0dab; font-weight: 600; }
+    .art small { color: var(--mock-muted); font-size: 13.5px; }
+    .art .warn { font-size: 12px; font-weight: 700; color: #c5221f; background: #fce8e6; padding: 2px 8px; border-radius: 6px; margin-left: 6px; }
+
+    /* Radios */
+    .opt { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; margin-bottom: 8px; border: 1.5px solid var(--mock-line); }
+    .radio { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 2px solid #b8bdd0; margin-top: 2px; position: relative; }
+    .radio.on { border-color: #1a73e8; }
+    .radio.on::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: #1a73e8; }
+    .opt b { display: block; font-size: 15.5px; }
+    .opt small { color: var(--mock-muted); font-size: 13.5px; }
+    .banner { margin-top: 16px; padding: 14px 16px; border-radius: 12px; background: #e6f4ea; color: #137333; font-size: 15px; display: flex; gap: 10px; align-items: center; }
+    .banner .ic { width: 20px; height: 20px; }
+
+    /* Profile card mock */
+    .prof { display: grid; grid-template-columns: 1fr 280px; gap: 26px; }
+    .prof .who { display: flex; gap: 18px; }
+    .prof .ph { width: 96px; height: 96px; border-radius: 50%; background: linear-gradient(135deg, #4285f4, #34a853); flex: none; display: grid; place-items: center; color: #fff; font-size: 34px; font-weight: 800; font-family: Arial; }
+    .prof h4 { margin: 4px 0 4px; font-size: 24px; font-family: Arial; color: var(--mock-ink); }
+    .prof .aff { color: var(--mock-muted); font-size: 14.5px; line-height: 1.45; }
+    .prof .ints { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .prof .ints span { font-size: 13px; color: #1a0dab; background: #eef3fe; padding: 4px 10px; border-radius: 999px; }
+    .ctab { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+    .ctab th { text-align: right; color: var(--mock-muted); font-weight: 600; padding: 6px 4px; border-bottom: 1px solid var(--mock-line); }
+    .ctab th:first-child, .ctab td:first-child { text-align: left; }
+    .ctab td { text-align: right; padding: 8px 4px; border-bottom: 1px solid var(--mock-line); font-weight: 600; }
+    .cbars { display: flex; align-items: flex-end; gap: 7px; height: 110px; margin-top: 18px; padding-bottom: 4px; border-bottom: 1px solid var(--mock-line); }
+    .cbars i { flex: 1; background: #9aa0a6; border-radius: 3px 3px 0 0; height: var(--h); transform: scaleY(0); transform-origin: bottom; }
+    .slide.active .cbars i { animation: barUp .8s cubic-bezier(.2, .8, .2, 1) forwards; animation-delay: calc(var(--i) * 70ms + 1.2s); }
+    @keyframes barUp { to { transform: scaleY(1); } }
+    .cbars-l { display: flex; justify-content: space-between; font-size: 11px; color: var(--mock-muted); margin-top: 4px; }
+    .plist { margin-top: 22px; }
+    .plist .art b { color: #1a0dab; }
+
+    /* ORCID mocks */
+    .oc-top { display: flex; align-items: center; justify-content: space-between; padding-bottom: 18px; border-bottom: 1px solid var(--mock-line); }
+    .oc-logo { font-family: Arial; font-weight: 800; font-size: 34px; color: #7aa31a; letter-spacing: -.02em; }
+    .oc-logo small { font-size: 13px; color: var(--mock-muted); font-weight: 600; letter-spacing: 0; display: block; margin-top: -4px; }
+    .oc-btn { padding: 11px 20px; border-radius: 8px; border: 2px solid #7aa31a; color: #4f6e0b; font-weight: 700; font-size: 15px; }
+    .oc-hero { text-align: center; padding: 50px 30px 30px; }
+    .oc-hero h4 { font-family: Arial; font-size: 32px; margin: 0 0 10px; color: var(--mock-ink); }
+    .oc-hero p { color: var(--mock-muted); margin: 0 auto 26px; max-width: 460px; line-height: 1.5; }
+    .modal {
+      position: absolute; right: 36px; top: 96px; width: 330px; background: #fff; border-radius: 14px; padding: 22px;
+      box-shadow: 0 24px 50px -14px rgba(20, 25, 60, .4); border: 1px solid var(--mock-line); opacity: 0; z-index: 3;
+    }
+    .slide.active .modal { animation: rZoom .5s cubic-bezier(.2, .8, .2, 1) forwards; animation-delay: 2.6s; }
+    .modal h5 { margin: 0 0 14px; font-size: 18px; font-family: Arial; }
+    .modal .in { border: 1.5px solid var(--mock-line); border-radius: 9px; padding: 10px 12px; color: var(--mock-muted); margin-bottom: 10px; font-size: 14px; }
+    .modal .reg { margin-top: 14px; text-align: center; font-size: 14.5px; color: var(--mock-muted); }
+    .modal .reg b { color: #4f6e0b; padding: 4px 8px; }
+
+    /* Wizard */
+    .stepper { display: flex; align-items: center; gap: 0; margin-bottom: 24px; }
+    .stepper .s { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 14px; color: var(--mock-muted); }
+    .stepper .s i {
+      width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-style: normal; border: 2px solid var(--mock-line); color: var(--mock-muted);
+    }
+    .slide.active .stepper .s i { animation: stepOn .4s ease forwards; animation-delay: var(--t); }
+    @keyframes stepOn { to { background: #7aa31a; border-color: #7aa31a; color: #fff; } }
+    .stepper .bar { flex: 1; height: 3px; background: var(--mock-line); margin: 0 10px; position: relative; overflow: hidden; border-radius: 3px; }
+    .stepper .bar::after { content: ""; position: absolute; inset: 0; background: #7aa31a; transform: scaleX(0); transform-origin: left; }
+    .slide.active .stepper .bar::after { animation: fillX .7s ease forwards; animation-delay: var(--t); }
+    @keyframes fillX { to { transform: scaleX(1); } }
+    .wgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .wcard { border: 1.5px solid var(--mock-line); border-radius: 14px; padding: 16px 18px; opacity: 0; }
+    .slide.active .wcard { animation: rUp .6s cubic-bezier(.2, .8, .2, 1) forwards; animation-delay: var(--t); }
+    .wcard h6 { margin: 0 0 10px; font-size: 15px; font-family: Arial; display: flex; gap: 8px; align-items: center; }
+    .wcard h6 span { width: 24px; height: 24px; border-radius: 50%; background: #eef5dc; color: #4f6e0b; display: grid; place-items: center; font-size: 12px; }
+    .wcard .in { border: 1.5px solid var(--mock-line); border-radius: 8px; padding: 7px 10px; font-size: 13.5px; color: var(--mock-ink); margin-bottom: 6px; }
+    .wcard .r2 { display: flex; gap: 8px; align-items: center; font-size: 13.5px; margin-bottom: 6px; }
+    .wcard .r2 .radio { width: 16px; height: 16px; margin: 0; }
+    .wcard .r2 .radio.on::after { background: #7aa31a; inset: 2px; }
+    .wcard .r2 .radio.on { border-color: #7aa31a; }
+    .captcha { display: flex; align-items: center; gap: 10px; border: 1.5px solid var(--mock-line); border-radius: 8px; padding: 8px 10px; font-size: 13.5px; }
+    .captcha .cb { width: 20px; height: 20px; }
+    .wcard .cb.tick { --t: 3.4s; }
+    .slide.active .wcard .cb.tick { animation-name: cbOnG; }
+    @keyframes cbOnG { to { background: #7aa31a; border-color: #7aa31a; } }
+
+    /* iD reveal */
+    .idstage { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 0; }
+    .idhalo { position: relative; width: 190px; height: 190px; display: grid; place-items: center; margin-bottom: 30px; }
+    .idhalo::before, .idhalo::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--orcid); opacity: 0; }
+    .slide.active .idhalo::before { animation: halo 2.4s ease-out infinite; animation-delay: 1s; }
+    .slide.active .idhalo::after { animation: halo 2.4s ease-out infinite; animation-delay: 2.2s; }
+    @keyframes halo { 0% { opacity: .8; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.5); } }
+    .idhalo .idlogo { width: 150px; height: 150px; font-size: 60px; box-shadow: 0 0 80px color-mix(in srgb, var(--orcid) 60%, transparent); }
+    .idbig { font-family: 'JetBrains Mono', Consolas, monospace; font-size: 74px; font-weight: 700; letter-spacing: .02em; }
+    .idbig .seg { display: inline-block; }
+    .idbig .chk { color: var(--orcid); }
+    .idurl { margin-top: 10px; font-size: 24px; color: var(--ink-2); font-family: 'JetBrains Mono', Consolas, monospace; }
+    .anatomy { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 46px; width: 100%; max-width: 1240px; text-align: left; }
+    .anatomy .card { padding: 22px 26px; }
+    .anatomy h3 { font-size: 21px; margin-bottom: 6px; }
+    .anatomy p { margin: 0; color: var(--ink-2); font-size: 19px; line-height: 1.5; }
+
+    /* ORCID record */
+    .rec { display: grid; grid-template-columns: 190px 1fr; gap: 22px; }
+    .rec .nav div { padding: 10px 12px; border-radius: 9px; font-size: 14.5px; color: var(--mock-muted); font-weight: 600; display: flex; gap: 8px; align-items: center; }
+    .rec .nav div.on { background: #eef5dc; color: #4f6e0b; }
+    .rec .nav .ic { width: 17px; height: 17px; }
+    .rec .panel h5 { margin: 0; font-size: 19px; font-family: Arial; display: flex; justify-content: space-between; align-items: center; }
+    .addbtn { font-size: 14px; font-family: Arial; padding: 7px 14px; border-radius: 8px; background: #7aa31a; color: #fff; font-weight: 700; }
+    .dd { margin: 12px 0 0 auto; width: 270px; border: 1px solid var(--mock-line); border-radius: 12px; padding: 6px 0; box-shadow: 0 16px 34px -14px rgba(20, 25, 60, .35); opacity: 0; }
+    .slide.active .dd { animation: rZoom .45s cubic-bezier(.2, .8, .2, 1) forwards; animation-delay: 2.5s; transform-origin: top right; }
+    .dd div { padding: 9px 16px; font-size: 14.5px; display: flex; gap: 10px; align-items: center; }
+    .dd div.hot { background: #eef5dc; font-weight: 700; color: #4f6e0b; }
+    .dd .ic { width: 17px; height: 17px; color: var(--mock-muted); }
+    .work { border: 1px solid var(--mock-line); border-radius: 12px; padding: 12px 14px; margin-top: 10px; font-size: 14px; }
+    .work b { display: block; font-size: 14.5px; margin-bottom: 3px; }
+    .work small { color: var(--mock-muted); }
+    .src { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: #eef5dc; color: #4f6e0b; margin-top: 6px; }
+
+    /* Use-everywhere grid */
+    .usegrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 40px; }
+    .usegrid .card { display: flex; gap: 18px; align-items: flex-start; padding: 24px; }
+    .usegrid h3 { font-size: 23px; margin-bottom: 6px; }
+    .usegrid p { margin: 0; color: var(--ink-2); font-size: 18.5px; line-height: 1.5; }
+    .connect { display: flex; align-items: center; justify-content: center; gap: 26px; margin-top: 30px; font-size: 19px; color: var(--ink-2); }
+    .connect .node { padding: 14px 22px; border-radius: 16px; font-weight: 700; color: var(--ink); background: var(--card); border: 1px solid var(--card-line); }
+    .connect .flow { width: 120px; height: 4px; border-radius: 4px; background: linear-gradient(90deg, var(--scholar), var(--orcid)); background-size: 200% 100%; animation: shine 2s linear infinite; }
+
+    /* Do & Don't */
+    .dodont { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-top: 40px; }
+    .dodont .card { padding: 30px 34px; }
+    .dodont h3 { font-size: 28px; display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .dodont ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+    .dodont li { display: flex; gap: 12px; font-size: 21px; color: var(--ink-2); line-height: 1.45; }
+    .dodont li .ic { margin-top: 2px; }
+    .do h3, .do li .ic { color: var(--teal); }
+    .dont h3, .dont li .ic { color: var(--rose); }
+
+    /* ================= Question slide ================= */
+    .qwrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative; }
+    .qwrap h2 { font-size: 84px; line-height: 1.06; max-width: 1300px; margin-top: 26px; }
+    .qwrap .sub { margin: 26px auto 0; text-align: center; }
+    .floaters { position: absolute; inset: 0; pointer-events: none; }
+    .floaters span {
+      position: absolute; padding: 10px 18px; border-radius: 999px; font-weight: 700; font-size: 19px; opacity: 0;
+      background: hsl(var(--h) 70% 60% / .14); color: hsl(var(--h) 70% 32%); border: 1px solid hsl(var(--h) 70% 60% / .35);
+    }
+    :root[data-theme="dark"] .floaters span { color: hsl(var(--h) 85% 72%); }
+    .slide.active .floaters span { animation: chipIn .9s cubic-bezier(.2, .8, .2, 1) forwards, float 6s ease-in-out infinite; animation-delay: calc(var(--i) * 140ms + 1s), calc(var(--i) * 300ms); }
+    @keyframes chipIn { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: none; } }
+    .qbadge { font-family: Arial; font-weight: 800; font-size: 20px; padding: 10px 22px; border-radius: 999px; color: #0b0f24; background: var(--kiu); color: #fff; }
+
+    /* ================= QR slide ================= */
+    .qrslide { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 50px; height: 100%; padding: 0; }
+    .qrcard {
+      background: #fff; border-radius: 34px; padding: 34px; box-shadow: var(--shadow), 0 0 0 10px color-mix(in srgb, var(--acc) 35%, transparent);
+      position: relative;
+    }
+    .qrcard #qrBig { width: 600px; height: 600px; }
+    .qrcard #qrBig img, .qrcard #qrBig canvas { width: 600px !important; height: 600px !important; image-rendering: pixelated; display: block; }
+    .scanline {
+      position: absolute; left: 34px; right: 34px; height: 4px; top: 34px; border-radius: 4px;
+      background: linear-gradient(90deg, transparent, var(--acc), transparent); box-shadow: 0 0 22px var(--acc); opacity: .85;
+    }
+    .slide.active .scanline { animation: scan 2.8s ease-in-out infinite alternate; }
+    @keyframes scan { to { top: 630px; } }
+    .corner { position: absolute; width: 60px; height: 60px; border: 6px solid var(--acc); }
+    .corner.a { top: -18px; left: -18px; border-right: none; border-bottom: none; border-radius: 22px 0 0 0; }
+    .corner.b { top: -18px; right: -18px; border-left: none; border-bottom: none; border-radius: 0 22px 0 0; }
+    .corner.c { bottom: -18px; left: -18px; border-right: none; border-top: none; border-radius: 0 0 0 22px; }
+    .corner.d { bottom: -18px; right: -18px; border-left: none; border-top: none; border-radius: 0 0 22px 0; }
+    .qrside h2 { font-size: 54px; line-height: 1.05; }
+    .qrside p { font-size: 21px; color: var(--ink-2); line-height: 1.5; }
+    .qrsteps { display: grid; gap: 18px; margin-top: 30px; }
+    .qrsteps div { display: flex; gap: 14px; align-items: center; font-size: 24px; font-weight: 600; }
+    .qrsteps i { font-style: normal; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--acc) 18%, transparent); color: var(--acc); font-weight: 800; flex: none; }
+    .live {
+      display: inline-flex; align-items: center; gap: 12px; font-weight: 700; font-size: 18px; padding: 10px 18px; border-radius: 999px;
+      background: var(--card); border: 1px solid var(--card-line);
+    }
+    .live .pulse { width: 12px; height: 12px; border-radius: 50%; background: var(--teal); animation: ping 1.6s infinite; }
+    .live[data-status="offline"] .pulse { background: var(--rose); animation: none; }
+    .live[data-status="connecting"] .pulse { background: var(--amber); }
+    @keyframes ping { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--teal) 70%, transparent); } 100% { box-shadow: 0 0 0 14px transparent; } }
+    .bigcount { font-family: Arial; font-size: 120px; font-weight: 800; line-height: 1; }
+    .bigcount + small { font-size: 20px; color: var(--muted); display: block; margin-top: 6px; }
+    .shorturl { font-family: 'JetBrains Mono', Consolas, monospace; font-size: 16px; color: var(--muted); margin-top: 22px; word-break: break-all; }
+
+    /* ================= Results ================= */
+    .rhead { display: flex; align-items: flex-end; justify-content: space-between; gap: 30px; }
+    .rhead .title { font-size: 46px; }
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 24px; }
+    .kpi { padding: 18px 22px; border-radius: 18px; background: var(--card); border: 1px solid var(--card-line); }
+    .kpi small { color: var(--muted); font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
+    .kpi b { display: block; font-family: Arial; font-size: 36px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kpi em { font-style: normal; font-size: 16px; color: var(--ink-2); }
+    .rgrid { display: grid; grid-template-columns: 560px 1fr; gap: 22px; margin-top: 20px; flex: 1; min-height: 0; }
+    .panel { background: var(--card); border: 1px solid var(--card-line); border-radius: 22px; padding: 20px 24px; display: flex; flex-direction: column; min-height: 0; position: relative; }
+    .panel h3 { font-size: 22px; display: flex; justify-content: space-between; align-items: baseline; }
+    .panel h3 small { font-family: Arial; font-weight: 500; font-size: 13.5px; color: var(--muted); }
+    .chartbox { position: relative; flex: 1; min-height: 0; margin-top: 10px; }
+    .podium { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; align-items: end; flex: 1; margin-top: 10px; }
+    .pod { display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: flex-end; height: 100%; }
+    .pod .nm { font-family: Arial; font-weight: 700; font-size: 21px; margin-bottom: 4px; }
+    .pod .sc { font-size: 14px; color: var(--muted); margin-bottom: 10px; }
+    .pod .blk {
+      width: 100%; border-radius: 16px 16px 6px 6px; display: grid; place-items: start center; padding-top: 14px;
+      font-family: Arial; font-weight: 800; font-size: 46px; color: #0b0f24; height: 0;
+      transition: height 1.1s cubic-bezier(.2, .8, .2, 1);
+    }
+    .pod.p1 .blk { background: linear-gradient(180deg, #ffd66b, #f4a524); }
+    .pod.p2 .blk { background: linear-gradient(180deg, #e6ebf5, #aab4c8); }
+    .pod.p3 .blk { background: linear-gradient(180deg, #f0b98a, #c4783e); }
+    .insight { margin-top: 14px; font-size: 18px; color: var(--ink-2); line-height: 1.5; }
+    .insight b { color: var(--ink); }
+    .empty {
+      position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center;
+      background: color-mix(in srgb, var(--bg) 80%, transparent); backdrop-filter: blur(6px); border-radius: 22px; z-index: 4; font-size: 20px; color: var(--ink-2);
+    }
+    .empty.show { display: flex; }
+    .empty .mq { background: #fff; padding: 12px; border-radius: 14px; }
+    .empty .mq img, .empty .mq canvas { width: 190px !important; height: 190px !important; display: block; }
+    .rgrid2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 20px; margin-top: 22px; flex: 1; min-height: 0; }
+    .rgrid2 .heat-panel { grid-row: span 2; }
+    .heat { display: grid; grid-template-columns: 130px repeat(10, 1fr) 62px; gap: 4px; margin-top: 12px; font-size: 13.5px; flex: 1; align-content: stretch; }
+    .heat .hdr { color: var(--muted); font-weight: 700; text-align: center; font-size: 12.5px; align-self: end; padding-bottom: 2px; }
+    .heat .lbl { font-weight: 600; display: flex; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .heat .cell {
+      border-radius: 6px; display: grid; place-items: center; font-weight: 700; font-size: 13px; min-height: 40px;
+      background: color-mix(in srgb, var(--acc) calc(var(--v, 0) * 100%), color-mix(in srgb, var(--ink) 5%, transparent));
+      color: var(--ink); transition: background .6s ease; cursor: default;
+    }
+    .heat .cell.dark { color: #0b0f24; }
+    .heat .avg { display: grid; place-items: center; font-weight: 700; color: var(--ink-2); }
+    .scale { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 13px; color: var(--muted); }
+    .scale i { width: 160px; height: 10px; border-radius: 6px; background: linear-gradient(90deg, color-mix(in srgb, var(--ink) 5%, transparent), var(--acc)); }
+    .ttip {
+      position: fixed; z-index: 50; pointer-events: none; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.4;
+      background: var(--card-solid); color: var(--ink); border: 1px solid var(--card-line); box-shadow: var(--shadow); opacity: 0; transition: opacity .15s;
+    }
+    .ttip.show { opacity: 1; }
+
+    /* ================= Thank you ================= */
+    .thanks { align-items: center; justify-content: center; text-align: center; }
+    .thanks h2 { font-size: 120px; line-height: 1; }
+    .links { display: flex; gap: 18px; justify-content: center; margin-top: 44px; flex-wrap: wrap; }
+    .links .urlpill { margin-top: 0; font-size: 21px; }
+
+    /* ================= HUD & presenter panel ================= */
+    .hud { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 0 22px 16px; transition: opacity .5s; pointer-events: none; }
+    .hud > * { pointer-events: auto; }
+    body.idle .hud { opacity: 0; }
+    .brand { font-size: 13.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .ctrls { display: flex; gap: 8px; align-items: center; }
+    .ctrls button {
+      width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--card-line); background: var(--card); color: var(--ink);
+      display: grid; place-items: center; cursor: pointer; backdrop-filter: blur(10px);
+    }
+    .ctrls button:hover { border-color: var(--acc); }
+    .ctrls .count { font-family: 'JetBrains Mono', Consolas, monospace; font-size: 14px; color: var(--ink-2); padding: 0 8px; min-width: 76px; text-align: center; }
+    .progress { position: fixed; left: 0; bottom: 0; height: 4px; z-index: 11; background: linear-gradient(90deg, var(--scholar), var(--kiu), var(--orcid)); transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+    .drawer {
+      position: fixed; top: 0; right: 0; bottom: 0; width: 380px; z-index: 20; padding: 26px; overflow-y: auto;
+      background: var(--card-solid); border-left: 1px solid var(--card-line); box-shadow: var(--shadow);
+      transform: translateX(105%); transition: transform .45s cubic-bezier(.2, .8, .2, 1);
+    }
+    .drawer.open { transform: none; }
+    .drawer h3 { font-size: 22px; margin-bottom: 4px; }
+    .drawer .lbl { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; margin: 20px 0 8px; }
+    .drawer .val { font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px; word-break: break-all; color: var(--ink-2); background: color-mix(in srgb, var(--ink) 6%, transparent); padding: 10px; border-radius: 10px; }
+    .drawer button.act {
+      width: 100%; margin-top: 8px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--card-line); background: var(--card);
+      color: var(--ink); font: inherit; font-weight: 600; text-align: left; cursor: pointer; display: flex; gap: 10px; align-items: center;
+    }
+    .drawer button.act:hover { border-color: var(--kiu); }
+    .drawer button.act.danger { color: var(--rose); }
+    .drawer .keys { font-size: 13.5px; color: var(--ink-2); line-height: 2; }
+    .drawer .warn { font-size: 13px; color: var(--amber); margin-top: 8px; line-height: 1.5; }
+    .toast {
+      position: fixed; left: 50%; top: 24px; transform: translate(-50%, -140%); z-index: 40; padding: 12px 20px; border-radius: 14px;
+      background: var(--card-solid); border: 1px solid var(--card-line); box-shadow: var(--shadow); font-weight: 600; transition: transform .4s cubic-bezier(.2, .8, .2, 1);
+    }
+    .toast.show { transform: translate(-50%, 0); }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <!-- ============ Icon sprite ============ -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+      <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></symbol>
+      <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5"/><path d="M16 4.5a3.5 3.5 0 010 7M22 20c0-3-2-5-5-5.4"/></symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+      <symbol id="i-id" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="12" r="2"/><path d="M14 10h4M14 14h4"/></symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+      <symbol id="i-award" viewBox="0 0 24 24"><circle cx="12" cy="9" r="6"/><path d="M8.5 14.5L7 22l5-3 5 3-1.5-7.5"/></symbol>
+      <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+      <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 4h6a3 3 0 013 3v13a2 2 0 00-2-2H4z"/><path d="M20 4h-6a3 3 0 00-3 3v13a2 2 0 012-2h7z"/></symbol>
+      <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6"/></symbol>
+      <symbol id="i-brief" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2"/></symbol>
+      <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+      <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></symbol>
+      <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0112 0v5l2 2H4z"/><path d="M10 21h4"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></symbol>
+      <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z"/></symbol>
+      <symbol id="i-money" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9.5c0-1.4-1.3-2.5-3-2.5s-3 1-3 2.3c0 3.2 6 1.7 6 5 0 1.4-1.3 2.7-3 2.7s-3-1.1-3-2.5M12 5v2M12 17v2"/></symbol>
+      <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 10-2.3 5.7"/><path d="M20 4v7h-7"/></symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+      <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+      <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+      <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></symbol>
+      <symbol id="i-full" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M4 20h16"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4 8 8 0 1020 14.5z"/></symbol>
+      <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></symbol>
+      <symbol id="i-cursor" viewBox="0 0 24 24"><path d="M3 2l17 9-7.5 1.8L9 20z" fill="#fff" stroke="#111" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+    </defs>
+  </svg>
+
+  <div class="ambient"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div><div class="gridbg"></div></div>
+
+  <div class="viewport">
+    <div class="stage" id="stage">
+      <div class="chrome" aria-hidden="true"><img class="logo" src="assets/kiu-logo.png" alt="" /><div class="bars"><i></i><i></i><i></i></div></div>
+
+      <!-- ================= 1. Title ================= -->
+      <section class="slide titleslide" data-title="Title">
+        <div class="tpanel r fl">
+          <span class="kicker">Practical Demonstration</span>
+          <h1>Build your <u>research identity</u> with Google Scholar &amp; ORCID</h1>
+          <p>A step-by-step, hands-on guide to creating, verifying and maintaining your scholarly profiles, plus a live poll on AI tools in research.</p>
+        </div>
+        <div class="tright">
+          <div class="duo r zm" style="--d:2">
+            <svg class="link" viewBox="0 0 520 560" preserveAspectRatio="none"><path d="M260 210 C 380 260, 160 330, 300 380"/></svg>
+            <div class="card c1">
+              <div class="mini-prof"><div class="ph"></div><div><b>Google Scholar</b><small>Citation profile</small></div></div>
+              <div class="stats3"><div><b>1,248</b><small>Citations</small></div><div><b>18</b><small>h-index</small></div><div><b>26</b><small>i10-index</small></div></div>
+            </div>
+            <div class="card c2">
+              <div class="idbadge"><div class="idlogo">iD</div><div><small style="color:var(--muted)">ORCID iD</small><div class="idnum mono">0000-0002-1825-0097</div></div></div>
+              <p style="color:var(--ink-2);margin:16px 0 0;font-size:17px;line-height:1.5">One persistent identifier that follows you across every journal, funder and institution.</p>
+            </div>
+          </div>
+          <div class="presenter r" style="--d:4;margin-top:10px">
+            <div class="av" data-initials>YN</div>
+            <div><b data-cfg="presenter">Your Name</b><span data-cfg="event">Research Skills Workshop</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 2. Agenda ================= -->
+      <section class="slide" data-title="Agenda">
+        <span class="kicker r">Today's roadmap</span>
+        <h2 class="title r" style="--d:1">What we'll do together</h2>
+        <div class="agenda">
+          <div class="card r" style="--d:2;--acc:var(--kiu)"><div class="num">01</div><h3>Why it matters</h3><p>Visibility, name disambiguation, impact metrics and what funders and journals expect.</p></div>
+          <div class="card r" style="--d:3;--acc:var(--scholar)"><div class="num">02</div><h3>Google Scholar</h3><p>Create, verify and publish your citation profile. Add your articles the right way.</p></div>
+          <div class="card r" style="--d:4;--acc:var(--orcid)"><div class="num">03</div><h3>ORCID</h3><p>Register for your 16-digit iD and build a record that updates itself.</p></div>
+          <div class="card r" style="--d:5;--acc:var(--amber)"><div class="num">04</div><h3>Live poll</h3><p>Scan, rank the AI research tools you know, and see the live ranking analysis.</p></div>
+        </div>
+      </section>
+
+      <!-- ================= 3. Why ================= -->
+      <section class="slide" data-title="Why it matters">
+        <span class="kicker r">The big picture</span>
+        <h2 class="title r" style="--d:1">Why your research identity matters</h2>
+        <div class="fgrid">
+          <div class="card feat r" style="--d:2"><div class="icbox"><svg class="ic"><use href="#i-search"/></svg></div><div><h3>Discoverability</h3><p>Your work appears when peers, editors and collaborators search for your name or field.</p></div></div>
+          <div class="card feat r" style="--d:3;--acc:var(--teal)"><div class="icbox"><svg class="ic"><use href="#i-users"/></svg></div><div><h3>Name disambiguation</h3><p>Thousands of researchers share names. A unique profile and iD make sure the credit lands on you.</p></div></div>
+          <div class="card feat r" style="--d:4;--acc:var(--amber)"><div class="icbox"><svg class="ic"><use href="#i-chart"/></svg></div><div><h3>Track your impact</h3><p>Citations, h-index and i10-index update automatically, ready for promotion and grant files.</p></div></div>
+          <div class="card feat r" style="--d:5;--acc:var(--orcid)"><div class="icbox"><svg class="ic"><use href="#i-shield"/></svg></div><div><h3>Required by publishers &amp; funders</h3><p>Many journals and funding bodies now ask for an ORCID iD at submission.</p></div></div>
+        </div>
+      </section>
+
+      <!-- ================= 4. Compare ================= -->
+      <section class="slide" data-title="Scholar vs ORCID">
+        <span class="kicker r">Side by side</span>
+        <h2 class="title r" style="--d:1">Two tools, two different jobs</h2>
+        <div class="cmp r" style="--d:2">
+          <div class="tr th"><div></div><div class="gs"><span class="dot"></span>Google Scholar Profile</div><div class="oc"><span class="dot"></span>ORCID</div></div>
+          <div class="tr"><div>What it is</div><div>A public citation profile built from Google Scholar's index</div><div>A persistent digital identifier (iD) for researchers</div></div>
+          <div class="tr"><div>Run by</div><div>Google</div><div>ORCID, a global non-profit</div></div>
+          <div class="tr"><div>Your identifier</div><div>Profile URL (…/citations?user=XXXX)</div><div>16-digit iD, e.g. 0000-0002-1825-0097</div></div>
+          <div class="tr"><div>How it's populated</div><div>Automatically found by Google; you confirm the articles</div><div>You plus trusted sources (Crossref, DataCite, publishers)</div></div>
+          <div class="tr"><div>Metrics</div><div>Citations, h-index, i10-index</div><div>None. It's about identity, not metrics</div></div>
+          <div class="tr"><div>Best for</div><div>Visibility and tracking impact</div><div>Manuscript submissions, grants, interoperability</div></div>
+        </div>
+      </section>
+
+      <!-- ================= 5. Divider: Scholar ================= -->
+      <section class="slide divider" data-accent="scholar" data-title="Part 1 · Google Scholar">
+        <div class="sband"><div class="bcircle"><img src="assets/classroom.svg" alt="" /></div></div>
+        <div class="big">01</div>
+        <span class="kicker r">Part one</span>
+        <h2 class="r bl" style="--d:1">Google<br><span class="grad">Scholar</span></h2>
+        <p class="sub r" style="--d:2">Create a verified, public citation profile in about 10 minutes.</p>
+        <div><span class="urlpill r" style="--d:3"><svg class="ic"><use href="#i-globe"/></svg>scholar.google.com</span></div>
+      </section>
+
+      <!-- ================= 6. Checklist ================= -->
+      <section class="slide" data-accent="scholar" data-title="Before you start">
+        <span class="kicker r">Before you start</span>
+        <h2 class="title r" style="--d:1">Have these ready</h2>
+        <div class="checklist">
+          <div class="card r" style="--d:2"><div class="icbox"><svg class="ic"><use href="#i-user"/></svg></div><h3>Google account</h3><p>Any Gmail or Google Workspace account to sign in with.</p><div class="tick"><svg class="ic"><use href="#i-check"/></svg></div></div>
+          <div class="card r" style="--d:3"><div class="icbox"><svg class="ic"><use href="#i-mail"/></svg></div><h3>Institutional email</h3><p>Your university or work address. It earns the "Verified email" badge.</p><div class="tick"><svg class="ic"><use href="#i-check"/></svg></div></div>
+          <div class="card r" style="--d:4"><div class="icbox"><svg class="ic"><use href="#i-book"/></svg></div><h3>Publication list</h3><p>Titles of your papers, chapters, theses and conference papers.</p><div class="tick"><svg class="ic"><use href="#i-check"/></svg></div></div>
+          <div class="card r" style="--d:5"><div class="icbox"><svg class="ic"><use href="#i-tag"/></svg></div><h3>3–5 keywords</h3><p>Your research interests, e.g. "Educational Technology".</p><div class="tick"><svg class="ic"><use href="#i-check"/></svg></div></div>
+          <div class="card r" style="--d:6"><div class="icbox"><svg class="ic"><use href="#i-camera"/></svg></div><h3>Professional photo</h3><p>A clear headshot makes your profile instantly recognisable.</p><div class="tick"><svg class="ic"><use href="#i-check"/></svg></div></div>
+        </div>
+        <div class="note r" style="--d:7"><svg class="ic"><use href="#i-alert"/></svg><span><b>No publications yet?</b> You can still create the profile now. Articles appear as soon as Google Scholar indexes them.</span></div>
+      </section>
+
+      <!-- ================= 7. GS Step 1 ================= -->
+      <section class="slide" data-accent="scholar" data-title="Scholar · Step 1">
+        <div class="step">
+          <div>
+            <div class="stepno r"><span class="n">1</span><span class="of">Google Scholar · Step 1 of 5</span></div>
+            <h2 class="r" style="--d:1">Open Scholar and go to <span class="grad">My profile</span></h2>
+            <ul class="actions">
+              <li class="r" style="--d:2"><span class="k">a</span><span>Visit <b>scholar.google.com</b> and click <b>Sign in</b> (top right).</span></li>
+              <li class="r" style="--d:3"><span class="k">b</span><span>Open the menu <kbd>☰</kbd> at the top left.</span></li>
+              <li class="r" style="--d:4"><span class="k">c</span><span>Choose <b>My profile</b> to start the setup wizard.</span></li>
+            </ul>
+            <div class="tip r" style="--d:5"><b>Tip:</b> Use a personal Google account you will keep for life, not one tied to a job you may leave.</div>
+          </div>
+          <div class="browser r fr" style="--d:2;--cd:1.7s">
+            <div class="bbar"><i></i><i></i><i></i><div class="url"><svg class="ic"><use href="#i-lock"/></svg>scholar.google.com</div></div>
+            <div class="bbody">
+              <div class="mock-top"><div class="burger hl keep"><svg class="ic"><use href="#i-menu"/></svg></div><div class="signin">Sign in</div></div>
+              <div class="gs-word"><span>Google</span> Scholar</div>
+              <div class="searchbox"><svg class="ic"><use href="#i-search"/></svg>Search articles, authors, topics…</div>
+              <div class="tagline">Stand on the shoulders of giants</div>
+              <div class="menu">
+                <div class="hl"><svg class="ic"><use href="#i-user"/></svg><b>My profile</b></div>
+                <div><svg class="ic"><use href="#i-book"/></svg>My library</div>
+                <div><svg class="ic"><use href="#i-bell"/></svg>Alerts</div>
+                <div><svg class="ic"><use href="#i-chart"/></svg>Metrics</div>
+                <div><svg class="ic"><use href="#i-gear"/></svg>Settings</div>
+              </div>
+              <div class="cursor" style="left:120px;top:110px"><svg><use href="#i-cursor"/></svg></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 8. GS Step 2 ================= -->
+      <section class="slide" data-accent="scholar" data-title="Scholar · Step 2" data-enter="type">
+        <div class="step">
+          <div>
+            <div class="stepno r"><span class="n">2</span><span class="of">Google Scholar · Step 2 of 5</span></div>
+            <h2 class="r" style="--d:1">Fill in your <span class="grad">profile details</span></h2>
+            <ul class="actions">
+              <li class="r" style="--d:2"><span class="k">a</span><span><b>Name</b>: use the form that appears on your papers.</span></li>
+              <li class="r" style="--d:3"><span class="k">b</span><span><b>Affiliation</b>: e.g. "Lecturer, Dept. of Biology, University of X".</span></li>
+              <li class="r" style="--d:4"><span class="k">c</span><span><b>Email for verification</b>: your institutional address.</span></li>
+              <li class="r" style="--d:5"><span class="k">d</span><span><b>Areas of interest</b> (up to 5) and an optional <b>Homepage</b>. Your ORCID link works well here.</span></li>
+            </ul>
+            <div class="tip r" style="--d:6">Click <b>Next</b> when done.</div>
+          </div>
+          <div class="browser r fr" style="--d:2;--cd:7.4s">
+            <div class="bbar"><i></i><i></i><i></i><div class="url"><svg class="ic"><use href="#i-lock"/></svg>scholar.google.com/citations?view_op=new_profile</div></div>
+            <div class="bbody mform">
+              <h4>Profile</h4>
+              <div class="hint">Get your own Google Scholar profile and track citations to your articles.</div>
+              <div class="field"><label>Name</label><div class="in" data-type="Dr. Jane A. Researcher"></div></div>
+              <div class="field"><label>Affiliation</label><div class="in" data-type="Senior Lecturer, Department of Biology, University of X"></div></div>
+              <div class="field"><label>Email for verification</label><div class="in" data-type="j.researcher@university.edu"></div></div>
+              <div class="field"><label>Areas of interest</label><div class="in" data-type="Bioinformatics, Genomics, Research Methods"></div></div>
+              <div class="field"><label>Homepage (optional)</label><div class="in" data-type="https://orcid.org/0000-0002-1825-0097"></div></div>
+              <span class="mbtn hl">Next</span>
+              <div class="cursor" style="left:70px;bottom:20px"><svg><use href="#i-cursor"/></svg></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 9. GS Step 3 ================= -->
+      <section class="slide" data-accent="scholar" data-title="Scholar · Step 3">
+        <div class="step">
+          <div>
+            <div class="stepno r"><span class="n">3</span><span class="of">Google Scholar · Step 3 of 5</span></div>
+            <h2 class="r" style="--d:1">Add <span class="grad">your</span> articles, and only yours</h2>
+            <ul class="actions">
+              <li class="r" style="--d:2"><span class="k">a</span><span>Scholar suggests <b>groups of articles</b> written under your name.</span></li>
+              <li class="r" style="--d:3"><span class="k">b</span><span>Tick only the ones you authored. Use <b>Search</b> to find missing titles.</span></li>
+              <li class="r" style="--d:4"><span class="k">c</span><span>Leave out papers by others with a similar name.</span></li>
+            </ul>
+            <div class="tip r" style="--d:5"><b>Watch out:</b> common names attract other people's papers. Check every title before adding.</div>
+          </div>
+          <div class="browser r fr" style="--d:2;--cd:4.2s">
+            <div class="bbar"><i></i><i></i><i></i><div class="url"><svg class="ic"><use href="#i-lock"/></svg>scholar.google.com/citations?view_op=…articles</div></div>
+            <div class="bbody">
+              <div class="searchbox" style="max-width:none;margin-bottom:10px"><svg class="ic"><use href="#i-search"/></svg>Search for your articles by title or author</div>
+              <div class="art"><span class="cb tick" style="--t:1.4s"><svg class="ic" style="stroke:#fff"><use href="#i-check"/></svg></span><div><b>Genomic signatures of drought tolerance in West African maize</b><small>JA Researcher, K Mensah… · Plant Genomics, 2023</small></div></div>
+              <div class="art"><span class="cb tick" style="--t:1.9s"><svg class="ic" style="stroke:#fff"><use href="#i-check"/></svg></span><div><b>A practical framework for teaching research methods online</b><small>JA Researcher, T Bello · Journal of Higher Education, 2022</small></div></div>
+              <div class="art"><span class="cb tick" style="--t:2.4s"><svg class="ic" style="stroke:#fff"><use href="#i-check"/></svg></span><div><b>Machine learning approaches to sequence classification: a review</b><small>JA Researcher · Bioinformatics Reviews, 2021</small></div></div>
+              <div class="art"><span class="cb"></span><div><b>Coastal erosion patterns in northern Europe</b><span class="warn">Not mine</span><small>J Researcher, P Olsen · Marine Geology, 2020</small></div></div>
+              <div class="art"><span class="cb tick" style="--t:2.9s"><svg class="ic" style="stroke:#fff"><use href="#i-check"/></svg></span><div><b>Student perceptions of AI tools in postgraduate research</b><small>JA Researcher, A Okoro… · Conference on EdTech, 2024</small></div></div>
+              <div style="text-align:right;margin-top:18px"><span class="mbtn hl">Next</span></div>
+              <div class="cursor" style="right:44px;bottom:30px"><svg><use href="#i-cursor"/></svg></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 10. GS Step 4 ================= -->
+      <section class="slide" data-accent="scholar" data-title="Scholar · Step 4">
+        <div class="step">
+          <div>
+            <div class="stepno r"><span class="n">4</span><span class="of">Google Scholar · Step 4 of 5</span></div>
+            <h2 class="r" style="--d:1">Updates, <span class="grad">go public</span> &amp; verify</h2>
+            <ul class="actions">
+              <li class="r" style="--d:2"><span class="k">a</span><span>Under <b>Article updates</b>, choose <b>"Send me email to review updates"</b> so nothing wrong is added silently.</span></li>
+              <li class="r" style="--d:3"><span class="k">b</span><span>Tick <b>Make my profile public</b>. Private profiles can't be found.</span></li>
+              <li class="r" style="--d:4"><span class="k">c</span><span>Open your institutional inbox and click the <b>verification link</b>.</span></li>
+            </ul>
+            <div class="tip r" style="--d:5">After verification your profile shows <b>"Verified email at university.edu"</b>, a strong trust signal.</div>
+          </div>
+          <div class="browser r fr" style="--d:2;--cd:1.8s">
+            <div class="bbar"><i></i><i></i><i></i><div class="url"><svg class="ic"><use href="#i-lock"/></svg>scholar.google.com/citations?view_op=settings</div></div>
+            <div class="bbody">
+              <h4 style="margin:0 0 14px;font-family:Arial;font-size:21px">Article updates</h4>
+              <div class="opt"><span class="radio"></span><div><b>Apply updates automatically</b><small>Google adds new articles and corrections for you</small></div></div>
+              <div class="opt hl" style="border-color:#1a73e8"><span class="radio on"></span><div><b>Send me email to review updates</b><small>Recommended: you approve every change</small></div></div>
+              <h4 style="margin:22px 0 12px;font-family:Arial;font-size:21px">Profile visibility</h4>
+              <div class="opt"><span class="cb tick" style="--t:3.2s"><svg class="ic" style="stroke:#fff"><use href="#i-check"/></svg></span><div><b>Make my profile public</b><small>Your profile appears in Google Scholar search results</small></div></div>
+              <div class="banner r" style="--d:20"><svg class="ic"><use href="#i-mail"/></svg>Verification email sent to j.researcher@university.edu</div>
+              <div class="cursor" style="left:56px;top:150px"><svg><use href="#i-cursor"/></svg></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 11. GS Step 5 ================= -->
+      <section class="slide" data-accent="scholar" data-title="Scholar · Step 5" data-enter="count">
+        <div class="step" style="grid-template-columns:500px 1fr">
+          <div>
+            <div class="stepno r"><span class="n">5</span><span class="of">Google Scholar · Step 5 of 5</span></div>
+            <h2 class="r" style="--d:1">Polish &amp; <span class="grad">maintain</span></h2>
+            <ul class="actions">
+              <li class="r" style="--d:2"><span class="k"><svg class="ic" style="width:16px"><use href="#i-camera"/></svg></span><span>Add a <b>photo</b> (click the image placeholder).</span></li>
+              <li class="r" style="--d:3"><span class="k"><svg class="ic" style="width:16px"><use href="#i-plus"/></svg></span><span>Missing paper? <kbd>+</kbd> → <b>Add article manually</b>.</span></li>
+              <li class="r" style="--d:4"><span class="k"><svg class="ic" style="width:16px"><use href="#i-link"/></svg></span><span><b>Merge</b> duplicate versions of the same article.</span></li>
+              <li class="r" style="--d:5"><span class="k"><svg class="ic" style="width:16px"><use href="#i-users"/></svg></span><span>Add <b>co-authors</b> and <b>follow</b> new citations.</span></li>
+            </ul>
+          </div>
+          <div class="browser r fr" style="--d:2">
+            <div class="bbar"><i></i><i></i><i></i><div class="url"><svg class="ic"><use href="#i-lock"/></svg>scholar.google.com/citations?user=AbCdEfG</div></div>
+            <div class="bbody">
+              <div class="prof">
+                <div>
+                  <div class="who">
+                    <div class="ph">JR</div>
+                    <div>
+                      <h4>Dr. Jane A. Researcher</h4>
+                      <div class="aff">Senior Lecturer, Department of Biology, University of X<br>Verified email at university.edu</div>
+                      <div class="ints"><span>Bioinformatics</span><span>Genomics</span><span>Research Methods</span></div>
+                    </div>
+                  </div>
+                  <div class="plist">
+                    <div class="art" style="padding:10px 0"><div style="flex:1"><b>Genomic signatures of drought tolerance in West African maize</b><small>Plant Genomics, 2023</small></div><b style="color:var(--mock-ink)" data-count="214">0</b></div>
+                    <div class="art" style="padding:10px 0"><div style="flex:1"><b>Machine learning approaches to sequence classification</b><small>Bioinformatics Reviews, 2021</small></div><b style="color:var(--mock-ink)" data-count="187">0</b></div>
+                    <div class="art" style="padding:10px 0;border:none"><div style="flex:1"><b>A practical framework for teaching research methods online</b><small>J. Higher Education, 2022</small></div><b style="color:var(--mock-ink)" data-count="96">0</b></div>
+                  </div>
+                </div>
+                <div>
+                  <table class="ctab">
+                    <tr><th>Cited by</th><th>All</th><th>Since 2021</th></tr>
+                    <tr><td>Citations</td><td data-count="1248">0</td><td data-count="902">0</td></tr>
+                    <tr><td>h-index</td><td data-count="18">0</td><td data-count="14">0</td></tr>
+                    <tr><td>i10-index</td><td data-count="26">0</td><td data-count="19">0</td></tr>
+                  </table>
+                  <div class="cbars">
+                    <i style="--h:18%;--i:0"></i><i style="--h:26%;--i:1"></i><i style="--h:35%;--i:2"></i><i style="--h:48%;--i:3"></i><i style="--h:57%;--i:4"></i><i style="--h:72%;--i:5"></i><i style="--h:88%;--i:6"></i><i style="--h:100%;--i:7"></i>
+                  </div>
+                  <div class="cbars-l"><span>2019</span><span>2026</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 12. Divider: ORCID ================= -->
+      <section class="slide divider" data-accent="orcid" data-title="Part 2 · ORCID">
+        <div class="sband"><div class="bcircle"><img src="assets/classroom.svg" alt="" /></div></div>
+        <div class="big">02</div>
+        <span class="kicker r">Part two</span>
+        <h2 class="r bl" style="--d:1"><span class="grad">ORCID</span><br>iD</h2>
+        <p class="sub r" style="--d:2">Open Researcher and Contributor ID: one free, permanent identifier for your whole career.</p>
+        <div><span class="urlpill r" style="--d:3"><svg class="ic"><use href="#i-globe"/></svg>orcid.org/register</span></div>
+      </section>
+
+      <!-- ================= 13. ORCID Step 1 ================= -->
+      <section class="slide" data-accent="orcid" data-title="ORCID · Step 1">
+        <div class="step">
+          <div>
+            <div class="stepno r"><span class="n">1</span><span class="of">ORCID · Step 1 of 5</span></div>
+            <h2 class="r" style="--d:1">Go to orcid.org and <span class="grad">register</span></h2>
+            <ul class="actions">
+              <li class="r" style="--d:2"><span class="k">a</span><span>Visit <b>orcid.org</b> and click <b>Sign in / Register</b>.</span></li>
+              <li class="r" style="--d:3"><span class="k">b</span><span>Choose <b>Register now</b>, or go straight to <b>orcid.org/register</b>.</span></li>
+              <li class="r" style="--d:4"><span class="k">c</span><span>Registration is <b>free</b> and takes about 2 minutes.</span></li>
+            </ul>
+            <div class="tip r" style="--d:5"><b>Already registered?</b> Never create a second iD. Use "Forgot your password" to recover your account.</div>
+          </div>
+          <div class="browser r fr" style="--d:2;--cd:1.5s">
+            <div class="bbar"><i></i><i></i><i></i><div class="url"><svg class="ic"><use href="#i-lock"/></svg>orcid.org</div></div>
+            <div class="bbody">
+              <div class="oc-top"><div class="oc-logo">ORCID<small>Connecting research and researchers</small></div><div class="oc-btn hl">Sign in / Register</div></div>
+              <div class="oc-hero">
+                <h4>Distinguish yourself in three easy steps</h4>
+                <p>ORCID provides a persistent digital identifier that you own and control, and that distinguishes you from every other researcher.</p>
+                <span class="mbtn green">Register now</span>
+              </div>
+              <div class="modal">
+                <h5>Sign in to ORCID</h5>
+                <div class="in">Email or 16-digit ORCID iD</div>
+                <div class="in">Password</div>
+                <span class="mbtn green" style="display:block;text-align:center">Sign in</span>
+                <div class="reg">Don't have an ORCID iD yet? <b class="hl" style="--cd:2.7s">Register now</b></div>
+              </div>
+              <div class="cursor" style="right:70px;top:70px"><svg><use href="#i-cursor"/></svg></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 14. ORCID Step 2 ================= -->
+      <section class="slide" data-accent="orcid" data-title="ORCID · Step 2">
+        <div class="step">
+          <div>
+            <div class="stepno r"><span class="n">2</span><span class="of">ORCID · Step 2 of 5</span></div>
+            <h2 class="r" style="--d:1">Complete the <span class="grad">registration wizard</span></h2>
+            <ul class="actions">
+              <li class="r" style="--d:2"><span class="k">1</span><span><b>Names &amp; emails</b>: given and family names, plus a primary email. Add a personal email as a backup.</span></li>
+              <li class="r" style="--d:3"><span class="k">2</span><span><b>Password</b>: at least 8 characters with a number and a letter or symbol.</span></li>
+              <li class="r" style="--d:4"><span class="k">3</span><span><b>Visibility</b>: set the default to <b>Everyone</b> so your record is useful.</span></li>
+              <li class="r" style="--d:5"><span class="k">4</span><span><b>Terms</b>: accept the terms, complete the captcha, then click <b>Register</b>.</span></li>
+            </ul>
+          </div>
+          <div class="browser r fr" style="--d:2">
+            <div class="bbar"><i></i><i></i><i></i><div class="url"><svg class="ic"><use href="#i-lock"/></svg>orcid.org/register</div></div>
+            <div class="bbody">
+              <div class="stepper">
+                <div class="s"><i style="--t:.9s">1</i></div><div class="bar" style="--t:1.2s"></div>
+                <div class="s"><i style="--t:1.9s">2</i></div><div class="bar" style="--t:2.2s"></div>
+                <div class="s"><i style="--t:2.9s">3</i></div><div class="bar" style="--t:3.2s"></div>
+                <div class="s"><i style="--t:3.9s">4</i></div>
+              </div>
+              <div class="wgrid">
+                <div class="wcard" style="--t:1s"><h6><span>1</span>Names &amp; emails</h6><div class="in">Jane A.</div><div class="in">Researcher</div><div class="in">j.researcher@university.edu</div><div class="in" style="color:var(--mock-muted)">+ Additional email (personal)</div></div>
+                <div class="wcard" style="--t:2s"><h6><span>2</span>Password</h6><div class="in">••••••••••••</div><div class="in">••••••••••••</div><div class="r2" style="color:#137333"><svg class="ic" style="width:16px;height:16px"><use href="#i-check"/></svg>8+ characters, 1 number</div></div>
+                <div class="wcard" style="--t:3s"><h6><span>3</span>Visibility</h6><div class="r2"><span class="radio on"></span><b>Everyone</b></div><div class="r2"><span class="radio"></span>Trusted parties</div><div class="r2"><span class="radio"></span>Only me</div></div>
+                <div class="wcard" style="--t:4s"><h6><span>4</span>Terms of use</h6><div class="r2"><span class="cb tick" style="--t:4.6s;width:18px;height:18px"><svg class="ic" style="stroke:#fff;width:12px"><use href="#i-check"/></svg></span>I consent to the privacy policy &amp; terms</div><div class="captcha"><span class="cb tick" style="--t:5s"><svg class="ic" style="stroke:#fff"><use href="#i-check"/></svg></span>I'm not a robot</div><div style="margin-top:10px"><span class="mbtn green" style="padding:8px 18px">Register</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 15. ORCID Step 3: iD reveal ================= -->
+      <section class="slide" data-accent="orcid" data-title="ORCID · Step 3" data-enter="orcid">
+        <div class="idstage" style="height:100%">
+          <div class="stepno r" style="margin-bottom:26px"><span class="n">3</span><span class="of">ORCID · Step 3 of 5 · Verify your email &amp; meet your iD</span></div>
+          <div class="idhalo r zm" style="--d:1"><div class="idlogo">iD</div></div>
+          <div class="idbig r" style="--d:2" id="orcidId">0000-0000-0000-0000</div>
+          <div class="idurl r" style="--d:3">https://orcid.org/0000-0002-1825-0097</div>
+          <div class="anatomy">
+            <div class="card r" style="--d:4"><h3>16 characters, 4 blocks</h3><p>Unique to you for life. It never changes when you move institution or change your name.</p></div>
+            <div class="card r" style="--d:5"><h3>The last character is a checksum</h3><p>It's 0–9 or <b>X</b>. Systems use it to catch typing mistakes.</p></div>
+            <div class="card r" style="--d:6"><h3>Verify your email first</h3><p>Click the link ORCID emails you. Some features stay locked until you do.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 16. ORCID Step 4 ================= -->
+      <section class="slide" data-accent="orcid" data-title="ORCID · Step 4">
+        <div class="step">
+          <div>
+            <div class="stepno r"><span class="n">4</span><span class="of">ORCID · Step 4 of 5</span></div>
+            <h2 class="r" style="--d:1">Build your <span class="grad">record</span></h2>
+            <ul class="actions">
+              <li class="r" style="--d:2"><span class="k"><svg class="ic" style="width:16px"><use href="#i-brief"/></svg></span><span>Add <b>Employment</b> and <b>Education</b>. Search for your institution by name.</span></li>
+              <li class="r" style="--d:3"><span class="k"><svg class="ic" style="width:16px"><use href="#i-file"/></svg></span><span><b>Works → Add</b> → <b>Search &amp; link</b> (Crossref, DataCite, Scopus…), <b>Add DOI</b>, <b>BibTeX</b> import, or add manually.</span></li>
+              <li class="r" style="--d:4"><span class="k"><svg class="ic" style="width:16px"><use href="#i-refresh"/></svg></span><span>Allow <b>Crossref auto-update</b> so new DOIs flow in automatically.</span></li>
+              <li class="r" style="--d:5"><span class="k"><svg class="ic" style="width:16px"><use href="#i-money"/></svg></span><span>Add <b>Funding</b>, <b>Peer review</b>, keywords and a short biography.</span></li>
+            </ul>
+          </div>
+          <div class="browser r fr" style="--d:2;--cd:1.4s">
+            <div class="bbar"><i></i><i></i><i></i><div class="url"><svg class="ic"><use href="#i-lock"/></svg>orcid.org/my-orcid</div></div>
+            <div class="bbody rec">
+              <div class="nav">
+                <div><svg class="ic"><use href="#i-user"/></svg>Biography</div>
+                <div><svg class="ic"><use href="#i-brief"/></svg>Employment</div>
+                <div><svg class="ic"><use href="#i-book"/></svg>Education</div>
+                <div class="on"><svg class="ic"><use href="#i-file"/></svg>Works (3)</div>
+                <div><svg class="ic"><use href="#i-money"/></svg>Funding</div>
+                <div><svg class="ic"><use href="#i-eye"/></svg>Peer review</div>
+              </div>
+              <div class="panel" style="background:none;border:none;padding:0;backdrop-filter:none">
+                <h5>Works <span class="addbtn hl">+ Add</span></h5>
+                <div class="dd">
+                  <div class="hot"><svg class="ic"><use href="#i-search"/></svg>Search &amp; link</div>
+                  <div><svg class="ic"><use href="#i-link"/></svg>Add DOI</div>
+                  <div><svg class="ic"><use href="#i-plus"/></svg>Add PubMed ID</div>
+                  <div><svg class="ic"><use href="#i-file"/></svg>Add BibTeX</div>
+                  <div><svg class="ic"><use href="#i-pen"/></svg>Add manually</div>
+                </div>
+                <div class="work"><b>Genomic signatures of drought tolerance in West African maize</b><small>2023 · Journal article · DOI: 10.xxxx/pg.2023.0142</small><br><span class="src">Source: Crossref</span></div>
+                <div class="work"><b>Machine learning approaches to sequence classification: a review</b><small>2021 · Review · DOI: 10.xxxx/br.2021.077</small><br><span class="src">Source: Crossref</span></div>
+              </div>
+              <div class="cursor" style="right:48px;top:42px"><svg><use href="#i-cursor"/></svg></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 17. ORCID Step 5 ================= -->
+      <section class="slide" data-accent="orcid" data-title="ORCID · Step 5">
+        <div class="stepno r"><span class="n">5</span><span class="of">ORCID · Step 5 of 5</span></div>
+        <h2 class="title r" style="--d:1">Use your iD <span class="grad">everywhere</span></h2>
+        <div class="usegrid">
+          <div class="card r" style="--d:2"><div class="icbox"><svg class="ic"><use href="#i-file"/></svg></div><div><h3>Manuscript submission</h3><p>Link your iD in the journal system so the published DOI is pushed to your record.</p></div></div>
+          <div class="card r" style="--d:3"><div class="icbox"><svg class="ic"><use href="#i-money"/></svg></div><div><h3>Grant applications</h3><p>Many funders pre-fill your CV and outputs straight from ORCID.</p></div></div>
+          <div class="card r" style="--d:4"><div class="icbox"><svg class="ic"><use href="#i-link"/></svg></div><div><h3>Google Scholar homepage</h3><p>Paste your ORCID URL into the profile's Homepage field to connect the two.</p></div></div>
+          <div class="card r" style="--d:5"><div class="icbox"><svg class="ic"><use href="#i-mail"/></svg></div><div><h3>Email signature &amp; CV</h3><p>Add the full https://orcid.org/… link, not just the number.</p></div></div>
+          <div class="card r" style="--d:6"><div class="icbox"><svg class="ic"><use href="#i-globe"/></svg></div><div><h3>Institutional repository</h3><p>Connect your university repository and research systems.</p></div></div>
+          <div class="card r" style="--d:7"><div class="icbox"><svg class="ic"><use href="#i-shield"/></svg></div><div><h3>Trusted organizations</h3><p>Grant permission once and let trusted sources keep your record up to date.</p></div></div>
+        </div>
+        <div class="connect r" style="--d:8"><span class="node" style="color:var(--scholar)">Google Scholar</span><span class="flow"></span><span>linked through your homepage &amp; CV</span><span class="flow" style="animation-direction:reverse"></span><span class="node" style="color:var(--orcid)">ORCID iD</span></div>
+      </section>
+
+      <!-- ================= 18. Best practices ================= -->
+      <section class="slide" data-accent="teal" data-title="Best practices">
+        <span class="kicker r">Keep it healthy</span>
+        <h2 class="title r" style="--d:1">Best practices &amp; common mistakes</h2>
+        <div class="dodont">
+          <div class="card do r fl" style="--d:2">
+            <h3><svg class="ic" style="width:32px;height:32px"><use href="#i-check"/></svg>Do</h3>
+            <ul>
+              <li><svg class="ic"><use href="#i-check"/></svg>Keep <b>one</b> ORCID iD for your entire career.</li>
+              <li><svg class="ic"><use href="#i-check"/></svg>Add a personal backup email to both accounts.</li>
+              <li><svg class="ic"><use href="#i-check"/></svg>Review Scholar's article updates by email.</li>
+              <li><svg class="ic"><use href="#i-check"/></svg>Make both profiles public and keep affiliations current.</li>
+              <li><svg class="ic"><use href="#i-check"/></svg>Check your profiles every few months.</li>
+            </ul>
+          </div>
+          <div class="card dont r fr" style="--d:3">
+            <h3><svg class="ic" style="width:32px;height:32px"><use href="#i-x"/></svg>Don't</h3>
+            <ul>
+              <li><svg class="ic"><use href="#i-x"/></svg>Create duplicate ORCID records. Ask ORCID support to merge them.</li>
+              <li><svg class="ic"><use href="#i-x"/></svg>Let "Apply updates automatically" add other people's papers.</li>
+              <li><svg class="ic"><use href="#i-x"/></svg>Rely only on a work email you may lose.</li>
+              <li><svg class="ic"><use href="#i-x"/></svg>Add predatory-journal or non-scholarly items to inflate metrics.</li>
+              <li><svg class="ic"><use href="#i-x"/></svg>Share your password or sign up through third-party sites.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 19. Question ================= -->
+      <section class="slide" data-title="Live poll · Question">
+        <div class="qwrap">
+          <div class="floaters" id="floaters"></div>
+          <span class="qbadge r zm">Interactive · Live poll</span>
+          <h2 class="r bl" style="--d:1">Which <span class="grad">AI application</span> are you much more familiar with in research?</h2>
+          <p class="sub r" style="--d:3">Grab your phone. On the next screen, scan the code and rank the tools from <b>most</b> to <b>least</b> familiar.</p>
+        </div>
+      </section>
+
+      <!-- ================= 20. QR ================= -->
+      <section class="slide" data-accent="teal" data-title="Scan to vote">
+        <div class="qrslide" style="padding:18px 0 0">
+          <div class="qrside">
+            <span class="kicker r">Scan to rank</span>
+            <h2 class="r" style="--d:1;margin-top:16px">Point your <span class="grad">camera</span> here</h2>
+            <div class="qrsteps">
+              <div class="r" style="--d:2"><i>1</i>Open your phone camera</div>
+              <div class="r" style="--d:3"><i>2</i>Tap tools in order of familiarity</div>
+              <div class="r" style="--d:4"><i>3</i>Submit and watch the results</div>
+            </div>
+          </div>
+          <div class="qrcard r zm" style="--d:1">
+            <span class="corner a"></span><span class="corner b"></span><span class="corner c"></span><span class="corner d"></span>
+            <div id="qrBig"></div>
+            <div class="scanline"></div>
+          </div>
+          <div class="qrside" style="text-align:center">
+            <div class="live r" style="--d:2" data-live><span class="pulse"></span><span data-live-text>Connecting…</span></div>
+            <div class="bigcount r" style="--d:3;margin-top:30px" data-count-live>0</div>
+            <small class="r" style="--d:3">responses so far</small>
+            <div class="shorturl r" style="--d:4" data-vote-url></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 21. Results: overview ================= -->
+      <section class="slide" data-title="Ranking analysis · Overview" data-enter="results">
+        <div class="rhead">
+          <div>
+            <span class="kicker r">Live results</span>
+            <h2 class="title r" style="--d:1">Ranking Analysis: who leads?</h2>
+          </div>
+          <div class="live r" style="--d:1" data-live><span class="pulse"></span><span data-live-text>Connecting…</span></div>
+        </div>
+        <div class="kpis">
+          <div class="kpi r" style="--d:2"><small>Responses</small><b id="kResp">0</b><em>people ranked the tools</em></div>
+          <div class="kpi r" style="--d:3"><small>Most familiar</small><b id="kTop">—</b><em id="kTopSub">highest Borda score</em></div>
+          <div class="kpi r" style="--d:4"><small>Avg tools ranked</small><b id="kAvg">0</b><em>out of 10 per person</em></div>
+          <div class="kpi r" style="--d:5"><small>Agreement (Kendall's W)</small><b id="kW">—</b><em id="kWSub">0 = none · 1 = identical</em></div>
+        </div>
+        <div class="rgrid">
+          <div class="panel r" style="--d:6">
+            <h3>Top 3 podium <small>familiarity score / 100</small></h3>
+            <div class="podium">
+              <div class="pod p2"><div class="nm" id="p2n">—</div><div class="sc" id="p2s"></div><div class="blk" id="p2b">2</div></div>
+              <div class="pod p1"><div class="nm" id="p1n">—</div><div class="sc" id="p1s"></div><div class="blk" id="p1b">1</div></div>
+              <div class="pod p3"><div class="nm" id="p3n">—</div><div class="sc" id="p3s"></div><div class="blk" id="p3b">3</div></div>
+            </div>
+            <div class="insight" id="insight1">Waiting for the first responses…</div>
+          </div>
+          <div class="panel r" style="--d:7">
+            <h3>Familiarity score by tool <small>Borda count: 1st = 10 pts … 10th = 1 pt, scaled to 100</small></h3>
+            <div class="chartbox"><canvas id="cScore" aria-label="Familiarity score by tool" role="img"></canvas></div>
+          </div>
+        </div>
+        <div class="empty" data-empty><div class="mq" data-mini-qr></div><div><b style="color:var(--ink);font-size:26px;font-family:Arial">Waiting for responses…</b><br>Scan the code to add your ranking.</div></div>
+      </section>
+
+      <!-- ================= 22. Results: deep dive ================= -->
+      <section class="slide" data-title="Ranking analysis · Deep dive" data-enter="results">
+        <div class="rhead">
+          <div>
+            <span class="kicker r">Live results</span>
+            <h2 class="title r" style="--d:1">Ranking Analysis: deep dive</h2>
+          </div>
+          <div class="live r" style="--d:1" data-live><span class="pulse"></span><span data-live-text>Connecting…</span></div>
+        </div>
+        <div class="rgrid2">
+          <div class="panel heat-panel r" style="--d:2">
+            <h3>Rank distribution heatmap <small>how many people placed each tool at each position</small></h3>
+            <div class="heat" id="heat"></div>
+            <div class="scale"><span>Fewer</span><i></i><span>More people</span><span style="margin-left:auto">Avg = mean position among people who ranked it</span></div>
+          </div>
+          <div class="panel r" style="--d:3">
+            <h3>Familiarity profile <small>score vs. reach (%)</small></h3>
+            <div class="chartbox"><canvas id="cRadar" aria-label="Radar of familiarity score and reach" role="img"></canvas></div>
+          </div>
+          <div class="panel r" style="--d:4">
+            <h3>First-choice votes <small>tools ranked #1</small></h3>
+            <div class="chartbox"><canvas id="cFirst" aria-label="First-choice votes by tool" role="img"></canvas></div>
+          </div>
+        </div>
+        <div class="insight r" style="--d:5" id="insight2"></div>
+        <div class="empty" data-empty><div class="mq" data-mini-qr></div><div><b style="color:var(--ink);font-size:26px;font-family:Arial">Waiting for responses…</b><br>Scan the code to add your ranking.</div></div>
+      </section>
+
+      <!-- ================= 23. Thanks ================= -->
+      <section class="slide thanks" data-title="Thank you">
+        <span class="kicker r" style="justify-content:center">Questions &amp; answers</span>
+        <h2 class="r bl" style="--d:1;margin-top:18px">Thank <span class="grad">you!</span></h2>
+        <p class="sub r" style="--d:2;margin:24px auto 0;text-align:center">Your research identity is now discoverable, verifiable and connected. Keep it up to date.</p>
+        <div class="links">
+          <span class="urlpill r" style="--d:3;--acc:var(--scholar)"><svg class="ic"><use href="#i-globe"/></svg>scholar.google.com</span>
+          <span class="urlpill r" style="--d:4;--acc:var(--orcid)"><svg class="ic"><use href="#i-id"/></svg>orcid.org/register</span>
+        </div>
+        <div class="presenter r" style="--d:5;justify-content:center">
+          <div class="av" data-initials>YN</div>
+          <div style="text-align:left"><b data-cfg="presenter">Your Name</b><span data-cfg="contact">your.email@institution.edu</span></div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div class="progress" id="progress"></div>
+  <div class="hud">
+    <div class="brand">Google Scholar × ORCID</div>
+    <div class="ctrls">
+      <button id="prev" title="Previous (←)" aria-label="Previous slide"><svg class="ic"><use href="#i-left"/></svg></button>
+      <span class="count" id="count">1 / 1</span>
+      <button id="next" title="Next (→)" aria-label="Next slide"><svg class="ic"><use href="#i-right"/></svg></button>
+      <button id="fs" title="Fullscreen (F)" aria-label="Fullscreen"><svg class="ic"><use href="#i-full"/></svg></button>
+      <button id="gear" title="Presenter panel (P)" aria-label="Presenter panel"><svg class="ic"><use href="#i-gear"/></svg></button>
+    </div>
+  </div>
+
+  <aside class="drawer" id="drawer" aria-label="Presenter panel">
+    <h3>Presenter panel</h3>
+    <div style="color:var(--muted);font-size:14px">Live poll controls</div>
+    <div class="lbl">Responses</div>
+    <div style="display:flex;align-items:baseline;gap:10px"><b style="font-family:Arial;font-size:40px" data-count-live>0</b><span style="color:var(--muted)" id="demoNote"></span></div>
+    <div class="lbl">Voting link</div>
+    <div class="val" data-vote-url></div>
+    <div class="warn" id="fileWarn" hidden>You're viewing a local file. Open the GitHub Pages URL so phones can reach the voting page.</div>
+    <button class="act" id="copyUrl"><svg class="ic"><use href="#i-link"/></svg>Copy voting link</button>
+    <div class="lbl">Rehearsal</div>
+    <button class="act" id="addDemo"><svg class="ic"><use href="#i-plus"/></svg>Add 25 sample responses</button>
+    <button class="act" id="clearDemo"><svg class="ic"><use href="#i-x"/></svg>Remove sample responses</button>
+    <div class="lbl">Data</div>
+    <button class="act" id="exportCsv"><svg class="ic"><use href="#i-download"/></svg>Export results (CSV)</button>
+    <button class="act" id="theme"><svg class="ic"><use href="#i-moon"/></svg>Toggle light / dark theme</button>
+    <button class="act danger" id="newSession"><svg class="ic"><use href="#i-refresh"/></svg>Start a new poll session</button>
+    <div class="lbl">Keyboard</div>
+    <div class="keys"><kbd>→</kbd> <kbd>Space</kbd> next · <kbd>←</kbd> back<br><kbd>F</kbd> fullscreen · <kbd>P</kbd> this panel · <kbd>T</kbd> theme<br><kbd>Q</kbd> QR slide · <kbd>R</kbd> results · <kbd>Home</kbd>/<kbd>End</kbd></div>
+    <div class="lbl">Session</div>
+    <div class="val" id="sessionId"></div>
+  </aside>
+  <div class="toast" id="toast"></div>
+  <div class="ttip" id="ttip"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="poll.js"></script>
+  <script>
+  /* =====================================================================
+   * EDIT THESE to personalise the deck.
+   * ===================================================================== */
+  var DECK = {
+    presenter: 'Your Name',
+    event: 'Research Skills Workshop',
+    contact: 'your.email@institution.edu'
+  };
+
+  (function () {
+    'use strict';
+    var $ = function (s, el) { return (el || document).querySelector(s); };
+    var $$ = function (s, el) { return Array.prototype.slice.call((el || document).querySelectorAll(s)); };
+
+    /* ---------- personalise ---------- */
+    $$('[data-cfg]').forEach(function (el) { el.textContent = DECK[el.dataset.cfg] || el.textContent; });
+    var initials = DECK.presenter.split(/\s+/).filter(Boolean).map(function (w) { return w[0]; }).slice(0, 2).join('').toUpperCase();
+    $$('[data-initials]').forEach(function (el) { el.textContent = initials || 'YN'; });
+
+    /* ---------- theme ---------- */
+    var savedTheme = Poll.store('deck.theme');
+    if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+    function toggleTheme() {
+      var t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = t;
+      Poll.store('deck.theme', t);
+      buildCharts();
+      renderResults(false);
+    }
+
+    /* ---------- stage scaling ---------- */
+    var stage = $('#stage');
+    function fit() {
+      var s = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
+      stage.style.transform = 'scale(' + s + ')';
+    }
+    window.addEventListener('resize', fit);
+    fit();
+
+    /* ---------- navigation ---------- */
+    var slides = $$('.slide');
+    var cur = -1;
+    function go(i) {
+      i = Math.max(0, Math.min(slides.length - 1, i));
+      if (i === cur) return;
+      slides.forEach(function (s, k) {
+        s.classList.toggle('active', k === i);
+        s.classList.toggle('before', k < i);
+      });
+      cur = i;
+      stage.classList.toggle('band', slides[i].classList.contains('divider'));
+      document.documentElement.style.removeProperty('--acc');
+      var acc = getComputedStyle(slides[i]).getPropertyValue('--acc');
+      document.documentElement.style.setProperty('--acc', acc);
+      $('#count').textContent = (i + 1) + ' / ' + slides.length;
+      $('#progress').style.width = ((i + 1) / slides.length * 100) + '%';
+      history.replaceState(null, '', '#' + (i + 1));
+      onEnter(slides[i]);
+    }
+    function findSlide(title) { return slides.findIndex(function (s) { return (s.dataset.title || '').indexOf(title) === 0; }); }
+    $('#prev').onclick = function () { go(cur - 1); };
+    $('#next').onclick = function () { go(cur + 1); };
+    $('#fs').onclick = toggleFs;
+    $('#gear').onclick = function () { $('#drawer').classList.toggle('open'); };
+    function toggleFs() {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+    document.addEventListener('keydown', function (e) {
+      if (e.target.closest && e.target.closest('input,textarea')) return;
+      var k = e.key;
+      if (k === 'ArrowRight' || k === 'PageDown' || k === ' ' || k === 'Enter') { e.preventDefault(); go(cur + 1); }
+      else if (k === 'ArrowLeft' || k === 'PageUp' || k === 'Backspace') { e.preventDefault(); go(cur - 1); }
+      else if (k === 'Home') go(0);
+      else if (k === 'End') go(slides.length - 1);
+      else if (k === 'f' || k === 'F') toggleFs();
+      else if (k === 'p' || k === 'P') $('#drawer').classList.toggle('open');
+      else if (k === 'Escape') $('#drawer').classList.remove('open');
+      else if (k === 't' || k === 'T') toggleTheme();
+      else if (k === 'q' || k === 'Q') go(findSlide('Scan'));
+      else if (k === 'r' || k === 'R') go(findSlide('Ranking'));
+    });
+    var tx = null;
+    document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+    document.addEventListener('touchend', function (e) {
+      if (tx === null) return;
+      var dx = e.changedTouches[0].clientX - tx;
+      if (Math.abs(dx) > 60) go(cur + (dx < 0 ? 1 : -1));
+      tx = null;
+    });
+    var idleT;
+    function wake() { document.body.classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(function () { document.body.classList.add('idle'); }, 3000); }
+    document.addEventListener('mousemove', wake);
+    wake();
+
+    /* ---------- per-slide enter effects ---------- */
+    var typeToken = 0;
+    function onEnter(slide) {
+      var kind = slide.dataset.enter;
+      typeToken++;
+      if (kind === 'type') runTyper(slide, typeToken);
+      if (kind === 'count') $$('[data-count]', slide).forEach(function (el) { countUp(el, +el.dataset.count, 0, 1300, 900); });
+      if (kind === 'orcid') revealId();
+      if (kind === 'results') renderResults(true);
+    }
+
+    function runTyper(slide, token) {
+      var fields = $$('[data-type]', slide);
+      fields.forEach(function (f) { f.textContent = ''; f.classList.remove('typing'); });
+      var fi = 0;
+      function nextField() {
+        if (token !== typeToken || fi >= fields.length) return;
+        var f = fields[fi++], txt = f.dataset.type, c = 0;
+        f.classList.add('typing');
+        (function tick() {
+          if (token !== typeToken) return;
+          f.textContent = txt.slice(0, ++c);
+          if (c < txt.length) setTimeout(tick, 28 + Math.random() * 30);
+          else { f.classList.remove('typing'); setTimeout(nextField, 180); }
+        })();
+      }
+      setTimeout(nextField, 1100);
+    }
+
+    function countUp(el, to, dec, dur, delay) {
+      var from = parseFloat(el.dataset.shown || 0) || 0;
+      el.dataset.shown = to;
+      setTimeout(function () {
+        var t0 = performance.now();
+        (function step(t) {
+          var p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3), v = from + (to - from) * e;
+          el.textContent = v.toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec });
+          if (p < 1) requestAnimationFrame(step);
+        })(t0);
+      }, delay || 0);
+    }
+
+    function revealId() {
+      var el = $('#orcidId'), target = '0000-0002-1825-0097', token = typeToken, start = performance.now() + 900;
+      (function frame(t) {
+        if (token !== typeToken) return;
+        var p = Math.max(0, (t - start) / 1800), shown = Math.floor(p * target.length), out = '';
+        for (var i = 0; i < target.length; i++) {
+          var ch = target[i];
+          if (ch === '-' || i < shown) out += ch; else out += Math.floor(Math.random() * 10);
+        }
+        el.innerHTML = out.slice(0, 18) + '<span class="chk">' + out.slice(18) + '</span>';
+        if (p < 1) requestAnimationFrame(frame);
+      })(performance.now());
+    }
+
+    /* ---------- question slide floaters ---------- */
+    var spots = [[6, 10], [74, 8], [86, 30], [3, 44], [88, 62], [8, 76], [70, 86], [36, 6], [24, 88], [52, 90]];
+    $('#floaters').innerHTML = Poll.TOOLS.map(function (t, i) {
+      return '<span style="left:' + spots[i][0] + '%;top:' + spots[i][1] + '%;--i:' + i + ';--h:' + t.hue + '">' + t.name + '</span>';
+    }).join('');
+
+    /* ---------- poll session ---------- */
+    var session = Poll.store('deck.session');
+    if (!session) { session = Poll.newId(8); Poll.store('deck.session', session); }
+    var liveVotes = [], demo = [], stopSub = null, status = 'connecting';
+    try { demo = JSON.parse(Poll.store('deck.demo.' + session) || '[]'); } catch (e) { demo = []; }
+
+    function voteUrl() { return new URL('vote.html?s=' + session, location.href).href; }
+
+    function makeQR(el, size) {
+      el.innerHTML = '';
+      if (window.QRCode) {
+        new QRCode(el, { text: voteUrl(), width: size, height: size, colorDark: '#0b1024', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+      } else {
+        el.innerHTML = '<div style="color:#0b1024;font:600 18px Arial;padding:20px;word-break:break-all;width:' + size + 'px">QR library could not load. Share this link:<br><br>' + voteUrl() + '</div>';
+      }
+    }
+
+    function startSession() {
+      if (stopSub) stopSub();
+      liveVotes = [];
+      makeQR($('#qrBig'), 600);
+      $$('[data-mini-qr]').forEach(function (el) { makeQR(el, 190); });
+      $$('[data-vote-url]').forEach(function (el) { el.textContent = voteUrl().replace(/^https?:\/\//, ''); });
+      $('#sessionId').textContent = session;
+      $('#fileWarn').hidden = location.protocol !== 'file:';
+      stopSub = Poll.subscribe(session, function (votes) {
+        liveVotes = votes;
+        update();
+      }, function (s) {
+        status = s;
+        $$('[data-live]').forEach(function (el) {
+          el.dataset.status = s;
+          $('[data-live-text]', el).textContent = s === 'live' ? 'Live · listening for votes' : s === 'offline' ? 'Offline · retrying…' : 'Connecting…';
+        });
+      });
+      update();
+    }
+
+    function allVotes() { return liveVotes.concat(demo); }
+
+    function update() {
+      var n = allVotes().length;
+      $$('[data-count-live]').forEach(function (el) { if (+el.dataset.shown !== n) countUp(el, n, 0, 600, 0); });
+      $('#demoNote').textContent = demo.length ? '(' + demo.length + ' sample)' : '';
+      if (slides[cur] && slides[cur].dataset.enter === 'results') renderResults(false);
+    }
+
+    /* ---------- charts ---------- */
+    var charts = {};
+    function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+    function alpha(hex, a) {
+      var c = document.createElement('canvas').getContext('2d');
+      c.fillStyle = hex; var v = c.fillStyle;
+      if (v[0] === '#') { var r = parseInt(v.slice(1, 3), 16), g = parseInt(v.slice(3, 5), 16), b = parseInt(v.slice(5, 7), 16); return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')'; }
+      return v;
+    }
+    var valueLabels = {
+      id: 'valueLabels',
+      afterDatasetsDraw: function (chart, args, opts) {
+        var ctx = chart.ctx, ds = chart.data.datasets[0], horiz = chart.options.indexAxis === 'y';
+        ctx.save();
+        ctx.fillStyle = opts.color; ctx.font = '700 14px Arial, sans-serif';
+        chart.getDatasetMeta(0).data.forEach(function (el, i) {
+          var v = ds.data[i]; if (!v) return;
+          var txt = opts.format(v);
+          if (horiz) { ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(txt, el.x + 8, el.y); }
+          else { ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(txt, el.x, el.y - 6); }
+        });
+        ctx.restore();
+      }
+    };
+
+    function buildCharts() {
+      if (!window.Chart) return;
+      Object.keys(charts).forEach(function (k) { charts[k].destroy(); });
+      var ink = css('--ink'), ink2 = css('--ink-2'), muted = css('--muted'), grid = css('--grid'), violet = css('--kiu'), teal = css('--teal');
+      Chart.defaults.font.family = 'Arial, sans-serif';
+      Chart.defaults.color = ink2;
+      var tooltip = { backgroundColor: css('--card-solid'), titleColor: ink, bodyColor: ink2, borderColor: grid, borderWidth: 1, padding: 12, cornerRadius: 10, titleFont: { weight: '700', size: 14 }, bodyFont: { size: 13 } };
+
+      charts.score = new Chart($('#cScore'), {
+        type: 'bar',
+        data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderRadius: 6, borderSkipped: 'start', barPercentage: .78, categoryPercentage: .9 }] },
+        options: {
+          indexAxis: 'y', maintainAspectRatio: false, animation: { duration: 1100, easing: 'easeOutQuart' },
+          layout: { padding: { right: 46 } },
+          scales: {
+            x: { min: 0, max: 100, grid: { color: grid }, border: { display: false }, ticks: { color: muted, stepSize: 25 } },
+            y: { grid: { display: false }, border: { display: false }, ticks: { color: ink, font: { size: 15, weight: '600' } } }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: Object.assign({}, tooltip, { callbacks: { label: function (c) { var s = lastResult.ranked[c.dataIndex]; return [' Score: ' + s.score.toFixed(1) + ' / 100', ' Borda points: ' + s.borda, ' Ranked #1 by: ' + s.firsts, ' Reach: ' + s.reach.toFixed(0) + '%']; } } }),
+            valueLabels: { color: ink, format: function (v) { return v.toFixed(1); } }
+          }
+        },
+        plugins: [valueLabels]
+      });
+
+      charts.radar = new Chart($('#cRadar'), {
+        type: 'radar',
+        data: {
+          labels: Poll.TOOLS.map(function (t) { return t.name; }),
+          datasets: [
+            { label: 'Familiarity score', data: [], borderColor: violet, backgroundColor: alpha(violet, .22), borderWidth: 2, pointRadius: 4, pointBackgroundColor: violet },
+            { label: 'Reach %', data: [], borderColor: teal, backgroundColor: alpha(teal, .12), borderWidth: 2, pointRadius: 4, pointBackgroundColor: teal, borderDash: [6, 4] }
+          ]
+        },
+        options: {
+          maintainAspectRatio: false, animation: { duration: 1100 },
+          scales: { r: { min: 0, max: 100, ticks: { display: false, stepSize: 25 }, grid: { color: grid }, angleLines: { color: grid }, pointLabels: { color: ink2, font: { size: 12.5, weight: '600' } } } },
+          plugins: { legend: { position: 'bottom', labels: { color: ink2, boxWidth: 14, boxHeight: 14, usePointStyle: true, padding: 14 } }, tooltip: Object.assign({}, tooltip, { callbacks: { label: function (c) { return ' ' + c.dataset.label + ': ' + c.raw.toFixed(1); } } }) }
+        }
+      });
+
+      charts.first = new Chart($('#cFirst'), {
+        type: 'bar',
+        data: { labels: [], datasets: [{ data: [], backgroundColor: alpha(css('--amber'), .9), borderRadius: 6, borderSkipped: 'start', barPercentage: .7 }] },
+        options: {
+          maintainAspectRatio: false, animation: { duration: 1100, easing: 'easeOutQuart' }, layout: { padding: { top: 22 } },
+          scales: {
+            x: { grid: { display: false }, border: { display: false }, ticks: { color: ink2, font: { size: 12, weight: '600' }, minRotation: 35, maxRotation: 35, autoSkip: false } },
+            y: { beginAtZero: true, grid: { color: grid }, border: { display: false }, ticks: { color: muted, precision: 0 } }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: Object.assign({}, tooltip, { callbacks: { label: function (c) { var s = lastFirst[c.dataIndex]; return ' ' + s.firsts + ' first-place votes (' + s.firstShare.toFixed(0) + '%)'; } } }),
+            valueLabels: { color: ink, format: function (v) { return String(v); } }
+          }
+        },
+        plugins: [valueLabels]
+      });
+    }
+
+    var lastResult = Poll.analyze([]), lastFirst = [];
+    function renderResults(replay) {
+      var votes = allVotes(), res = Poll.analyze(votes);
+      lastResult = res;
+      var empty = res.m === 0;
+      $$('[data-empty]').forEach(function (el) { el.classList.toggle('show', empty); });
+
+      // KPIs
+      countUp($('#kResp'), res.m, 0, 700, 0);
+      $('#kTop').textContent = empty ? '—' : res.ranked[0].name;
+      $('#kTopSub').textContent = empty ? 'highest Borda score' : 'score ' + res.ranked[0].score.toFixed(1) + ' / 100';
+      countUp($('#kAvg'), res.avgListLen, 1, 700, 0);
+      if (res.W === null) { $('#kW').textContent = '—'; $('#kWSub').textContent = 'needs 2+ responses'; }
+      else {
+        $('#kW').textContent = res.W.toFixed(2);
+        $('#kWSub').textContent = (res.W < .1 ? 'Very weak' : res.W < .3 ? 'Weak' : res.W < .5 ? 'Moderate' : res.W < .7 ? 'Strong' : 'Very strong') + ' agreement';
+      }
+
+      // Podium
+      var maxH = 230;
+      [1, 2, 3].forEach(function (p) {
+        var s = res.ranked[p - 1], blk = $('#p' + p + 'b');
+        $('#p' + p + 'n').textContent = empty ? '—' : s.name;
+        $('#p' + p + 's').textContent = empty ? '' : s.score.toFixed(1) + ' pts';
+        var h = empty ? 40 : Math.max(50, (s.score / Math.max(1, res.ranked[0].score)) * maxH * (p === 1 ? 1 : p === 2 ? .82 : .68));
+        if (replay) { blk.style.transition = 'none'; blk.style.height = '0px'; void blk.offsetHeight; blk.style.transition = ''; }
+        setTimeout(function () { blk.style.height = h + 'px'; }, replay ? 900 : 0);
+      });
+
+      // Insight
+      if (empty) $('#insight1').textContent = 'Waiting for the first responses…';
+      else {
+        var firstLeader = res.stats.slice().sort(function (a, b) { return b.firsts - a.firsts; })[0];
+        var last = res.ranked[res.ranked.length - 1];
+        $('#insight1').innerHTML = '<b>' + res.ranked[0].name + '</b> leads overall. <b>' + firstLeader.name + '</b> received the most first-place votes (' + firstLeader.firsts + '). Least familiar so far: <b>' + last.name + '</b>.';
+      }
+
+      // Charts
+      if (window.Chart && charts.score) {
+        var violet = css('--kiu');
+        charts.score.data.labels = res.ranked.map(function (s) { return s.name; });
+        charts.score.data.datasets[0].data = res.ranked.map(function (s) { return +s.score.toFixed(1); });
+        charts.score.data.datasets[0].backgroundColor = res.ranked.map(function (s, i) { return alpha(violet, i < 3 ? 1 : .45); });
+        charts.radar.data.datasets[0].data = res.stats.map(function (s) { return s.score; });
+        charts.radar.data.datasets[1].data = res.stats.map(function (s) { return s.reach; });
+        lastFirst = res.stats.slice().sort(function (a, b) { return b.firsts - a.firsts || b.borda - a.borda; });
+        charts.first.data.labels = lastFirst.map(function (s) { return s.name; });
+        charts.first.data.datasets[0].data = lastFirst.map(function (s) { return s.firsts; });
+        Object.keys(charts).forEach(function (k) {
+          if (replay) { charts[k].reset(); setTimeout(function () { charts[k].update(); }, 700); }
+          else charts[k].update();
+        });
+      }
+
+      // Heatmap
+      var max = 1;
+      res.stats.forEach(function (s) { s.dist.forEach(function (c) { if (c > max) max = c; }); });
+      var h = '<div></div>';
+      for (var p = 1; p <= res.N; p++) h += '<div class="hdr">#' + p + '</div>';
+      h += '<div class="hdr">Avg</div>';
+      res.ranked.forEach(function (s) {
+        h += '<div class="lbl">' + s.name + '</div>';
+        s.dist.forEach(function (c, i) {
+          var v = c / max;
+          h += '<div class="cell' + (v > .55 ? ' dark' : '') + '" style="--v:' + v.toFixed(3) + '" data-tip="<b>' + s.name + '</b><br>Ranked #' + (i + 1) + ' by ' + c + ' ' + (c === 1 ? 'person' : 'people') + '">' + (c || '') + '</div>';
+        });
+        h += '<div class="avg">' + (s.avgRank ? s.avgRank.toFixed(1) : '–') + '</div>';
+      });
+      $('#heat').innerHTML = h;
+
+      if (!empty) {
+        var widest = res.stats.slice().sort(function (a, b) { return b.reach - a.reach; })[0];
+        var users = res.stats.filter(function (s) { return s.count >= 2; }).sort(function (a, b) { return a.avgRank - b.avgRank; })[0];
+        $('#insight2').innerHTML = 'Most widely known: <b>' + widest.name + '</b> (ranked by ' + widest.reach.toFixed(0) + '% of respondents).' +
+          (users ? ' Best average position among the people who know it: <b>' + users.name + '</b> (avg #' + users.avgRank.toFixed(1) + ').' : '');
+      } else $('#insight2').textContent = '';
+    }
+
+    // Heatmap tooltip
+    var tip = $('#ttip');
+    $('#heat').addEventListener('mousemove', function (e) {
+      var c = e.target.closest('.cell');
+      if (!c) { tip.classList.remove('show'); return; }
+      tip.innerHTML = c.dataset.tip;
+      tip.style.left = (e.clientX + 14) + 'px';
+      tip.style.top = (e.clientY + 14) + 'px';
+      tip.classList.add('show');
+    });
+    $('#heat').addEventListener('mouseleave', function () { tip.classList.remove('show'); });
+
+    /* ---------- presenter actions ---------- */
+    function toast(msg) {
+      var t = $('#toast'); t.textContent = msg; t.classList.add('show');
+      clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 2200);
+    }
+    $('#copyUrl').onclick = function () {
+      (navigator.clipboard ? navigator.clipboard.writeText(voteUrl()) : Promise.reject()).then(function () { toast('Voting link copied'); }, function () { toast(voteUrl()); });
+    };
+    $('#addDemo').onclick = function () {
+      demo = demo.concat(Poll.demoVotes(25));
+      Poll.store('deck.demo.' + session, JSON.stringify(demo));
+      update(); toast('Added 25 sample responses');
+    };
+    $('#clearDemo').onclick = function () {
+      demo = []; Poll.store('deck.demo.' + session, null);
+      update(); if (slides[cur].dataset.enter === 'results') renderResults(false); toast('Sample responses removed');
+    };
+    $('#exportCsv').onclick = function () {
+      var votes = allVotes(), csv = Poll.toCSV(Poll.analyze(votes), votes);
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      a.download = 'ai-tools-ranking-' + session + '.csv';
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    };
+    $('#theme').onclick = toggleTheme;
+    $('#newSession').onclick = function () {
+      if (!confirm('Start a new poll session? The QR code will change and current results will be cleared from this screen.')) return;
+      Poll.store('deck.demo.' + session, null);
+      session = Poll.newId(8); Poll.store('deck.session', session);
+      demo = [];
+      startSession();
+      if (slides[cur].dataset.enter === 'results') renderResults(true);
+      toast('New session started');
+    };
+
+    /* ---------- boot ---------- */
+    buildCharts();
+    startSession();
+    var start = parseInt((location.hash || '').slice(1), 10);
+    go(isNaN(start) ? 0 : start - 1);
+  })();
+  </script>
+</body>
+</html>
