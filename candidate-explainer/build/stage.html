@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PSE Certificate Guide · Stage</title>
+<link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700;900&family=Source+Sans+3:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<!-- Seekable animation stage for the candidate explainer video.
+     window.render(t) draws the frame at t seconds; render.js steps through it frame by frame.
+     Open with ?play to watch it in real time with the narration. -->
+<script src="data.js"></script>
+<style>
+:root{--g950:#021a0d;--g900:#05361c;--g800:#064a26;--g700:#046031;--g600:#0b7a3e;--g400:#4fae73;--mint:#d9f1db;--gold:#e0b83a;--ink:#0e1a10;--red:#c7352a}
+*{box-sizing:border-box}
+html,body{margin:0;background:#000;overflow:hidden}
+#stage{position:relative;width:1920px;height:1080px;overflow:hidden;font-family:"Source Sans 3",Arial,sans-serif;color:#fff;
+  background:radial-gradient(1400px 900px at 70% 20%,#0b5a2f 0%,var(--g900) 45%,var(--g950) 100%)}
+.abs{position:absolute;left:0;top:0}
+.layer{position:absolute;inset:0}
+#guil{position:absolute;left:960px;top:540px;width:1700px;height:1700px;margin:-850px 0 0 -850px;opacity:.16}
+.grain{position:absolute;inset:0;opacity:.07;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>")}
+h1,h2,h3{font-family:Merriweather,Georgia,serif;margin:0}
+.chip{display:inline-flex;align-items:center;gap:12px;padding:10px 20px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);font-weight:700;font-size:22px;letter-spacing:.04em;backdrop-filter:blur(6px)}
+.gold{color:var(--gold)}
+/* top bar */
+#brand{left:28px;top:24px;padding:6px 20px 6px 8px;border-radius:999px;background:rgba(4,40,20,.92);display:flex;align-items:center;gap:14px;font-weight:700;font-size:22px;letter-spacing:.03em}
+#brand img{width:52px;height:52px;border-radius:50%;background:#fff;padding:2px}
+#brand small{display:block;font-weight:600;font-size:16px;opacity:.7;letter-spacing:.08em;text-transform:uppercase}
+#stepchip{left:auto;right:40px;top:34px;background:rgba(4,40,20,.92)}
+#stepchip b{background:var(--gold);color:var(--g950);border-radius:999px;padding:2px 12px;font-size:18px}
+/* captions */
+#cap{left:50%;top:958px;transform:translateX(-50%);max-width:1500px;text-align:center;font-size:33px;line-height:1.3;font-weight:600;
+  padding:12px 28px;border-radius:14px;background:rgba(2,20,10,.78);border:1px solid rgba(255,255,255,.12);white-space:normal;width:max-content}
+#cap .hl{color:var(--gold)}
+/* progress */
+#prog{left:0;bottom:0;height:8px;width:1920px;background:rgba(255,255,255,.08)}
+#progfill{height:100%;background:linear-gradient(90deg,var(--g400),var(--gold));width:0}
+.tick{position:absolute;top:-4px;width:2px;height:16px;background:rgba(255,255,255,.35)}
+/* browser */
+#browser{left:238px;top:100px;width:1443px;height:820px;transform-origin:0 0}
+.bframe{position:absolute;inset:0;border-radius:16px;overflow:hidden;background:#fff;box-shadow:0 40px 90px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.12)}
+.bbar{height:56px;background:#e9edf0;display:flex;align-items:center;gap:16px;padding:0 18px;border-bottom:1px solid #cfd6db}
+.dots i{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:8px}
+.url{flex:1;height:36px;border-radius:18px;background:#fff;display:flex;align-items:center;gap:10px;padding:0 16px;color:#27322b;font-size:20px;font-family:"Source Sans 3";border:1px solid #d5dde2}
+.url .lock{color:#0b7a3e}
+.caret{display:inline-block;width:2px;height:22px;background:#0b7a3e;margin-left:1px;vertical-align:middle}
+.bview{position:absolute;left:0;top:56px;width:1443px;height:764px;overflow:hidden;background:#05361c}
+.inner{position:absolute;left:0;top:0;width:1760px;transform-origin:0 0}
+.inner > .page{position:absolute;left:0;top:0;width:1760px}
+.inner img.page{display:block}
+.ring{position:absolute;border:5px solid var(--gold);border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,0,.0),0 0 28px rgba(224,184,58,.9);pointer-events:none}
+.tag{position:absolute;background:var(--gold);color:var(--g950);font-weight:800;font-size:26px;padding:8px 16px;border-radius:10px;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.tag:after{content:"";position:absolute;left:24px;top:-12px;border:12px solid transparent;border-top:0;border-bottom-color:var(--gold)}
+#cursor{position:absolute;width:44px;height:44px;left:0;top:0;transform-origin:0 0;filter:drop-shadow(0 3px 4px rgba(0,0,0,.45))}
+.ripple{position:absolute;width:90px;height:90px;margin:-45px 0 0 -45px;border-radius:50%;border:5px solid var(--gold)}
+/* fake ascon homepage (illustration) */
+#home{height:932px;background:#f4f7f4;color:#13261a;font-family:"Source Sans 3"}
+#home .top{height:120px;background:#fff;display:flex;align-items:center;gap:22px;padding:0 60px;border-bottom:5px solid #0b7a3e}
+#home .top img{width:88px}
+#home .top h2{font-size:30px;color:#064a26}
+#home .top p{margin:4px 0 0;font-size:19px;color:#4b5d50}
+#home nav{display:flex;gap:44px;padding:0 60px;height:62px;align-items:center;background:#064a26;color:#e7f4ea;font-size:21px;font-weight:600}
+#home .hero{position:absolute;left:60px;top:222px;width:1060px;height:560px;border-radius:18px;overflow:hidden;
+  background:linear-gradient(120deg,rgba(4,48,24,.92),rgba(11,122,62,.75)),repeating-linear-gradient(45deg,#0b7a3e 0 2px,#086333 2px 22px)}
+#home .hero img{position:absolute;right:-60px;bottom:-60px;width:520px;opacity:.18}
+#home .hero h1{position:absolute;left:56px;top:150px;font-size:58px;line-height:1.15;color:#fff;width:820px}
+#home .hero p{position:absolute;left:58px;top:330px;font-size:26px;color:#d9f1db;width:760px}
+#home .side{position:absolute;left:1160px;top:222px;width:540px;background:#fff;border-radius:18px;padding:30px 34px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+#home .side h3{font-size:26px;color:#064a26;margin-bottom:16px}
+#home .side a{display:flex;justify-content:space-between;align-items:center;padding:18px 4px;border-bottom:1px solid #dde7df;font-size:23px;color:#1c3324;text-decoration:none;font-weight:600}
+#home .side a.pse{background:#e3f4e6;border-radius:12px;padding:20px 16px;color:#064a26;border:2px solid #0b7a3e;margin-top:6px}
+#home .illus{position:absolute;right:30px;bottom:24px;font-size:18px;color:#5f7365;background:#fff;border:1px dashed #9db3a3;border-radius:8px;padding:6px 12px}
+/* dialogs */
+.dlg{position:absolute;background:#fff;color:#1d2622;border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.5);font-family:"Source Sans 3"}
+#confirm{left:421px;top:120px;width:600px;padding:28px 32px}
+#confirm h4{margin:0 0 12px;font-size:24px}
+#confirm p{margin:0 0 10px;font-size:20px;line-height:1.4;color:#36433b}
+#confirm .btns{display:flex;justify-content:flex-end;gap:14px;margin-top:20px}
+.b{padding:10px 26px;border-radius:20px;font-weight:700;font-size:19px;border:1px solid #c2ccc6;color:#0b5a2f}
+.b.p{background:#0b5a2f;color:#fff;border-color:#0b5a2f}
+#pdlg{left:40px;top:30px;width:1363px;height:704px;display:flex;overflow:hidden}
+#pdlg .prev{flex:1;background:#525659;display:flex;align-items:center;justify-content:center}
+#pdlg .prev img{width:760px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+#pdlg .set{width:470px;padding:26px 30px;position:relative}
+#pdlg h4{margin:0 0 4px;font-size:30px;font-weight:600}
+#pdlg .sub{color:#5f6b64;font-size:18px;margin-bottom:18px}
+.row{display:flex;justify-content:space-between;align-items:center;height:62px;padding:0 10px;margin:0 -10px;border-radius:10px;font-size:20px}
+.row .v{border:1px solid #c7d0cb;border-radius:8px;padding:6px 12px;min-width:210px;font-weight:600;background:#fff}
+.row .chk{width:28px;height:28px;border:2px solid #7a867f;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900}
+.row.on{background:#fff3cf;box-shadow:inset 0 0 0 3px var(--gold)}
+#pdlg .acts{position:absolute;right:30px;bottom:26px;display:flex;gap:14px}
+/* generic cards */
+.card{position:absolute;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:22px;padding:30px 34px;backdrop-filter:blur(8px)}
+.num{display:inline-flex;width:58px;height:58px;border-radius:50%;background:var(--gold);color:var(--g950);font-weight:900;font-size:30px;align-items:center;justify-content:center;font-family:Merriweather}
+.ico{width:64px;height:64px}
+.big{font-family:Merriweather;font-weight:900}
+.titlecard{left:0;top:0;width:1920px;height:1080px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:22px;background:radial-gradient(900px 500px at 50% 50%,rgba(5,54,28,.97),rgba(2,26,13,.94))}
+.titlecard .k{font-size:30px;letter-spacing:.3em;font-weight:800;color:var(--gold)}
+.titlecard h2{font-size:84px;text-align:center}
+.side-note{position:absolute;width:430px;font-size:26px;line-height:1.35;background:rgba(4,40,20,.96);border-color:rgba(224,184,58,.55);box-shadow:0 20px 50px rgba(0,0,0,.45)}
+.side-note.warn{background:rgba(170,40,30,.97);border-color:rgba(255,255,255,.3)}
+.mono{font-family:"JetBrains Mono",monospace}
+.conf{position:absolute;width:16px;height:26px;border-radius:3px}
+#phone{position:absolute;width:420px;height:860px;border-radius:58px;background:#0b0f0d;padding:16px;box-shadow:0 40px 90px rgba(0,0,0,.6),inset 0 0 0 3px #2b3330}
+#phone .scr{position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;background:#111}
+#phone .notch{position:absolute;left:50%;top:10px;width:120px;height:30px;margin-left:-60px;border-radius:20px;background:#0b0f0d;z-index:3}
+.opt{display:flex;align-items:center;gap:26px;width:620px;height:110px;border-radius:24px;padding:0 34px;font-size:44px;font-weight:800;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.25)}
+.opt .l{width:66px;height:66px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:32px}
+.recap{position:absolute;width:280px;text-align:center}
+.recap .disc{width:150px;height:150px;margin:0 auto 18px;border-radius:50%;background:rgba(255,255,255,.08);border:3px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center}
+.recap .disc svg{width:74px;height:74px}
+.recap b{display:block;font-size:30px}
+</style>
+</head>
+<body>
+<div id="stage">
+  <svg id="guil" viewBox="-320 -320 640 640"></svg>
+  <div class="grain"></div>
+
+  <!-- ===== INTRO ===== -->
+  <div class="layer" id="sc-intro">
+    <div class="abs" id="introGlow" style="left:960px;top:400px;width:520px;height:520px;margin:-260px;border-radius:50%;background:radial-gradient(circle,rgba(224,184,58,.55),rgba(224,184,58,0) 65%)"></div>
+    <img class="abs" id="introSeal" src="shots/seal.png" style="left:860px;top:300px;width:200px;height:200px;border-radius:50%;background:#fff;padding:4px">
+    <div class="abs" id="introK" style="left:0;width:1920px;top:540px;text-align:center;font-size:28px;letter-spacing:.32em;font-weight:800;color:var(--gold)">2026 PUBLIC SERVICE EXAMINATION</div>
+    <h1 class="abs" id="introT" style="left:0;width:1920px;top:590px;text-align:center;font-size:92px">Your Certificate,</h1>
+    <h1 class="abs" id="introT2" style="left:0;width:1920px;top:700px;text-align:center;font-size:92px"><span class="gold">Step by Step.</span></h1>
+    <div class="abs" id="introVerbs" style="left:0;width:1920px;top:840px;text-align:center;font-size:34px;font-weight:700;letter-spacing:.12em"></div>
+    <img class="abs" id="introCert" src="shots/cert_print.png" style="left:1180px;top:250px;width:640px;border-radius:6px;box-shadow:0 30px 70px rgba(0,0,0,.6)">
+    <div id="confA"></div>
+  </div>
+
+  <!-- ===== CHECKLIST ===== -->
+  <div class="layer" id="sc-checklist">
+    <h2 class="abs" style="left:120px;top:140px;font-size:64px">Before you start</h2>
+    <div class="abs" style="left:122px;top:226px;font-size:28px;opacity:.75">Get these four things ready</div>
+    <div id="cl"></div>
+    <div class="abs" id="admit" style="left:1060px;top:170px;width:740px;height:450px;border-radius:20px;background:#fdfbf3;color:#1a2a1f;box-shadow:0 30px 70px rgba(0,0,0,.5);overflow:hidden">
+      <div style="height:90px;background:#064a26;color:#fff;display:flex;align-items:center;gap:16px;padding:0 28px"><img src="shots/seal.png" style="width:60px;background:#fff;border-radius:50%"><div><b style="font-size:22px">ADMISSION CARD</b><div style="font-size:16px;opacity:.8">Public Service Examination 2026 · sample</div></div></div>
+      <div style="padding:26px 30px;font-size:22px;line-height:1.9">
+        <div style="display:flex;gap:26px"><div style="width:130px;height:160px;border-radius:10px;background:#dfe8e1;display:flex;align-items:flex-end;justify-content:center;overflow:hidden"><svg width="110" height="130" viewBox="0 0 110 130"><circle cx="55" cy="48" r="30" fill="#9fb5a6"/><path d="M5 130c4-36 26-50 50-50s46 14 50 50z" fill="#9fb5a6"/></svg></div>
+        <div><div style="color:#6a7a6f;font-size:17px">NAME</div><b>OKAFOR TEMITOPE AISHA</b><div style="color:#6a7a6f;font-size:17px;margin-top:6px">EXAMINATION NUMBER</div>
+        <b class="mono" id="admitNo" style="font-size:30px;padding:2px 8px;border-radius:6px;position:relative">ANCSC/2026/001</b></div></div>
+        <div style="margin-top:14px;font-size:18px;color:#6a7a6f">CODE / YEAR / NUMBER</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== BROWSER (visit → help) ===== -->
+  <div class="abs" id="browser">
+    <div class="bframe">
+      <div class="bbar"><span class="dots"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></span>
+        <div class="url"><span class="lock">&#128274;</span><span id="urlText"></span><span class="caret" id="caret"></span></div></div>
+      <div class="bview"><div class="inner" id="inner">
+        <div class="page" id="home">
+          <div class="top"><img src="shots/seal.png"><div><h2>Administrative Staff College of Nigeria</h2><p>Topo, Badagry, Lagos State</p></div></div>
+          <nav><span>Home</span><span>About</span><span>Programmes</span><span>Research</span><span>Consultancy</span><span>Contact</span></nav>
+          <div class="hero"><img src="shots/seal.png"><h1>Welcome to ASCON</h1><p>Training, research and consultancy for Nigeria's public service.</p></div>
+          <div class="side"><h3>Quick links</h3>
+            <a>Programmes &amp; Courses <span>›</span></a><a>Research &amp; Publications <span>›</span></a><a>News &amp; Events <span>›</span></a>
+            <a class="pse" id="pseLink">PSE 2026 Certificate Portal <span>↗</span></a></div>
+          <div class="illus">Illustration · the live ascon.gov.ng layout may differ</div>
+        </div>
+        <img class="page" id="pg" src="shots/p_empty.jpg">
+        <div id="rings"></div>
+        <div id="ripples"></div>
+        <svg id="cursor" viewBox="0 0 44 44"><path d="M6 3 L6 35 L14 27 L20 41 L26 38 L20 25 L32 25 Z" fill="#fff" stroke="#111" stroke-width="2.4" stroke-linejoin="round"/></svg>
+      </div></div>
+      <div id="dlgs">
+        <div class="dlg" id="confirm"><h4>ascon-pse-certificate.portals.com.ng says</h4>
+          <p>Print this certificate now?</p><p>This uses 1 of your 3 prints (3 left). The print is counted even if you cancel the print dialog.</p>
+          <div class="btns"><span class="b">Cancel</span><span class="b p" id="okBtn">OK</span></div></div>
+        <div class="dlg" id="pdlg"><div class="prev"><img src="shots/cert_print.png"></div>
+          <div class="set"><h4>Print</h4><div class="sub">1 sheet of paper</div>
+            <div class="row" id="rDest"><span>Destination</span><span class="v" id="destV">HP LaserJet (Office)</span></div>
+            <div class="row"><span>Pages</span><span class="v">All</span></div>
+            <div class="row" id="rPaper"><span>Paper size</span><span class="v">A4</span></div>
+            <div class="row" id="rLayout"><span>Layout</span><span class="v">Landscape</span></div>
+            <div class="row" id="rMargins"><span>Margins</span><span class="v">None</span></div>
+            <div class="row" id="rBg"><span>Background graphics</span><span class="chk" id="bgChk"></span></div>
+            <div class="acts"><span class="b">Cancel</span><span class="b p" id="pBtn">Print</span></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- floating side notes (screen coords) -->
+  <div id="notes"></div>
+
+  <!-- ===== VERIFY extras ===== -->
+  <div class="layer" id="sc-verify">
+    <div class="abs" id="vCertWrap" style="left:120px;top:150px;width:1000px;height:708px;transform-origin:0 0">
+      <img src="shots/cert_print.png" style="width:1000px;border-radius:6px;box-shadow:0 30px 70px rgba(0,0,0,.6)">
+      <div class="abs" id="qrRing" style="border:6px solid var(--gold);border-radius:12px;box-shadow:0 0 30px rgba(224,184,58,.9)"></div>
+    </div>
+    <div id="phone" style="left:1320px;top:120px"><div class="scr"><div class="notch"></div>
+      <div class="abs" id="camView" style="width:388px;height:828px;background:#1b1f1d;overflow:hidden">
+        <img id="camImg" src="shots/cert_print.png" style="position:absolute;width:1900px;left:-760px;top:-330px;filter:blur(.4px) brightness(.9)">
+        <div class="abs" style="left:74px;top:294px;width:240px;height:240px;border:4px solid rgba(255,255,255,.9);border-radius:22px"></div>
+        <div class="abs" id="scanLine" style="left:80px;width:228px;height:4px;background:#4fff9a;box-shadow:0 0 18px #4fff9a"></div>
+        <div class="abs" id="camPill" style="left:40px;top:600px;width:308px;padding:12px 16px;border-radius:16px;background:rgba(255,255,255,.92);color:#123;font-size:17px;font-weight:700">ascon-pse-certificate.portals.com.ng ›</div>
+      </div>
+      <img class="abs" id="phoneShot" src="shots/phone_verify.jpg" style="width:388px">
+    </div></div>
+  </div>
+
+  <!-- ===== HELP ===== -->
+  <div class="layer" id="sc-help"><div id="helpCards"></div></div>
+
+  <!-- ===== QUIZ ===== -->
+  <div class="layer" id="sc-quiz">
+    <div class="abs" style="left:0;width:1920px;top:150px;text-align:center"><span class="chip gold" style="font-size:28px">POP QUIZ</span></div>
+    <h2 class="abs" style="left:0;width:1920px;top:240px;text-align:center;font-size:66px">How many times can you<br>print your certificate?</h2>
+    <div id="opts"></div>
+    <svg class="abs" id="timer" viewBox="0 0 120 120" style="left:1260px;top:540px;width:200px;height:200px"><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="10"/><circle id="timerArc" cx="60" cy="60" r="52" fill="none" stroke="#e0b83a" stroke-width="10" stroke-linecap="round" transform="rotate(-90 60 60)" stroke-dasharray="326.7"/><text id="timerTxt" x="60" y="76" text-anchor="middle" font-size="46" font-weight="800" fill="#fff" font-family="Source Sans 3">3</text></svg>
+    <div id="confB"></div>
+  </div>
+
+  <!-- ===== OUTRO ===== -->
+  <div class="layer" id="sc-outro">
+    <h2 class="abs" id="recapH" style="left:0;width:1920px;top:150px;text-align:center;font-size:64px">Recap</h2>
+    <div id="recap"></div>
+    <div class="abs" id="endCard" style="left:0;top:0;width:1920px;height:1080px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px">
+      <img src="shots/seal.png" id="endSeal" style="width:190px;background:#fff;border-radius:50%;padding:4px">
+      <h1 style="font-size:88px">Congratulations!</h1>
+      <div style="font-size:34px;opacity:.85">All the best in your public service career.</div>
+      <div class="chip" style="font-size:30px;margin-top:10px">Start at <span class="gold">&nbsp;ascon.gov.ng</span></div>
+    </div>
+    <div id="confC"></div>
+  </div>
+
+  <!-- titles / chrome -->
+  <div id="titles"></div>
+  <div class="abs" id="brand"><img src="shots/seal.png"><div>ASCON · PSE 2026<small>Candidate certificate guide</small></div></div>
+  <div class="abs chip" id="stepchip"><b id="stepNo">STEP 1</b><span id="stepName"></span></div>
+  <div class="abs" id="cap"></div>
+  <div class="abs" id="prog"><div id="progfill"></div></div>
+</div>
+
+<script>
+/* ---------- tiny deterministic tween engine ---------- */
+const $ = s => document.querySelector(s);
+const E = {
+  lin: x => x,
+  io: x => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3)/2,
+  out: x => 1 - Math.pow(1 - x, 3),
+  back: x => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3*Math.pow(x-1,3) + c1*Math.pow(x-1,2); },
+  step: x => x < 1 ? 0 : 1
+};
+const tracks = [], fns = [], SFX = [];
+const ST = new Map();   // element -> transform state
+function st(el){ if(!ST.has(el)) ST.set(el,{o:1,x:0,y:0,s:1,r:0}); return ST.get(el); }
+function val(keys, t){
+  if(t <= keys[0][0]) return keys[0][1];
+  for(let i=1;i<keys.length;i++){ const [t1,v1,e] = keys[i]; if(t < t1){ const [t0,v0] = keys[i-1]; const p = (t-t0)/(t1-t0||1); return v0 + (v1-v0)*(E[e||"io"])(p); } }
+  return keys[keys.length-1][1];
+}
+// K(el,"o",[t,v,ease],...) — keys must be time-ordered
+function K(el, prop, ...keys){ if(typeof el === "string") el = $(el); st(el); tracks.push({el, prop, keys}); }
+function F(fn){ fns.push(fn); }
+function sfx(t, kind){ SFX.push([+t.toFixed(3), kind]); }
+// fade in/out window
+function show(el, t0, t1, d=.45){ K(el,"o",[t0-d,0],[t0,1],[t1,1],[t1+d,0]); }
+function pop(el, t0, t1, d=.5){ K(el,"o",[t0-.01,0],[t0+.2,1,"out"],[t1,1],[t1+.35,0]); K(el,"s",[t0,.6],[t0+d,1,"back"]); }
+function slide(el, t0, t1, dx=0, dy=40){ K(el,"o",[t0,0],[t0+.45,1,"out"],[t1,1],[t1+.35,0]); if(dx) K(el,"x",[t0,dx],[t0+.6,0,"out"]); if(dy) K(el,"y",[t0,dy],[t0+.6,0,"out"]); }
+function mk(html, parent){ const d = document.createElement("div"); d.innerHTML = html.trim(); const n = d.firstChild; (typeof parent==="string"?$(parent):parent).append(n); return n; }
+
+/* ---------- data ---------- */
+const T = window.TIMING, B = window.BOXES.boxes, CERT = window.BOXES.certNo, DUR = T.duration;
+const S = Object.fromEntries(T.scenes.map(s => [s.id, s]));
+const L = (id, i, f=0) => { const l = S[id].lines[i]; return l.start + f*(l.end - l.start); };
+const SC0 = id => S[id].start, SC1 = id => S[id].end;
+// time at which a word/phrase is spoken inside a line (char-proportional estimate)
+const W = (id, i, phrase) => { const l = S[id].lines[i]; const k = l.text.indexOf(phrase); return L(id, i, k < 0 ? 0 : k / l.text.length); };
+
+/* ---------- background ---------- */
+(function(){ let out=""; const ring=(R,a,n,ph,c,w,o)=>{let p="";for(let i=0;i<=720;i++){const q=i/720*Math.PI*2,r=R+a*Math.sin(n*q+ph);p+=(i?"L":"M")+(r*Math.cos(q)).toFixed(1)+","+(r*Math.sin(q)).toFixed(1);}return `<path d="${p}" fill="none" stroke="${c}" stroke-width="${w}" opacity="${o}"/>`;};
+  for(let k=0;k<14;k++) out+=ring(270,34,24,k*Math.PI/7,"#a9e6bd",.7,.8);
+  for(let k=0;k<10;k++) out+=ring(180,22,18,k*Math.PI/5,"#e1f6e6",.6,.7);
+  for(let k=0;k<8;k++) out+=ring(105,14,12,k*Math.PI/4,"#e0b83a",.7,.8);
+  $("#guil").innerHTML = out; })();
+F(t => { $("#guil").style.transform = `rotate(${t*3}deg)`; });
+
+/* ---------- captions + progress + step chip ---------- */
+const capEl = $("#cap");
+const allLines = T.scenes.flatMap(s => s.lines.filter(l => !l.pause));
+const HL = ["ascon.gov.ng","examination number","three","3","A4","landscape","background graphics","Save as PDF","QR code","Verify","Help","Find my result","Print certificate","preview","not a valid certificate","stop"];
+function capHTML(s){ let h = s.replace(/&/g,"&amp;").replace(/</g,"&lt;"); return h; }
+F(t => {
+  const l = allLines.find(l => t >= l.start - .05 && t < l.end + .3);
+  const txt = l ? l.text : "";
+  if(capEl.dataset.t !== txt){ capEl.dataset.t = txt; capEl.innerHTML = capHTML(txt); }
+  capEl.style.opacity = txt ? 1 : 0;
+  $("#progfill").style.width = (t / DUR * 100) + "%";
+});
+T.scenes.forEach(s => mk(`<i class="tick" style="left:${s.start/DUR*1920}px"></i>`, "#prog"));
+const STEPS = {visit:["STEP 1","Visit ascon.gov.ng"], tour:["STEP 1","The certificate portal"], find:["STEP 2","Find your result"], preview:["STEP 3","Check the preview"], print:["STEP 4","Print smartly"], verify:["STEP 5","Verify with the QR code"], help:["TIPS","Quick troubleshooting"], checklist:["READY?","What you need"], quiz:["QUIZ","Test yourself"]};
+F(t => { const s = T.scenes.find(s => t >= s.start && t < s.end); const v = s && STEPS[s.id];
+  const chip = $("#stepchip"); chip.style.opacity = v ? 1 : 0;
+  if(v && chip.dataset.id !== s.id){ chip.dataset.id = s.id; $("#stepNo").textContent = v[0]; $("#stepName").textContent = v[1]; } });
+K("#brand","o",[0,0],[SC0("checklist")-.6,0],[SC0("checklist"),1],[SC0("outro")+2,1],[SC0("outro")+2.6,0]);
+
+/* ---------- step title cards ---------- */
+function titleCard(id, kicker, title){
+  const n = mk(`<div class="abs titlecard"><div class="k">${kicker}</div><h2>${title}</h2></div>`, "#titles");
+  const t0 = SC0(id) - .5; K(n,"o",[t0,0],[t0+.35,1],[t0+1.7,1],[t0+2.2,0]); K(n.querySelector("h2"),"s",[t0,.85],[t0+.6,1,"back"]); sfx(t0, "whoosh");
+}
+titleCard("visit","STEP 1","Visit the official website");
+titleCard("find","STEP 2","Find your result");
+titleCard("preview","STEP 3","Check the preview");
+titleCard("print","STEP 4","Print smartly");
+titleCard("verify","STEP 5","Verify with the QR code");
+titleCard("help","TIPS","Quick troubleshooting");
+
+/* ---------- confetti ---------- */
+function confetti(host, t0, cx, cy, n=90, seed=7){
+  let r = seed; const rnd = () => (r = (r*16807) % 2147483647) / 2147483647;
+  const cols = ["#e0b83a","#4fae73","#ffffff","#0b7a3e","#f4d77a"];
+  for(let i=0;i<n;i++){
+    const p = mk(`<div class="conf" style="background:${cols[i%5]}"></div>`, host);
+    const a = rnd()*Math.PI*2, v = 500 + rnd()*900, vx = Math.cos(a)*v, vy = Math.sin(a)*v - 600, spin = (rnd()-.5)*1400;
+    F(t => { const d = t - t0; if(d < 0 || d > 3.2){ p.style.opacity = 0; return; }
+      const x = cx + vx*d*.75, y = cy + vy*d + 900*d*d; p.style.opacity = d > 2.4 ? (3.2-d)/.8 : 1;
+      p.style.transform = `translate(${x}px,${y}px) rotate(${spin*d}deg) scaleY(${Math.cos(d*8+i)})`; });
+  }
+  sfx(t0, "pop");
+}
+
+/* ======================= INTRO ======================= */
+{ const s = SC0("intro"), e = SC1("intro");
+  show("#sc-intro", s, e - .3, .6);
+  pop("#introSeal", s + .3, e); K("#introSeal","r",[s+.3,-180],[s+1.2,0,"out"]);
+  K("#introGlow","s",[s,.2],[s+1.2,1.15,"out"],[e,1]);
+  F(t => { $("#introGlow").style.opacity = t < s ? 0 : .7 + .3*Math.sin(t*2.2); });
+  slide("#introK", s + .9, e, 0, 30); slide("#introT", s + 1.3, e, 0, 50); slide("#introT2", s + 1.7, e, 0, 50);
+  confetti("#confA", L("intro",0,.05)+.3, 960, 420, 110, 11);
+  const verbs = ["FIND","CHECK","PRINT","VERIFY"]; const vb = $("#introVerbs");
+  verbs.forEach((w,i) => { const sp = mk(`<span style="display:inline-block;margin:0 22px">${w}${i<3?' <span class="gold">›</span>':''}</span>`, vb); slide(sp, W("intro",1,["find","check","print","verify"][i]), e, 0, 30); });
+  // move title block to left & bring in certificate on line 2
+  const l2 = L("intro",1,0);
+  ["#introSeal","#introGlow","#introK","#introT","#introT2","#introVerbs"].forEach(q => K(q,"x",[l2,0],[l2+1,-330]));
+  K("#introCert","o",[l2+.2,0],[l2+.8,1],[e-.3,1]); K("#introCert","x",[l2+.2,300],[l2+1.1,0,"out"]); K("#introCert","r",[l2+.2,14],[l2+1.1,-4,"out"],[e,-2]);
+}
+
+/* ======================= CHECKLIST ======================= */
+{ const s = SC0("checklist"), e = SC1("checklist");
+  show("#sc-checklist", s, e - .3);
+  const items = [
+    ["Examination number","On your admission card · e.g. ANCSC/2026/001",'<rect x="8" y="14" width="48" height="36" rx="5" fill="none" stroke="#e0b83a" stroke-width="4"/><path d="M16 26h18M16 36h28" stroke="#fff" stroke-width="4" stroke-linecap="round"/>'],
+    ["Your surname","Or any one of your registered names",'<circle cx="32" cy="22" r="11" fill="none" stroke="#e0b83a" stroke-width="4"/><path d="M12 54c2-12 10-18 20-18s18 6 20 18" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>'],
+    ["Phone, tablet or computer","With a good internet connection",'<rect x="18" y="6" width="28" height="52" rx="6" fill="none" stroke="#e0b83a" stroke-width="4"/><path d="M28 50h8" stroke="#fff" stroke-width="4" stroke-linecap="round"/>'],
+    ["Printer + A4 paper","…or simply Save as PDF",'<rect x="12" y="24" width="40" height="22" rx="4" fill="none" stroke="#e0b83a" stroke-width="4"/><path d="M20 24V8h24v16M20 40h24v16H20z" fill="none" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>']
+  ];
+  items.forEach(([h,sub,ic],i) => {
+    const c = mk(`<div class="card" style="left:120px;top:${300+i*150}px;width:860px;height:128px;display:flex;align-items:center;gap:26px;padding:20px 30px">
+      <svg class="ico" viewBox="0 0 64 64">${ic}</svg><div style="flex:1"><div style="font-size:34px;font-weight:800">${h}</div><div style="font-size:24px;opacity:.75">${sub}</div></div>
+      <svg viewBox="0 0 60 60" style="width:60px;height:60px"><circle cx="30" cy="30" r="27" fill="#0b7a3e" stroke="#4fae73" stroke-width="3"/><path class="tk" d="M17 31l9 9 17-19" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="44" stroke-dashoffset="44"/></svg></div>`, "#cl");
+    const t0 = L("checklist", i+1, 0) - .1;
+    slide(c, t0, e - .3, -80, 0);
+    const tk = c.querySelector(".tk"), tt = L("checklist", i+1, .55);
+    F(t => { tk.style.strokeDashoffset = 44*(1 - Math.min(1, Math.max(0, (t - tt)/.4))); });
+    sfx(tt, "tick");
+  });
+  slide("#admit", L("checklist",1,0), L("checklist",3,0), 120, 0); K("#admit","r",[L("checklist",1,0),6],[L("checklist",1,0)+.8,-2,"out"]);
+  F(t => { const a = $("#admitNo"), t0 = W("checklist",1,"For example"); const on = t > t0;
+    a.style.background = on ? "rgba(224,184,58,"+(.45+.25*Math.sin(t*6))+")" : "transparent"; });
+}
+
+/* ======================= BROWSER ======================= */
+const BR = $("#browser"), INNER = $("#inner"), PG = $("#pg"), HOME = $("#home");
+const KZ = .82;                     // content image -> browser view scale
+const CAM = {fx:[], fy:[], cs:[]};   // camera keys (browser-local focus point + scale)
+const SCROLL = [[0, 0]];              // content scroll keys (content px)
+// moves are inserted in time order: a new move cuts off anything scheduled after it, then glides over d seconds
+function move(keys, t, v, d, e="io"){ while(keys.length && keys[keys.length-1][0] > t) keys.pop(); const from = keys.length ? val(keys, t) : v; keys.push([t, from], [t + d, v, e]); }
+function cam(t, fx, fy, cs, d=.9){ move(CAM.fx,t,fx,d); move(CAM.fy,t,fy,d); move(CAM.cs,t,cs,d); }
+// focus on a content-space box (needs scroll at that time)
+function camBox(t, b, cs, scroll=0, d=.9){ cam(t, (b.x + b.w/2)*KZ, 56 + (b.y + b.h/2 - scroll)*KZ, cs, d); }
+function scrollTo(t, y, d=1){ move(SCROLL, t, y, d); }
+const bIn = SC0("visit") - .5, bOut = SC1("help") - .1;
+K(BR,"o",[bIn-.01,0],[bIn+.5,1],[SC0("verify")-.6,1],[SC0("verify")-.2,0],[L("verify",1,.5)-.3,0],[L("verify",1,.5),1],[SC1("verify")-.4,1],[SC1("verify"),0],[L("help",5,0)-.4,0],[L("help",5,0),1],[bOut-.4,1],[bOut,0]);
+K(BR,"y",[bIn,80],[bIn+.8,0,"out"]);
+
+// page image schedule (discrete)
+const PAGES = [];   // [t, src or "home"]
+function page(t, src){ PAGES.push([t, src]); }
+F(t => { let cur = PAGES[0][1]; for(const [tt,s] of PAGES) if(t >= tt) cur = s;
+  const home = cur === "home"; HOME.style.display = home ? "block" : "none"; PG.style.display = home ? "none" : "block";
+  if(!home && PG.dataset.src !== cur){ PG.dataset.src = cur; PG.src = "shots/" + cur; } });
+// typing image sequence
+function typeSeq(prefix, n, t0, t1){ for(let i=1;i<=n;i++){ const tt = t0 + (t1-t0)*(i-1)/(n-1||1); page(tt, `${prefix}_${String(i).padStart(2,"0")}.jpg`); sfx(tt, "key"); } }
+
+// url bar
+const URLS = [];
+function url(t0, text, typeDur=0){ URLS.push([t0, text, typeDur]); if(typeDur) for(let i=0;i<text.length;i+=2) sfx(t0 + typeDur*i/text.length, "key"); }
+F(t => { let s = ""; let typing = false;
+  for(const [t0,text,d] of URLS) if(t >= t0){ if(d && t < t0 + d){ s = text.slice(0, Math.ceil(text.length*(t-t0)/d)); typing = true; } else s = text; }
+  $("#urlText").textContent = s; $("#caret").style.opacity = typing || (Math.floor(t*2)%2 && s.length < 14) ? 1 : 0; });
+
+// cursor (content coords)
+const CUR = {x:[], y:[]};
+function mv(t, x, y, d=.8){ move(CUR.x, t, x, d); move(CUR.y, t, y, d); }
+function mvBox(t, b, d=.8){ mv(t, b.x + b.w*.5, b.y + b.h*.62, d); }
+const CLICKS = [];
+function click(t){ CLICKS.push(t); sfx(t, "click"); const r = mk(`<div class="ripple"></div>`, "#ripples");
+  F(tt => { const d = tt - t; if(d < 0 || d > .6){ r.style.opacity = 0; return; } r.style.opacity = 1 - d/.6;
+    r.style.left = val(CUR.x, t) + "px"; r.style.top = val(CUR.y, t) + "px"; r.style.transform = `scale(${.3 + d*2})`; }); }
+const CURVIS = [];
+F(t => { const c = $("#cursor"); if(!CUR.x.length) return;
+  const vis = CURVIS.some(([a,b]) => t >= a && t <= b); c.style.opacity = vis ? 1 : 0;
+  const near = CLICKS.find(ct => Math.abs(t - ct) < .12); const sc = (near !== undefined ? .82 : 1) * 1.6;
+  c.style.transform = `translate(${val(CUR.x,t)}px,${val(CUR.y,t)}px) scale(${sc})`; });
+
+// highlight rings (content coords) + tags
+function ring(b, t0, t1, label, pos="below", pad=10){
+  const r = mk(`<div class="ring" style="left:${b.x-pad}px;top:${b.y-pad}px;width:${b.w+2*pad}px;height:${b.h+2*pad}px"></div>`, "#rings");
+  K(r,"o",[t0,0],[t0+.3,1],[t1,1],[t1+.3,0]); F(t => { if(t>=t0 && t<=t1) r.style.boxShadow = `0 0 ${18+14*Math.sin(t*6)}px rgba(224,184,58,.95)`; });
+  if(label){ const g = mk(`<div class="tag" style="left:${b.x}px;top:${pos==="below"? b.y+b.h+26 : b.y-74}px">${label}</div>`, "#rings"); pop(g, t0+.15, t1); }
+  sfx(t0, "ding");
+}
+// side notes in screen coords
+function note(html, t0, t1, x, y, cls="", w=430){ const n = mk(`<div class="card side-note ${cls}" style="left:${x}px;top:${y}px;width:${w}px">${html}</div>`, "#notes"); slide(n, t0, t1, 60, 0); sfx(t0, "pop"); return n; }
+
+/* ---- visit ---- */
+{ const s = SC0("visit");
+  page(0, "home"); url(bIn, "", 0); url(L("visit",0,.45), "ascon.gov.ng", 1.1);
+  cam(0, 721, 410, 1); cam(L("visit",0,.4), 721, 30, 1.5); cam(L("visit",0,.85), 721, 410, 1);
+  const pse = {x:1160+34, y:222+30+42+3*61+10, w:472, h:66};
+  CURVIS.push([L("visit",1,0)-.2, SC1("visit")]);
+  mv(L("visit",1,0)-.2, 900, 700, .01); mvBox(L("visit",1,.3), pse, 1.2);
+  camBox(L("visit",1,.15), pse, 1.55); ring(pse, L("visit",1,.45), L("visit",1,1), "Look for this link", "below", 8);
+  click(L("visit",1,.92));
+  cam(L("visit",2,0), 721, 410, 1);
+  note(`<div style="font-size:24px;font-weight:800;color:var(--gold);letter-spacing:.1em">PRO TIP</div><div style="margin-top:6px">Always start from the <b>official</b> site.<br>No fake pages, no scams.</div>`, L("visit",2,0), SC1("visit")-.2, 1440, 560, "", 420);
+  // into the portal
+  page(SC0("tour") - .4, "p_empty.jpg"); url(SC0("tour") - .4, "ascon-pse-certificate.portals.com.ng");
+}
+/* ---- tour ---- */
+{ const s = SC0("tour");
+  CURVIS.push([s, SC1("find")]);
+  camBox(L("tour",0,.3), {x:125, y:150, w:500, h:70}, 1.6); mv(s, 1000, 600, .01);
+  ring(B.tabPrint, W("tour",1,"Print"), SC1("tour"), "Print"); mvBox(W("tour",1,"Print")-.3, B.tabPrint, .5);
+  ring(B.tabVerify, W("tour",1,"Verify"), SC1("tour"), "Verify"); mvBox(W("tour",1,"Verify")-.3, B.tabVerify, .5);
+  ring(B.tabHelp, W("tour",1,"Help"), SC1("tour"), "Help"); mvBox(W("tour",1,"Help")-.3, B.tabHelp, .5);
+  cam(L("tour",1,.8), 721, 410, 1);
+}
+/* ---- find ---- */
+{ const s = SC0("find");
+  camBox(L("find",0,.2), {x:180, y:520, w:700, h:380}, 1.55);
+  mvBox(L("find",0,.3), B.regInput, .7); click(L("find",0,.62));
+  typeSeq("p_reg", 14, L("find",0,.7), L("find",1,.3));
+  note(`<div style="font-size:24px;font-weight:800;color:var(--gold)">NO STRESS</div>Lowercase is fine.<br><span class="mono" style="font-size:24px">ancsc/2026/001</span><br>becomes <span class="mono" style="font-size:24px;color:var(--gold)">ANCSC/2026/001</span>`, L("find",1,0), L("find",2,0), 1440, 420, "", 430);
+  mvBox(L("find",2,0), B.surnameInput, .6); click(L("find",2,.15));
+  typeSeq("p_sur", 6, L("find",2,.25), L("find",2,.55));
+  mvBox(L("find",3,0), B.lookupBtn, .6); ring(B.lookupBtn, L("find",3,.2), SC1("find")-.1);
+  click(L("find",3,.85));
+}
+/* ---- preview ---- */
+{ const s = SC0("preview");
+  page(s - .3, "p_result_full.jpg");
+  // the portal normalises the number on submit → shown on result page
+  scrollTo(s + .5, 700, 1.1);
+  cam(s, 721, 410, 1);
+  ring(B.msg, s + 1.4, L("preview",0,.4), "", "below");
+  camBox(L("preview",0,.25), {x:178, y:1050, w:1400, h:260}, 1.25, 700);
+  ring(B.facts, L("preview",0,.35), L("preview",0,1)+.2, "Your details", "below");
+  scrollTo(L("preview",1,0), 1420); cam(L("preview",1,0), 721, 410, 1);
+  camBox(L("preview",1,.05), {x:178, y:1460, w:1400, h:1000}, 1.0, 1420);
+  note(`<div style="font-size:24px;font-weight:800;color:var(--gold)">PREVIEW ONLY</div>The watermarked preview is <b>not</b> a valid certificate.`, L("preview",1,.45), L("preview",2,0)-.1, 30, 520, "", 360);
+  note(`<div style="font-size:26px;font-weight:900">✋ Details wrong?</div><div style="margin-top:6px">Don't print. Contact your commission/board or the ASCON Examinations Office first.</div>`, L("preview",2,0), L("preview",3,0)-.2, 1450, 330, "warn", 440).dataset.k = "warn";
+  scrollTo(L("preview",3,0), 700); camBox(L("preview",3,.02), B.uses, 1.7, 700);
+  ring(B.uses, L("preview",3,.15), SC1("print")-.2, "3 prints per candidate", "above", 8);
+}
+/* ---- print ---- */
+{ const s = SC0("print");
+  cam(s, 721, 410, 1); camBox(s+.1, {x:178, y:1250, w:700, h:150}, 1.5, 700);
+  CURVIS.push([s, L("print",0,.9)]); mv(s, 900, 1500, .01); mvBox(s+.2, B.printBtn, .7); click(L("print",0,.5));
+  // confirm dialog
+  const cf = $("#confirm"); K(cf,"o",[0,0],[L("print",0,.55),0],[L("print",0,.62),1],[L("print",1,.95),1],[L("print",1,1),0]); K(cf,"s",[L("print",0,.55),.85],[L("print",0,.65),1,"back"]);
+  cam(L("print",0,.6), 721, 300, 1.25);
+  F(t => { $("#okBtn").style.boxShadow = t > L("print",1,0) ? `0 0 0 ${4+3*Math.sin(t*7)}px #e0b83a` : "none"; });
+  sfx(L("print",1,.97), "click");
+  note(`<div style="font-size:24px;font-weight:800;color:var(--gold)">HEADS UP</div>1 print is counted the moment you confirm, even if you cancel the print dialog.`, L("print",1,.1), L("print",2,0)-.1, 1450, 640, "", 430);
+  page(L("print",1,.98), "p_issued_full.jpg");
+  // print dialog
+  const pd = $("#pdlg"), p2 = L("print",2,0);
+  K(pd,"o",[0,0],[p2-.1,0],[p2+.3,1],[SC1("print")-.3,1],[SC1("print"),0]); K(pd,"y",[p2-.1,60],[p2+.4,0,"out"]);
+  cam(p2, 721, 410, 1); sfx(p2, "whoosh");
+  const rows = [["rPaper","A4"],["rLayout","landscape"],["rMargins","margins"],["rBg","background graphics"]];
+  rows.forEach(([id,ph],i) => { const t0 = W("print",2,ph), t1 = i<3 ? W("print",2,rows[i+1][1]) : L("print",3,0);
+    F(t => $("#"+id).classList.toggle("on", t >= t0 && t < t1 + (i===3?0:0))); sfx(t0, "tick"); });
+  const bgOn = W("print",2,"background graphics") + .5;
+  F(t => { const c = $("#bgChk"); const on = t >= bgOn; c.style.background = on ? "#0b5a2f" : "#fff"; c.style.borderColor = on ? "#0b5a2f" : "#7a867f"; c.textContent = on ? "✓" : ""; });
+  cam(W("print",2,"A4")-.4, 1168, 380, 1.3);
+  const sp = L("print",3,.35);
+  F(t => { $("#rDest").classList.toggle("on", t >= L("print",3,0)); $("#destV").textContent = t >= sp ? "Save as PDF" : "HP LaserJet (Office)"; });
+  sfx(sp, "ding");
+}
+
+/* ======================= VERIFY ======================= */
+{ const s = SC0("verify"), e = SC1("verify");
+  K("#sc-verify","o",[s-.5,0],[s,1],[L("verify",1,.5)-.3,1],[L("verify",1,.5),0]);
+  // QR position on cert_print (fractions of the image), zoom into it
+  const q = window.BOXES.qr || {x:.5,y:.885,w:.075};
+  const qx = q.x*1000, qy = q.y*708, qw = q.w*1000 + 24;
+  const qr = $("#qrRing"); Object.assign(qr.style, {left:(qx-qw/2)+"px", top:(qy-qw/2)+"px", width:qw+"px", height:qw+"px"});
+  K(qr,"o",[0,0],[L("verify",0,.6),0],[L("verify",0,.7),1]);
+  const vc = "#vCertWrap";
+  K(vc,"s",[s,1],[L("verify",0,.55),1],[L("verify",0,.95),1.9]); K(vc,"x",[L("verify",0,.55),0],[L("verify",0,.95),-(qx*1.9-500)]); K(vc,"y",[L("verify",0,.55),0],[L("verify",0,.95),-(qy*1.9-560)]);
+  K(vc,"s",[L("verify",1,0),1.9],[L("verify",1,.12),1]); K(vc,"x",[L("verify",1,0),-(qx*1.9-500)],[L("verify",1,.12),0]); K(vc,"y",[L("verify",1,0),-(qy*1.9-560)],[L("verify",1,.12),0]);
+  sfx(L("verify",0,.65), "ding");
+  // phone scans
+  const ph = $("#phone"), p0 = W("verify",1,"scan");
+  K(ph,"o",[0,0],[p0-.6,0],[p0-.2,1]); K(ph,"y",[p0-.6,300],[p0,0,"out"]);
+  F(t => { $("#scanLine").style.top = (300 + 228*(.5+.5*Math.sin((t-p0)*4))) + "px"; });
+  K("#camPill","o",[0,0],[p0+1.2,0],[p0+1.4,1]); sfx(p0+1.3, "ding");
+  K("#phoneShot","o",[0,0],[p0+1.8,0],[p0+2.1,1]); K("#phoneShot","y",[p0+1.8,40],[p0+2.2,0,"out"]);
+  // browser: verify tab typing (from second half of line 2)
+  const b0 = L("verify",1,.5);
+  page(b0, "v_empty.jpg"); url(b0, "ascon-pse-certificate.portals.com.ng/#verify");
+  scrollTo(b0 - .3, 0, .01); cam(b0 - .3, 721, 410, 1, .01); camBox(b0+.05, {x:200, y:520, w:720, h:200}, 1.5);
+  CURVIS.push([b0, L("verify",2,.1)]); mvBox(b0, B.certInput, .4);
+  typeSeq("v_cert", CERT.length, b0+.4, L("verify",1,1)-.2);
+  mvBox(L("verify",1,1)-.2, B.verifyBtn, .4); click(L("verify",2,0));
+  page(L("verify",2,0)+.15, "v_result_full.jpg"); cam(L("verify",2,.05), 721, 410, 1);
+  camBox(L("verify",2,.2), B.badge, 1.3); ring(B.badge, L("verify",2,.25), e-.3, "Authentic ✓", "below", 6);
+}
+
+/* ======================= HELP ======================= */
+{ const s = SC0("help"), e = L("help",5,0);
+  show("#sc-help", s, e - .4);
+  const head = mk(`<h2 class="abs" style="left:120px;top:130px;font-size:60px">Quick troubleshooting</h2>`, "#helpCards"); slide(head, s, e-.4, 0, 30);
+  const cards = [
+    ["Number not found?","Double-check it against your admission card.","err_notfound.png"],
+    ["Surname doesn't match?","Enter it exactly as you registered.","err_name.png"],
+    ["Colours missing on paper?","Turn on <b>Background graphics</b> in the print dialog.",null],
+    ["Used all 3 prints?","Contact the ASCON Examinations Office with your examination number.",null]
+  ];
+  cards.forEach(([h,p,img],i) => {
+    const x = 120 + (i%2)*850, y = 250 + Math.floor(i/2)*330;
+    const c = mk(`<div class="card" style="left:${x}px;top:${y}px;width:810px;height:300px">
+      <div style="display:flex;align-items:center;gap:18px"><span class="num">${i+1}</span><b style="font-size:36px">${h}</b></div>
+      <div style="font-size:27px;margin-top:14px;opacity:.9">${p}</div>
+      ${img ? `<img src="shots/${img}" style="margin-top:18px;width:740px;border-radius:10px;opacity:.95">` : ""}</div>`, "#helpCards");
+    const t0 = L("help", i+1, 0) - .15; K(c,"o",[t0,0],[t0+.35,1],[e-.4,1],[e,0]); K(c,"r",[t0,-8],[t0+.6,0,"back"]); K(c,"s",[t0,.8],[t0+.6,1,"back"]); sfx(t0, "whoosh");
+  });
+  page(e - .2, "help.jpg"); url(e - .2, "ascon-pse-certificate.portals.com.ng/#help");
+  cam(e-.4, 721, 410, 1, .01); camBox(e+.6, {x:125, y:150, w:1400, h:700}, 1.15);
+  ring(B.tabHelp, e + .3, bOut - .5, "", "below");
+}
+
+/* ======================= QUIZ ======================= */
+{ const s = SC0("quiz"), e = SC1("quiz"), pz = S.quiz.lines[1], rv = L("quiz",2,0);
+  show("#sc-quiz", s, e - .3);
+  const opts = [["A","Once"],["B","Three times"],["C","Unlimited"]];
+  opts.forEach(([l,txt],i) => { const o = mk(`<div class="opt abs" style="left:560px;top:${470+i*140}px"><span class="l">${l}</span>${txt}</div>`, "#opts");
+    slide(o, L("quiz",0,.4) + i*.25, e - .3, -60, 0);
+    if(i === 1){ F(t => { const on = t >= rv; o.style.background = on ? "#0b7a3e" : ""; o.style.borderColor = on ? "#4fae73" : ""; o.style.boxShadow = on ? "0 0 40px rgba(79,174,115,.8)" : "none"; }); K(o,"s",[rv,1],[rv+.15,1.08],[rv+.5,1,"back"]); }
+    else F(t => { o.style.filter = t >= rv ? "opacity(.35)" : ""; }); });
+  K("#timer","o",[0,0],[pz.start-.2,0],[pz.start,1],[rv,1],[rv+.3,0]);
+  F(t => { const p = Math.min(1, Math.max(0, (t - pz.start)/(pz.end - pz.start - .3)));
+    $("#timerArc").style.strokeDashoffset = 326.7*p; $("#timerTxt").textContent = Math.max(1, 3 - Math.floor(p*3)); });
+  for(let i=0;i<3;i++) sfx(pz.start + i*(pz.end-pz.start-.3)/3, "tick");
+  confetti("#confB", rv, 870, 610, 90, 3); sfx(rv, "ding");
+}
+
+/* ======================= OUTRO ======================= */
+{ const s = SC0("outro"), e = SC1("outro"), l2 = L("outro",1,0);
+  K("#sc-outro","o",[s-.4,0],[s,1]);
+  K("#recapH","o",[s-.2,0],[s+.3,1],[l2-.3,1],[l2,0]);
+  const steps = [["Exam number","get your examination number",'<rect x="8" y="14" width="48" height="36" rx="5" fill="none" stroke="#e0b83a" stroke-width="4"/><path d="M16 26h18M16 36h28" stroke="#fff" stroke-width="4" stroke-linecap="round"/>'],
+    ["ascon.gov.ng","visit ascon.gov.ng",'<circle cx="32" cy="32" r="24" fill="none" stroke="#e0b83a" stroke-width="4"/><path d="M8 32h48M32 8c-10 12-10 36 0 48M32 8c10 12 10 36 0 48" fill="none" stroke="#fff" stroke-width="3"/>'],
+    ["Find result","find your result",'<circle cx="27" cy="27" r="16" fill="none" stroke="#e0b83a" stroke-width="5"/><path d="M39 39l14 14" stroke="#fff" stroke-width="6" stroke-linecap="round"/>'],
+    ["Check preview","check the preview",'<path d="M4 32s10-18 28-18 28 18 28 18-10 18-28 18S4 32 4 32z" fill="none" stroke="#e0b83a" stroke-width="4"/><circle cx="32" cy="32" r="8" fill="#fff"/>'],
+    ["Print smartly","print smartly",'<rect x="12" y="24" width="40" height="22" rx="4" fill="none" stroke="#e0b83a" stroke-width="4"/><path d="M20 24V8h24v16M20 40h24v16H20z" fill="none" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>'],
+    ["QR verifies","QR code do the verifying",'<path d="M8 8h18v18H8zM38 8h18v18H38zM8 38h18v18H8z" fill="none" stroke="#e0b83a" stroke-width="4"/><path d="M40 40h6v6h-6zM50 50h6v6h-6zM40 52h4M52 40h4" stroke="#fff" stroke-width="4"/>']];
+  steps.forEach(([lab,ph,ic],i) => { const r = mk(`<div class="recap" style="left:${60+i*305}px;top:380px"><div class="disc"><svg viewBox="0 0 64 64">${ic}</svg></div><b>${lab}</b></div>`, "#recap");
+    const t0 = W("outro",0,ph.replace("QR code do the verifying","QR code")); K(r,"o",[s,0],[s+.3+i*.08,.25],[t0,.25],[t0+.25,1],[l2-.3,1],[l2,0]); K(r,"s",[t0,1],[t0+.15,1.15],[t0+.5,1,"back"]); sfx(t0,"tick");
+    const d = r.querySelector(".disc"); F(t => { const on = t >= t0; d.style.background = on ? "#0b7a3e" : ""; d.style.borderColor = on ? "#e0b83a" : ""; }); });
+  K("#endCard","o",[0,0],[l2-.1,0],[l2+.5,1]); K("#endSeal","s",[l2,.5],[l2+.7,1,"back"]); K("#endSeal","r",[l2,-90],[l2+.9,0,"out"]);
+  confetti("#confC", l2 + .4, 960, 380, 130, 21);
+  K("#stage","o",[e-1.2,1],[e,0]);
+}
+
+/* ---------- apply camera / scroll ---------- */
+PAGES.sort((a,b) => a[0]-b[0]); URLS.sort((a,b) => a[0]-b[0]);
+
+F(t => {
+  const fx = val(CAM.fx,t), fy = val(CAM.fy,t), cs = val(CAM.cs,t), sy = SCROLL.length ? val(SCROLL,t) : 0;
+  let tx = 960 - 238 - fx*cs, ty = 520 - 100 - fy*cs;
+  // keep the browser inside the frame (or covering it, once it is bigger than the frame)
+  const clamp = (pos, size, screen) => Math.min(Math.max(pos, Math.min(0, screen - size)), Math.max(0, screen - size));
+  tx = clamp(238 + tx, 1443*cs, 1920) - 238; ty = clamp(100 + ty, 820*cs, 1080) - 100;
+  // clamp so the browser never leaves the frame at scale 1
+  st(BR).camX = tx; st(BR).camY = ty; st(BR).camS = cs;
+  INNER.style.transform = `scale(${KZ}) translateY(${-sy}px)`;
+});
+
+/* ---------- render ---------- */
+function apply(t){
+  for(const tr of tracks) st(tr.el)[tr.prop] = val(tr.keys, t);
+  for(const f of fns) f(t);
+  for(const [el, s] of ST){
+    el.style.opacity = s.o;
+    let tf = `translate(${s.x}px,${s.y}px) rotate(${s.r}deg) scale(${s.s})`;
+    if(el === BR) tf = `translate(${s.camX + s.x}px,${s.camY + s.y}px) scale(${s.camS})`;
+    el.style.transform = tf;
+  }
+}
+// default hidden for things that only appear via tracks
+["#sc-intro","#sc-checklist","#sc-verify","#sc-help","#sc-quiz","#sc-outro"].forEach(q => st($(q)));
+window.render = t => apply(t);
+window.SFX = SFX.sort((a,b) => a[0]-b[0]);
+window.DURATION = DUR;
+window.ready = Promise.all([document.fonts.ready, ...[...document.images].map(i => i.complete ? 1 : new Promise(r => { i.onload = i.onerror = r; }))]);
+apply(0);
+
+if(location.search.includes("play")){
+  const a = new Audio("narration.wav"); let t0 = null;
+  document.body.addEventListener("click", () => { a.play(); t0 = performance.now(); }, {once:true});
+  (function loop(){ if(t0 !== null) apply(a.currentTime); requestAnimationFrame(loop); })();
+}
+</script>
+</body>
+</html>

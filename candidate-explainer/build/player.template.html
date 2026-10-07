@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PSE Certificate Video Guide</title>
+<meta name="description" content="Interactive video guide for 2026 Public Service Examination candidates: how to find, check, print and verify your ASCON certificate.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700;900&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3f8f4;--panel:#fff;--ink:#0e1a10;--ink2:#4a5d50;--line:#d3e3d7;--accent:#0b7a3e;--accent-ink:#fff;--gold:#c9a227;--soft:#e3f4e6;--bad:#a3261b;--bad-bg:#fbe9e7}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#04170c;--panel:#0d2417;--ink:#e6f3e9;--ink2:#a6c4ae;--line:#24503a;--accent:#3fa96a;--accent-ink:#04170c;--soft:#133222;--bad:#ff9a8e;--bad-bg:#3a1714}}
+:root[data-theme="dark"]{--bg:#04170c;--panel:#0d2417;--ink:#e6f3e9;--ink2:#a6c4ae;--line:#24503a;--accent:#3fa96a;--accent-ink:#04170c;--soft:#133222;--bad:#ff9a8e;--bad-bg:#3a1714}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 "Source Sans 3",system-ui,sans-serif}
+header{background:linear-gradient(180deg,#064a26,#05361c);color:#fff;border-bottom:4px solid #0b7a3e}
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px}
+header .wrap{display:flex;align-items:center;gap:14px;padding-top:16px;padding-bottom:16px}
+header img{width:54px;height:54px;border-radius:50%;background:#fff;padding:2px}
+header h1{font:900 clamp(20px,3vw,28px)/1.2 Merriweather,Georgia,serif;margin:0}
+header p{margin:2px 0 0;opacity:.8;font-size:15px}
+main .wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;padding-top:22px;padding-bottom:40px}
+@media (max-width:960px){main .wrap{grid-template-columns:1fr}}
+.player{position:relative;background:#000;border-radius:14px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.25);aspect-ratio:16/9}
+video{width:100%;height:100%;display:block}
+.overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,20,10,.86);padding:16px}
+.overlay.on{display:flex}
+.q{background:var(--panel);color:var(--ink);border-radius:16px;padding:22px 24px;max-width:560px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.q .k{font-weight:700;letter-spacing:.14em;font-size:13px;color:var(--gold)}
+.q h3{font:700 clamp(18px,2.4vw,24px)/1.3 Merriweather,Georgia,serif;margin:6px 0 14px}
+.q button.opt{display:block;width:100%;text-align:left;margin:8px 0;padding:12px 16px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink);font:600 17px "Source Sans 3",sans-serif;cursor:pointer}
+.q button.opt:hover{border-color:var(--accent)}
+.q button.opt.right{border-color:var(--accent);background:var(--soft)}
+.q button.opt.wrong{border-color:var(--bad);background:var(--bad-bg)}
+.q .fb{min-height:24px;margin-top:8px;font-weight:600}
+.q .row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:10px;border:0;background:var(--accent);color:var(--accent-ink);font:700 16px "Source Sans 3",sans-serif;cursor:pointer;text-decoration:none}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:14px 0}
+.bar label{display:inline-flex;align-items:center;gap:8px;font-weight:600;color:var(--ink2);margin-left:auto}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:18px}
+.panel h2{font:700 19px/1.3 Merriweather,Georgia,serif;margin:0 0 10px}
+ol.ch{list-style:none;margin:0;padding:0}
+ol.ch li button{width:100%;display:flex;gap:10px;align-items:center;text-align:left;padding:9px 10px;border-radius:9px;border:0;background:none;color:var(--ink);font:600 16px "Source Sans 3",sans-serif;cursor:pointer}
+ol.ch li button:hover{background:var(--soft)}
+ol.ch li.on button{background:var(--soft);box-shadow:inset 3px 0 0 var(--accent)}
+ol.ch .t{margin-left:auto;color:var(--ink2);font-variant-numeric:tabular-nums;font-weight:400;font-size:14px}
+ol.ch .d{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--accent-ink)}
+ol.ch li.done .d{background:var(--accent);border-color:var(--accent)}
+.check label{display:flex;gap:10px;align-items:flex-start;padding:7px 0;cursor:pointer}
+.check input{width:20px;height:20px;margin-top:3px;accent-color:var(--accent)}
+.meter{height:8px;border-radius:8px;background:var(--line);overflow:hidden;margin-top:8px}
+.meter i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+.tr{max-height:420px;overflow:auto;padding-right:6px}
+.tr p{margin:0;padding:6px 8px;border-radius:8px;cursor:pointer;color:var(--ink2)}
+.tr p:hover{background:var(--soft)}
+.tr p.on{color:var(--ink);background:var(--soft);font-weight:600}
+.tr h3{font:700 14px "Source Sans 3",sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:12px 8px 4px}
+.score{font-weight:700}
+.links a{display:block;margin:6px 0}
+footer{color:var(--ink2);font-size:14px;text-align:center;padding:20px 16px 40px}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+</style>
+</head>
+<body>
+<header><div class="wrap"><img src="seal.png" alt="ASCON seal"><div><h1>Your PSE 2026 Certificate: the video guide</h1><p>Administrative Staff College of Nigeria · find, check, print and verify, step by step</p></div></div></header>
+<main><div class="wrap">
+  <section>
+    <div class="player">
+      <video id="v" controls playsinline preload="metadata" poster="poster.jpg">
+        <source src="pse-certificate-guide.mp4" type="video/mp4">
+        <track kind="captions" src="pse-certificate-guide.vtt" srclang="en" label="English" default>
+      </video>
+      <div class="overlay" id="ov" role="dialog" aria-modal="true" aria-labelledby="qh"><div class="q">
+        <div class="k">CHECKPOINT <span id="qn"></span></div><h3 id="qh"></h3><div id="qo"></div>
+        <div class="fb" id="fb" aria-live="polite"></div>
+        <div class="row"><button class="btn ghost" id="skip" type="button">Skip</button><button class="btn" id="cont" type="button" hidden>Continue the video ▸</button></div>
+      </div></div>
+    </div>
+    <div class="bar">
+      <button class="btn" id="play" type="button">▶ Play the guide</button>
+      <a class="btn ghost" href="pse-certificate-guide.mp4" download>⤓ Download video</a>
+      <label><input type="checkbox" id="cp" checked> Pause for checkpoints</label>
+    </div>
+    <div class="panel"><h2>Transcript <span style="font:400 14px 'Source Sans 3';color:var(--ink2)">(click a line to jump there)</span></h2><div class="tr" id="tr"></div></div>
+  </section>
+  <aside>
+    <div class="panel"><h2>Chapters</h2><ol class="ch" id="ch"></ol></div>
+    <div class="panel check"><h2>Am I ready?</h2>
+      <label><input type="checkbox" data-k="num"> My examination number (from my admission card)</label>
+      <label><input type="checkbox" data-k="name"> My surname, as registered</label>
+      <label><input type="checkbox" data-k="dev"> A phone or computer with internet</label>
+      <label><input type="checkbox" data-k="prn"> A4 printer, or I'll save as PDF</label>
+      <div class="meter"><i id="meter"></i></div><p id="ready" style="margin:8px 0 0;color:var(--ink2)">Tick each item when you have it.</p>
+    </div>
+    <div class="panel"><h2>Checkpoint score</h2><p class="score" id="score" style="margin:0">0 of 0 answered correctly</p></div>
+    <div class="panel links"><h2>Go to</h2>
+      <a href="https://ascon.gov.ng/" target="_blank" rel="noopener">ascon.gov.ng ↗</a>
+      <a href="__PORTAL__" target="_blank" rel="noopener">PSE certificate portal ↗</a>
+    </div>
+  </aside>
+</div></main>
+<footer>The candidate shown in the video (Okafor Temitope Aisha, ANCSC/2026/001) is fictional. Screens are from the portal running in demonstration mode.</footer>
+<script>
+const DATA = __DATA__;
+const v = document.getElementById("v");
+const fmt = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}`;
+const store = { get(k){ try{ return JSON.parse(localStorage.getItem("pseguide:"+k)); }catch(e){ return null; } }, set(k,x){ try{ localStorage.setItem("pseguide:"+k, JSON.stringify(x)); }catch(e){} } };
+
+/* chapters */
+const ch = document.getElementById("ch"), seen = new Set(store.get("seen") || []);
+DATA.chapters.forEach((c,i) => { const li = document.createElement("li"); li.dataset.i = i; if(seen.has(c.id)) li.classList.add("done");
+  li.innerHTML = `<button type="button"><span class="d">✓</span><span></span><span class="t">${fmt(c.start)}</span></button>`;
+  li.querySelector("span:nth-child(2)").textContent = c.title; li.querySelector("button").onclick = () => { v.currentTime = c.start + .01; v.play(); }; ch.append(li); });
+
+/* transcript */
+const tr = document.getElementById("tr"); const lines = [];
+DATA.chapters.forEach(c => { const h = document.createElement("h3"); h.textContent = c.title; tr.append(h);
+  c.lines.forEach(l => { const p = document.createElement("p"); p.textContent = l.text; p.onclick = () => { v.currentTime = l.start + .01; v.play(); }; tr.append(p); lines.push([l, p]); }); });
+
+/* checkpoints */
+const Q = DATA.checkpoints; let asked = new Set(), right = 0, answered = 0;
+const ov = document.getElementById("ov"), qo = document.getElementById("qo"), fb = document.getElementById("fb"), cont = document.getElementById("cont");
+function ask(i){
+  const q = Q[i]; asked.add(i); v.pause(); if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+  document.getElementById("qn").textContent = `${i+1} of ${Q.length}`; document.getElementById("qh").textContent = q.q;
+  qo.innerHTML = ""; fb.textContent = ""; cont.hidden = true; let done = false;
+  q.options.forEach((o,k) => { const b = document.createElement("button"); b.type = "button"; b.className = "opt"; b.textContent = o;
+    b.onclick = () => { if(done) return; done = true; answered++; const ok = k === q.answer; if(ok) right++;
+      b.classList.add(ok ? "right" : "wrong"); qo.children[q.answer].classList.add("right");
+      fb.textContent = (ok ? "Correct! " : "Not quite. ") + q.why; cont.hidden = false; cont.focus();
+      document.getElementById("score").textContent = `${right} of ${answered} answered correctly`; };
+    qo.append(b); });
+  ov.classList.add("on"); qo.firstChild.focus();
+}
+function closeQ(){ ov.classList.remove("on"); v.play(); }
+cont.onclick = closeQ; document.getElementById("skip").onclick = closeQ;
+
+/* playback sync */
+v.addEventListener("timeupdate", () => {
+  const t = v.currentTime;
+  DATA.chapters.forEach((c,i) => { const li = ch.children[i], on = t >= c.start && t < c.end; li.classList.toggle("on", on);
+    if(on && t > c.end - 3 && !seen.has(c.id)){ seen.add(c.id); li.classList.add("done"); store.set("seen", [...seen]); } });
+  lines.forEach(([l,p]) => { const on = t >= l.start && t < l.end + .3; if(on && !p.classList.contains("on")){ p.classList.add("on"); const r = p.offsetTop - tr.offsetTop - 120; tr.scrollTo({top:r, behavior:"smooth"}); } else if(!on) p.classList.remove("on"); });
+  if(document.getElementById("cp").checked && !v.seeking) Q.forEach((q,i) => { if(!asked.has(i) && t >= q.at && t < q.at + 1.5) ask(i); });
+});
+v.addEventListener("seeked", () => { Q.forEach((q,i) => { if(v.currentTime < q.at) asked.delete(i); }); });
+document.getElementById("play").onclick = () => { v.play(); v.scrollIntoView({behavior:"smooth", block:"center"}); };
+
+/* readiness checklist */
+const boxes = [...document.querySelectorAll(".check input")], saved = store.get("ready") || {};
+function upd(){ const n = boxes.filter(b => b.checked).length; document.getElementById("meter").style.width = n/boxes.length*100 + "%";
+  document.getElementById("ready").textContent = n === boxes.length ? "You're ready. Head to the portal! 🎉" : `${n} of ${boxes.length} ready`; }
+boxes.forEach(b => { b.checked = !!saved[b.dataset.k]; b.onchange = () => { saved[b.dataset.k] = b.checked; store.set("ready", saved); upd(); }; }); upd();
+</script>
+</body>
+</html>

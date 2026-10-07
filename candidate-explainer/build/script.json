@@ -1,0 +1,62 @@
+[
+ {"id":"intro","title":"Welcome","lines":[
+  ["Congratulations! You sat the 2026 Public Service Examination, and your certificate is now just a few clicks away.", "Congratulations! You sat the twenty twenty-six Public Service Examination, and your certificate is now just a few clicks away."],
+  ["I'm your digital guide. In the next few minutes, I'll show you how to find, check, print and verify your certificate, the smart way.", null]
+ ]},
+ {"id":"checklist","title":"What you need","lines":[
+  ["Before you start, get these four things ready.", null],
+  ["One: your examination number. It's on your admission card, in the form CODE/2026/NUMBER. For example, ANCSC/2026/001.", "One: your examination number. It's on your admission card, in the form, code, slash, twenty twenty-six, slash, number. For example, A, N, C, S, C, slash, twenty twenty-six, slash, zero zero one."],
+  ["Two: your surname, or any one of your registered names.", null],
+  ["Three: a phone, tablet or computer with a good internet connection.", null],
+  ["And four: a printer loaded with A4 paper. No printer? No problem. You can save it as a PDF.", "And four: a printer loaded with A4 paper. No printer? No problem. You can save it as a P D F."]
+ ]},
+ {"id":"visit","title":"Step 1 · Visit ascon.gov.ng","lines":[
+  ["Step one. Open your browser and go to the official ASCON website: ascon.gov.ng.", "Step one. Open your browser, and go to the official Ascon website: ascon dot gov dot N G."],
+  ["On the homepage, look for the link to the PSE certificate portal, and click it.", "On the homepage, look for the link to the P S E certificate portal, and click it."],
+  ["Pro tip: always start from the official site, so you never land on a fake page.", null]
+ ]},
+ {"id":"tour","title":"The portal at a glance","lines":[
+  ["Welcome to the certificate portal. Notice the three tabs at the top:", null],
+  ["Print certificate, Verify a certificate, and Help. We'll use all three.", "Print certificate. Verify a certificate. And Help. We'll use all three."]
+ ]},
+ {"id":"find","title":"Step 2 · Find your result","lines":[
+  ["Step two. In the examination number box, type your number exactly as it appears on your admission card.", null],
+  ["Don't worry about capital letters. The portal tidies up the format for you.", null],
+  ["Next, type your surname. Any one of your registered names will work.", null],
+  ["Now click “Find my result”.", "Now, click, Find my result."]
+ ]},
+ {"id":"preview","title":"Step 3 · Check the preview","lines":[
+  ["And there it is! Your name, examination number, commission or board, centre, average and grade.", null],
+  ["Below it is a preview of your certificate. Check every detail carefully. The preview itself is not a valid certificate.", null],
+  ["If your name or marks look wrong, stop. Don't print. Contact your commission or board, or the ASCON Examinations Office, so it can be corrected first.", "If your name or marks look wrong, stop. Don't print. Contact your commission or board, or the Ascon Examinations Office, so it can be corrected first."],
+  ["See these three dots? That's your print allowance. Each candidate can print up to three times.", null]
+ ]},
+ {"id":"print","title":"Step 4 · Print smartly","lines":[
+  ["Happy with everything? Step four: click “Print certificate”, and confirm.", "Happy with everything? Step four. Click, Print certificate, and confirm."],
+  ["Heads up: one print is counted the moment you confirm, even if you cancel the print dialog.", null],
+  ["In the print dialog, set the paper to A4, the layout to landscape, margins to none, and switch on background graphics, so the green colours come out perfectly.", null],
+  ["Want a digital copy too? Choose “Save as PDF” as the destination. Smart move.", "Want a digital copy too? Choose, Save as P D F, as the destination. Smart move."]
+ ]},
+ {"id":"verify","title":"Step 5 · Verify with the QR code","lines":[
+  ["Your printed certificate now carries a unique certificate number and a QR code.", "Your printed certificate now carries a unique certificate number, and a Q R code."],
+  ["Anyone, like an employer or an institution, can scan that QR code with a phone camera, or type the certificate number on the Verify tab.", "Anyone, like an employer or an institution, can scan that Q R code with a phone camera, or type the certificate number on the Verify tab."],
+  ["Within seconds, the portal confirms that it's an authentic certificate issued by ASCON. Security, built in.", "Within seconds, the portal confirms that it's an authentic certificate, issued by Ascon. Security, built in."]
+ ]},
+ {"id":"help","title":"Quick troubleshooting","lines":[
+  ["Quick troubleshooting.", null],
+  ["Number not found? Double-check it against your admission card.", null],
+  ["Surname doesn't match? Enter it exactly as you registered.", null],
+  ["Colours missing on paper? Turn on background graphics.", null],
+  ["Used all three prints? Contact the ASCON Examinations Office with your examination number.", "Used all three prints? Contact the Ascon Examinations Office with your examination number."],
+  ["And for anything else, open the Help tab.", null]
+ ]},
+ {"id":"quiz","title":"Pop quiz","lines":[
+  ["Pop quiz! How many times can you print your certificate?", null],
+  ["__PAUSE__", null],
+  ["Three times! So check first, and make every print count.", null]
+ ]},
+ {"id":"outro","title":"Recap","lines":[
+  ["To recap: get your examination number ready, visit ascon.gov.ng, find your result, check the preview, print smartly, and let the QR code do the verifying.", "To recap. Get your examination number ready. Visit ascon dot gov dot N G. Find your result. Check the preview. Print smartly. And let the Q R code do the verifying."],
+  ["Congratulations once again, and all the best in your public service career!", null]
+ ]}
+]
