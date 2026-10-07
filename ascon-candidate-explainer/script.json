@@ -1,0 +1,78 @@
+{
+  "voice": { "model": "en-us-ryan-high.onnx", "length_scale": 0.93 },
+  "gap": 0.35,
+  "scenes": [
+    { "id": "intro", "chapter": "Welcome", "lead": 0.8, "tail": 0.6, "segs": [
+      { "id": "intro_a", "text": "Hello, and welcome! If you are a candidate for the ASCON Public Service Examination, this video is for you." },
+      { "id": "intro_b", "text": "I'll walk you through everything you need to know: before, during, and after your exam. And stay sharp, because there's a quick quiz along the way!" }
+    ]},
+    { "id": "portal", "chapter": "Portal", "lead": 0.6, "tail": 0.8, "segs": [
+      { "id": "portal_a", "text": "Step one. Open the browser on your device, and visit the official ASCON website: ascon.gov.ng." },
+      { "id": "portal_b", "text": "On the homepage, look for the link to the CBT examination portal." },
+      { "id": "portal_c", "text": "Click it, and the examination sign-in page opens. That's your gateway." }
+    ]},
+    { "id": "bring", "chapter": "What to bring", "lead": 0.5, "tail": 0.8, "segs": [
+      { "id": "bring_a", "text": "Now, what should you bring on exam day?" },
+      { "id": "bring_b", "text": "Your username and password, exactly as issued to you." },
+      { "id": "bring_c", "text": "A valid means of identification." },
+      { "id": "bring_d", "text": "Your device: a laptop, tablet, or smartphone. Fully charged, with a charger or power bank." },
+      { "id": "bring_e", "text": "Enough internet data for a stable connection." },
+      { "id": "bring_f", "text": "And for the theory paper, bring pens and plain sheets of paper." },
+      { "id": "bring_g", "text": "Pro tip: arrive early, so you are settled and connected before the countdown begins." }
+    ]},
+    { "id": "device", "chapter": "Your device", "lead": 0.5, "tail": 0.8, "segs": [
+      { "id": "device_a", "text": "Here's good news. You are allowed to bring your own laptop, smartphone, or tablet, and use it to write the examination." },
+      { "id": "device_b", "text": "But there is one condition you cannot skip. Your device location must be switched on, at the examination venue." },
+      { "id": "device_c", "text": "When the portal asks for your location, tap Allow. Until your location is confirmed, the continue button stays locked. No location, no exam!" }
+    ]},
+    { "id": "signin", "chapter": "Sign in", "lead": 0.5, "tail": 0.8, "segs": [
+      { "id": "signin_a", "text": "Let's walk through signing in. First, enter your username, and tap Continue." },
+      { "id": "signin_b", "text": "Next, type your password, and sign in." },
+      { "id": "signin_c", "text": "Read the instructions carefully. Make sure your location is on, tick the box to accept the terms, and continue." },
+      { "id": "signin_d", "text": "Confirm your details: your name, present post, promotion post, and grade level. If anything is wrong, correct it right there." },
+      { "id": "signin_e", "text": "Then you'll see your paper: the areas you'll be examined on, the number of questions, and the duration. When the countdown reaches zero, tap Start Examination." }
+    ]},
+    { "id": "exam", "chapter": "The exam", "lead": 0.5, "tail": 0.8, "segs": [
+      { "id": "exam_a", "text": "Inside the exam, the timer sits at the top. Pick your answer, then move with Next and Previous." },
+      { "id": "exam_b", "text": "The question palette lets you jump to any question, and shows what you've answered at a glance." },
+      { "id": "exam_c", "text": "Every answer is saved instantly, and backed up to the server automatically." },
+      { "id": "exam_d", "text": "When five minutes remain, the timer turns red. When time runs out, your paper is submitted automatically. If you finish early, tap Submit Paper." }
+    ]},
+    { "id": "rules", "chapter": "Malpractice", "lead": 0.6, "tail": 0.9, "segs": [
+      { "id": "rules_a", "text": "Now, listen closely. This part matters most." },
+      { "id": "rules_b", "text": "While you write, the system is monitoring in the background." },
+      { "id": "rules_c", "text": "Switching browser tabs or pages. Minimizing the exam window. Opening another app, like WhatsApp or a search engine." },
+      { "id": "rules_d", "text": "Listening to audio or using earpieces in the background. Copying and pasting content." },
+      { "id": "rules_e", "text": "Every one of these is detected. A warning appears, and each incident is counted, and recorded against you as examination malpractice." },
+      { "id": "rules_f", "text": "So, stay on the exam window, from the first question to the last." }
+    ]},
+    { "id": "quiz", "chapter": "Quick quiz", "lead": 0.5, "tail": 0.9, "segs": [
+      { "id": "quiz_a", "text": "Quick check! Allowed, or malpractice? Think fast." },
+      { "id": "quiz_1q", "text": "Number one. Writing the exam on your own smartphone, with location switched on.", "pause": 3.2, "quiz": { "item": 1, "answer": "allowed" } },
+      { "id": "quiz_1a", "text": "Allowed! That's exactly right." },
+      { "id": "quiz_2q", "text": "Number two. Quickly switching to WhatsApp to read a message.", "pause": 3.2, "quiz": { "item": 2, "answer": "malpractice" } },
+      { "id": "quiz_2a", "text": "Malpractice! Leaving the exam window is recorded." },
+      { "id": "quiz_3q", "text": "Number three. Opening a new tab to search for an answer.", "pause": 3.2, "quiz": { "item": 3, "answer": "malpractice" } },
+      { "id": "quiz_3a", "text": "Malpractice! Stay on the exam page." },
+      { "id": "quiz_4q", "text": "Number four. Wearing earpieces, and listening to audio during the exam.", "pause": 3.2, "quiz": { "item": 4, "answer": "malpractice" } },
+      { "id": "quiz_4a", "text": "Malpractice again! Keep your ears free, and your focus on the screen." }
+    ]},
+    { "id": "theory", "chapter": "Theory", "lead": 0.5, "tail": 0.8, "segs": [
+      { "id": "theory_a", "text": "After Part A, you move on to the Theory, Part B, which has its own timer." },
+      { "id": "theory_b", "text": "Download or print the answer sheet if it's provided, and write your answers clearly on paper." },
+      { "id": "theory_c", "text": "Then take a clear photo of each page, and upload it. You can upload several pages. Just make sure everything is uploaded before the time runs out." },
+      { "id": "theory_d", "text": "And remember: leaving the window during Part B is recorded too." }
+    ]},
+    { "id": "after", "chapter": "After the exam", "lead": 0.5, "tail": 0.8, "segs": [
+      { "id": "after_a", "text": "And when you're done?" },
+      { "id": "after_b", "text": "Wait for the Examination Complete screen. That's your confirmation that your submission has been recorded." },
+      { "id": "after_c", "text": "Where enabled, your Part A score is shown immediately. Your theory answers are marked separately, and the overall result is released by the examination office." },
+      { "id": "after_d", "text": "Each candidate can take the examination only once. After you submit, you cannot sit it again." }
+    ]},
+    { "id": "recap", "chapter": "Golden rules", "lead": 0.5, "tail": 2.6, "segs": [
+      { "id": "recap_a", "text": "Let's recap the golden rules." },
+      { "id": "recap_b", "text": "Come prepared. Location on. Stay on the exam window. Upload before time. Wait for confirmation." },
+      { "id": "recap_c", "text": "Do these, and you're all set. Best of luck in your examination!" }
+    ]}
+  ]
+}
