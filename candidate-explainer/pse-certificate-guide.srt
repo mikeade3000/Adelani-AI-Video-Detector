@@ -1,148 +1,148 @@
 1
-00:00:00,800 --> 00:00:09,295
+00:00:00,900 --> 00:00:11,283
 Congratulations! You sat the 2026 Public Service Examination, and your certificate is now just a few clicks away.
 
 2
-00:00:09,425 --> 00:00:17,606
+00:00:11,683 --> 00:00:21,533
 I'm your digital guide. In the next few minutes, I'll show you how to find, check, print and verify your certificate, the smart way.
 
 3
-00:00:18,256 --> 00:00:21,109
+00:00:22,683 --> 00:00:26,368
 Before you start, get these four things ready.
 
 4
-00:00:21,239 --> 00:00:34,974
+00:00:26,768 --> 00:00:42,655
 One: your examination number. It's on your admission card, in the form CODE/2026/NUMBER. For example, ANCSC/2026/001.
 
 5
-00:00:35,104 --> 00:00:38,831
+00:00:43,055 --> 00:00:47,464
 Two: your surname, or any one of your registered names.
 
 6
-00:00:38,961 --> 00:00:43,316
+00:00:47,864 --> 00:00:53,212
 Three: a phone, tablet or computer with a good internet connection.
 
 7
-00:00:43,446 --> 00:00:50,828
+00:00:53,612 --> 00:01:01,862
 And four: a printer loaded with A4 paper. No printer? No problem. You can save it as a PDF.
 
 8
-00:00:51,478 --> 00:00:58,328
+00:01:03,012 --> 00:01:11,348
 Step one. Open your browser and go to the official ASCON website: ascon.gov.ng.
 
 9
-00:00:58,458 --> 00:01:03,771
+00:01:11,748 --> 00:01:17,886
 On the homepage, look for the link to the PSE certificate portal, and click it.
 
 10
-00:01:03,901 --> 00:01:09,186
+00:01:18,286 --> 00:01:24,146
 Pro tip: always start from the official site, so you never land on a fake page.
 
 11
-00:01:09,836 --> 00:01:14,160
+00:01:25,296 --> 00:01:31,093
 Welcome to the certificate portal. Notice the three tabs at the top:
 
 12
-00:01:14,290 --> 00:01:18,910
+00:01:31,493 --> 00:01:37,418
 Print certificate, Verify a certificate, and Help. We'll use all three.
 
 13
-00:01:19,560 --> 00:01:26,591
+00:01:38,568 --> 00:01:47,070
 Step two. In the examination number box, type your number exactly as it appears on your admission card.
 
 14
-00:01:26,721 --> 00:01:31,485
+00:01:47,470 --> 00:01:53,928
 Don't worry about capital letters. The portal tidies up the format for you.
 
 15
-00:01:31,615 --> 00:01:36,033
+00:01:54,328 --> 00:01:59,494
 Next, type your surname. Any one of your registered names will work.
 
 16
-00:01:36,163 --> 00:01:38,216
+00:01:59,894 --> 00:02:02,763
 Now click “Find my result”.
 
 17
-00:01:38,866 --> 00:01:45,401
+00:02:03,913 --> 00:02:11,224
 And there it is! Your name, examination number, commission or board, centre, average and grade.
 
 18
-00:01:45,531 --> 00:01:53,318
+00:02:11,624 --> 00:02:21,005
 Below it is a preview of your certificate. Check every detail carefully. The preview itself is not a valid certificate.
 
 19
-00:01:53,448 --> 00:02:03,944
+00:02:21,405 --> 00:02:32,769
 If your name or marks look wrong, stop. Don't print. Contact your commission or board, or the ASCON Examinations Office, so it can be corrected first.
 
 20
-00:02:04,074 --> 00:02:10,081
+00:02:33,169 --> 00:02:40,097
 See these three dots? That's your print allowance. Each candidate can print up to three times.
 
 21
-00:02:10,731 --> 00:02:15,334
+00:02:41,247 --> 00:02:46,595
 Happy with everything? Step four: click “Print certificate”, and confirm.
 
 22
-00:02:15,464 --> 00:02:21,517
+00:02:46,995 --> 00:02:54,322
 Heads up: one print is counted the moment you confirm, even if you cancel the print dialog.
 
 23
-00:02:21,647 --> 00:02:32,448
+00:02:54,722 --> 00:03:07,047
 In the print dialog, set the paper to A4, the layout to landscape, margins to none, and switch on background graphics, so the green colours come out perfectly.
 
 24
-00:02:32,578 --> 00:02:38,823
+00:03:07,447 --> 00:03:14,550
 Want a digital copy too? Choose “Save as PDF” as the destination. Smart move.
 
 25
-00:02:39,473 --> 00:02:44,847
+00:03:15,700 --> 00:03:22,155
 Your printed certificate now carries a unique certificate number and a QR code.
 
 26
-00:02:44,977 --> 00:02:54,998
+00:03:22,555 --> 00:03:33,980
 Anyone, like an employer or an institution, can scan that QR code with a phone camera, or type the certificate number on the Verify tab.
 
 27
-00:02:55,128 --> 00:03:02,545
+00:03:34,380 --> 00:03:43,718
 Within seconds, the portal confirms that it's an authentic certificate issued by ASCON. Security, built in.
 
 28
-00:03:03,195 --> 00:03:04,659
+00:03:44,868 --> 00:03:46,861
 Quick troubleshooting.
 
 29
-00:03:04,789 --> 00:03:08,772
+00:03:47,261 --> 00:03:52,284
 Number not found? Double-check it against your admission card.
 
 30
-00:03:08,902 --> 00:03:12,825
+00:03:52,684 --> 00:03:57,606
 Surname doesn't match? Enter it exactly as you registered.
 
 31
-00:03:12,955 --> 00:03:16,661
+00:03:58,006 --> 00:04:02,779
 Colours missing on paper? Turn on background graphics.
 
 32
-00:03:16,791 --> 00:03:23,308
+00:04:03,179 --> 00:04:11,130
 Used all three prints? Contact the ASCON Examinations Office with your examination number.
 
 33
-00:03:23,438 --> 00:03:26,229
+00:04:11,530 --> 00:04:15,118
 And for anything else, open the Help tab.
 
 34
-00:03:26,879 --> 00:03:30,274
+00:04:16,268 --> 00:04:20,550
 Pop quiz! How many times can you print your certificate?
 
 35
-00:03:34,404 --> 00:03:37,000
+00:04:24,950 --> 00:04:29,547
 Three times! So check first, and make every print count.
 
 36
-00:03:38,650 --> 00:03:51,328
+00:04:30,697 --> 00:04:44,771
 To recap: get your examination number ready, visit ascon.gov.ng, find your result, check the preview, print smartly, and let the QR code do the verifying.
 
 37
-00:03:51,458 --> 00:03:56,242
+00:04:45,171 --> 00:04:51,279
 Congratulations once again, and all the best in your public service career!
 

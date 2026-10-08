@@ -4,8 +4,8 @@ An explainer video for 2026 Public Service Examination candidates. It shows how 
 
 | File | What it is |
 | --- | --- |
-| `pse-certificate-guide.mp4` | The video: 1080p, about 5 minutes, narrated, with captions burned into the picture (26 MB) |
-| `pse-certificate-guide-720p.mp4` | The same video at 720p (13 MB), for sharing on WhatsApp and phones |
+| `pse-certificate-guide.mp4` | The video: 1080p, about 5 minutes, narrated, with captions burned into the picture (30 MB) |
+| `pse-certificate-guide-720p.mp4` | The same video at 720p (15 MB), for sharing on WhatsApp and phones |
 | `index.html` | Interactive player with chapters, a clickable transcript, pause-and-answer checkpoints, an "Am I ready?" checklist and links to the site and portal |
 | `pse-certificate-guide.vtt` / `.srt` | Caption files, for the player, YouTube, Facebook or WhatsApp uploads |
 | `poster.jpg`, `seal.png` | Assets used by the player |
