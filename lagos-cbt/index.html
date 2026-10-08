@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CBT Platform — Promotion Examination Practice</title>
+<style>
+:root{
+  --ink:#132638; --muted:#5b6b78; --primary:#0e4d6b; --primary-600:#0b3e57;
+  --accent:#e0a21a; --accent-soft:#fbf0d6;
+  --bg:#eef2f5; --surface:#ffffff; --line:#d9e0e6; --line-soft:#e8edf1;
+  --success:#1f7a54; --success-bg:#e4f3eb; --danger:#b23a3a; --danger-bg:#f8e8e8;
+  --radius:12px; --radius-sm:8px; --shadow:0 1px 2px rgba(19,38,56,.06),0 6px 20px rgba(19,38,56,.06);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:var(--font);font-size:17px;line-height:1.5;color:var(--ink);background:var(--bg);
+  -webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{line-height:1.2;margin:0 0 .4em;font-weight:700;letter-spacing:-.01em}
+h1{font-size:1.7rem} h2{font-size:1.3rem} h3{font-size:1.08rem}
+p{margin:0 0 1rem} a{color:var(--primary)}
+button{font-family:inherit;font-size:1rem;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:1rem}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:4px}
+.hidden{display:none !important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* Layout */
+.app{min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:var(--primary);color:#fff;display:flex;align-items:center;gap:1rem;
+  padding:.7rem 1.1rem;position:sticky;top:0;z-index:20;box-shadow:0 2px 10px rgba(11,62,87,.25)}
+.topbar .brand{display:flex;align-items:center;gap:.6rem;font-weight:700;font-size:1.15rem}
+.topbar .brand .mark{width:30px;height:30px;border-radius:7px;background:var(--accent);color:var(--primary-600);
+  display:grid;place-items:center;font-weight:800;font-size:.95rem}
+.topbar .spacer{flex:1}
+.topbar .who{font-size:.9rem;opacity:.95;text-align:right;line-height:1.25}
+.topbar .who b{display:block;font-size:.98rem}
+.btn{border:1px solid transparent;border-radius:var(--radius-sm);padding:.62rem 1.05rem;font-weight:600;
+  background:var(--primary);color:#fff;transition:background .15s,transform .05s}
+.btn:hover{background:var(--primary-600)} .btn:active{transform:translateY(1px)}
+.btn.ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
+.btn.ghost:hover{background:rgba(255,255,255,.12)}
+.card .btn.ghost{color:var(--primary);border-color:var(--line)}
+.btn.sec{background:var(--surface);color:var(--primary);border-color:var(--line)}
+.btn.sec:hover{background:#f3f7f9}
+.btn.warn{background:var(--accent);color:#5b4409} .btn.warn:hover{filter:brightness(.96)}
+.btn.danger{background:var(--danger)} .btn.danger:hover{filter:brightness(.94)}
+.btn.sm{padding:.4rem .7rem;font-size:.86rem}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.main{flex:1;width:100%;max-width:1120px;margin:0 auto;padding:1.4rem 1.1rem 3rem}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:1.3rem;box-shadow:var(--shadow);margin-bottom:1.1rem}
+.card h2{margin-top:0}
+.grid{display:grid;gap:1.1rem}
+.grid.cols2{grid-template-columns:repeat(2,1fr)}
+.grid.cols3{grid-template-columns:repeat(3,1fr)}
+.grid.cols4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:820px){.grid.cols2,.grid.cols3,.grid.cols4{grid-template-columns:1fr}}
+
+/* Forms */
+.field{margin-bottom:1rem}
+.field label{display:block;font-weight:600;font-size:.92rem;margin-bottom:.35rem;color:var(--ink)}
+.field .hint{font-weight:400;color:var(--muted);font-size:.85rem}
+input[type=text],input[type=password],input[type=number],input[type=email],select,textarea{
+  width:100%;padding:.7rem .8rem;border:1.5px solid var(--line);border-radius:var(--radius-sm);
+  background:#fff;color:var(--ink)}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);outline:none;box-shadow:0 0 0 3px rgba(14,77,107,.15)}
+textarea{min-height:120px;resize:vertical}
+.row{display:flex;gap:.8rem;flex-wrap:wrap}
+.row>*{flex:1;min-width:180px}
+
+/* Auth screen */
+.auth-wrap{min-height:100vh;display:grid;place-items:center;padding:1.2rem;
+  background:linear-gradient(160deg,#0e4d6b 0%,#0b3e57 60%,#0a3247 100%)}
+.auth-card{background:var(--surface);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);
+  width:100%;max-width:430px;padding:2rem 1.8rem}
+.auth-brand{display:flex;align-items:center;gap:.7rem;margin-bottom:.3rem}
+.auth-brand .mark{width:44px;height:44px;border-radius:10px;background:var(--accent);color:var(--primary-600);
+  display:grid;place-items:center;font-weight:800;font-size:1.2rem}
+.auth-brand .t{font-weight:800;font-size:1.35rem;color:var(--primary)}
+.auth-sub{color:var(--muted);margin-bottom:1.5rem;font-size:.95rem}
+
+/* Badges / pills */
+.badge{display:inline-block;padding:.2rem .6rem;border-radius:999px;font-size:.78rem;font-weight:600;
+  background:var(--accent-soft);color:#8a6608}
+.badge.role-super{background:#e7ecf2;color:var(--primary-600)}
+.badge.role-admin{background:#e3f0f5;color:var(--primary)}
+.badge.role-user{background:var(--accent-soft);color:#8a6608}
+.badge.ok{background:var(--success-bg);color:var(--success)}
+.badge.bad{background:var(--danger-bg);color:var(--danger)}
+.badge.lock{background:#eceff2;color:var(--muted)}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:.93rem}
+th,td{text-align:left;padding:.6rem .55rem;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+th{font-size:.8rem;color:var(--muted);font-weight:700}
+tr:hover td{background:#fafcfd}
+.table-wrap{overflow-x:auto}
+
+/* Tabs */
+.tabs{display:flex;gap:.3rem;flex-wrap:wrap;border-bottom:2px solid var(--line);margin-bottom:1.2rem}
+.tab{background:none;border:none;padding:.7rem 1rem;font-weight:600;color:var(--muted);
+  border-bottom:3px solid transparent;margin-bottom:-2px}
+.tab.active{color:var(--primary);border-bottom-color:var(--accent)}
+
+/* Progress bar */
+.progress{height:12px;background:var(--line-soft);border-radius:999px;overflow:hidden}
+.progress .fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--accent));
+  transition:width .5s ease}
+.stat{text-align:center;padding:.4rem}
+.stat .n{font-size:2rem;font-weight:800;color:var(--primary);line-height:1}
+.stat .l{font-size:.82rem;color:var(--muted);margin-top:.3rem}
+
+/* Bars for category analytics */
+.catbar{display:grid;grid-template-columns:1fr;gap:.7rem}
+.catbar .item{display:grid;grid-template-columns:190px 1fr 52px;align-items:center;gap:.7rem}
+@media(max-width:640px){.catbar .item{grid-template-columns:130px 1fr 44px}}
+.catbar .lab{font-size:.9rem;font-weight:600}
+.catbar .track{height:14px;background:var(--line-soft);border-radius:999px;overflow:hidden}
+.catbar .bar{height:100%;border-radius:999px}
+.catbar .pct{text-align:right;font-weight:700;font-size:.9rem}
+
+/* Exam */
+.exam-head{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
+.qpalette{display:flex;flex-wrap:wrap;gap:.35rem;margin:.5rem 0 0}
+.qdot{width:34px;height:34px;border-radius:7px;border:1.5px solid var(--line);background:#fff;
+  font-size:.85rem;font-weight:700;color:var(--muted)}
+.qdot.answered{background:var(--primary);color:#fff;border-color:var(--primary)}
+.qdot.current{outline:3px solid var(--accent);outline-offset:1px}
+.qstem{font-size:1.22rem;font-weight:600;margin:.2rem 0 1.1rem;line-height:1.45}
+.opt{display:block;width:100%;text-align:left;padding:.85rem 1rem;border:1.5px solid var(--line);
+  border-radius:var(--radius-sm);background:#fff;margin-bottom:.6rem;font-size:1.02rem;transition:.12s}
+.opt:hover{border-color:var(--primary)}
+.opt.sel{border-color:var(--primary);background:#eef6fa;box-shadow:0 0 0 2px rgba(14,77,107,.15)}
+.opt.correct{border-color:var(--success);background:var(--success-bg)}
+.opt.wrong{border-color:var(--danger);background:var(--danger-bg)}
+.timer{font-weight:800;font-size:1.1rem;background:var(--accent-soft);color:#8a6608;
+  padding:.3rem .8rem;border-radius:8px}
+.timer.low{background:var(--danger-bg);color:var(--danger)}
+
+/* drag-drop ordering */
+.dnd{list-style:none;padding:0;margin:0}
+.dnd li{padding:.8rem 1rem;border:1.5px solid var(--line);border-radius:var(--radius-sm);
+  background:#fff;margin-bottom:.55rem;display:flex;align-items:center;gap:.7rem;cursor:grab}
+.dnd li.dragging{opacity:.5;border-style:dashed}
+.dnd li .grip{color:var(--muted);font-size:1.2rem;cursor:grab}
+.dnd li .num{width:26px;height:26px;border-radius:6px;background:var(--primary);color:#fff;
+  display:grid;place-items:center;font-size:.85rem;font-weight:700;flex:none}
+.dnd .updown{margin-left:auto;display:flex;gap:.25rem}
+
+/* matching */
+.match-row{display:grid;grid-template-columns:1fr 220px;gap:.7rem;align-items:center;margin-bottom:.55rem}
+@media(max-width:560px){.match-row{grid-template-columns:1fr}}
+.match-row .left{padding:.75rem .9rem;border:1.5px solid var(--line);border-radius:var(--radius-sm);
+  background:#f7fafb;font-weight:600}
+
+/* review */
+.review-q{border:1.5px solid var(--line);border-radius:var(--radius);padding:1.1rem;margin-bottom:1rem}
+.review-q.correct{border-left:5px solid var(--success)}
+.review-q.wrong{border-left:5px solid var(--danger)}
+.explain{background:#f3f8fb;border:1px solid var(--line);border-left:4px solid var(--primary);
+  border-radius:8px;padding:.85rem 1rem;margin-top:.8rem;font-size:.98rem}
+.explain b{color:var(--primary)}
+
+/* toast + modal */
+.toast{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
+  padding:.8rem 1.3rem;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.3);z-index:100;
+  font-weight:600;max-width:90vw}
+.toast.ok{background:var(--success)} .toast.err{background:var(--danger)}
+.modal-bg{position:fixed;inset:0;background:rgba(19,38,56,.55);display:grid;place-items:center;
+  z-index:90;padding:1rem}
+.modal{background:#fff;border-radius:14px;max-width:560px;width:100%;padding:1.6rem;
+  max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.kv{display:flex;justify-content:space-between;gap:1rem;padding:.4rem 0;border-bottom:1px solid var(--line-soft);font-size:.93rem}
+.kv span:first-child{color:var(--muted)}
+.notice{background:var(--accent-soft);border:1px solid #eed49a;border-radius:8px;padding:.8rem 1rem;
+  font-size:.9rem;color:#6b5208;margin-bottom:1rem}
+.empty{text-align:center;color:var(--muted);padding:2.5rem 1rem}
+@media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+/* content protection (deterrent only) */
+body{-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}
+input,textarea,select{-webkit-user-select:text;-moz-user-select:text;-ms-user-select:text;user-select:text}
+img{-webkit-user-drag:none;user-drag:none;pointer-events:none}
+.spinner{width:34px;height:34px;border:3px solid var(--line,#dfe6ec);border-top-color:var(--primary,#0e4d6b);border-radius:50%;display:inline-block;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* WhatsApp contact */
+.wa-fab{position:fixed;right:16px;bottom:16px;z-index:9999;display:inline-flex;align-items:center;gap:.5rem;
+  background:#25D366;color:#fff;text-decoration:none;padding:.6rem .95rem;border-radius:999px;
+  font-weight:700;font-size:.92rem;box-shadow:0 6px 20px rgba(0,0,0,.18);pointer-events:auto}
+.wa-fab:hover{filter:brightness(.94)}
+.wa-fab svg{width:20px;height:20px;fill:#fff;flex:none}
+.auth-contact{margin-top:1.1rem;text-align:center;font-size:.9rem;color:var(--muted)}
+.auth-contact a{color:#128C4B;font-weight:700;text-decoration:none}
+.auth-contact a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div id="auth"></div>
+<div id="app" class="app hidden">
+  <header class="topbar">
+    <div class="brand"><span class="mark">CBT</span><span>CBT Platform</span></div>
+    <div class="spacer"></div>
+    <div class="who" id="whoami"></div>
+    <button class="btn ghost sm hidden" id="pwBtn">Change password</button>
+    <button class="btn ghost sm" id="logoutBtn">Log out</button>
+  </header>
+  <main class="main" id="view"></main>
+</div>
+<div id="modalMount"></div>
+<a class="wa-fab" href="https://wa.me/19102090087" target="_blank" rel="noopener" aria-label="Chat with support on WhatsApp">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5A11.8 11.8 0 0 0 12 0C5.4 0 .1 5.3.1 11.9c0 2.1.6 4.1 1.6 5.9L0 24l6.4-1.7c1.7.9 3.6 1.4 5.6 1.4 6.6 0 11.9-5.3 11.9-11.9 0-3.2-1.2-6.1-3.4-8.3zM12 21.6c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 .99-3.6-.24-.4A9.6 9.6 0 0 1 2.4 12C2.4 6.7 6.7 2.4 12 2.4c2.6 0 5 1 6.8 2.8A9.5 9.5 0 0 1 21.6 12c0 5.3-4.3 9.6-9.6 9.6zm5.5-7.2c-.3-.15-1.8-.9-2-1-.3-.1-.5-.15-.7.15-.2.3-.8 1-.95 1.15-.2.15-.35.17-.65.05-.3-.15-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.65-2.1-.15-.3 0-.45.13-.6.13-.13.3-.35.44-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.66-1.6-.9-2.2-.24-.58-.48-.5-.66-.5h-.56c-.2 0-.5.07-.76.37-.26.3-1 1-1 2.42 0 1.43 1.03 2.8 1.17 3 .14.2 2.03 3.1 4.92 4.35.69.3 1.22.48 1.64.61.69.22 1.32.19 1.82.11.55-.08 1.8-.73 2.05-1.44.25-.7.25-1.32.18-1.44-.07-.13-.26-.2-.56-.35z"/></svg>
+  WhatsApp
+</a>
+<!-- Shared data and logic (also pasted into the Apps Script project as .gs files). Keep these
+     files next to index.html when hosting (e.g. on GitHub Pages). -->
+<script src="cbt-shared.js"></script>
+<script src="cbt-bank-permsec.js"></script>
+<script src="cbt-bank-law-enforcement.js"></script>
+<script>
+/* ============================================================
+   CBT Platform — application logic
+   Runs in two modes:
+     • Offline mode  — API_URL empty: data lives in localStorage.
+     • Backend mode  — API_URL set:   data lives in Google Sheets
+                       via an Apps Script web app. The front end
+                       hydrates an in-memory cache on login and
+                       syncs every write back to the server.
+   CADRES, the seed banks, scopeVisibleTo() and cbtGrade() come from
+   cbt-shared.js and the bank files loaded above.
+   ============================================================ */
+"use strict";
+
+/* ====== BACKEND CONFIG ======
+   Paste your deployed Apps Script web-app URL between the quotes to
+   switch the whole platform to the shared Google Sheets backend.
+   Leave it empty to run standalone on this device (localStorage).   */
+const API_URL = "https://script.google.com/macros/s/AKfycbyHAUzfCvldJ7Jn4XbV8-B79d3lKpO6aHRW9LGwAC1kp1A2fNwk3Qd_BN_gVLOjfTPrEA/exec";
+const BACKEND = !!API_URL;
+const MIN_PASSWORD = 8;
+
+const CATEGORIES=["Quantitative","Qualitative","Logic","English and Grammar","Lagos State Civil Service Rules","Lagos State Financial Regulations","Current Affairs","ICT","Public Policy & Governance","Leadership & Strategic Management","Road Traffic Law & Management","Vehicle Inspection & Roadworthiness","Law Enforcement Practice"];
+const TYPES = [
+  {id:"mcq",label:"Multiple choice"},
+  {id:"truefalse",label:"True / False"},
+  {id:"shortanswer",label:"Short answer"},
+  {id:"ordering",label:"Drag & drop ordering"},
+  {id:"matching",label:"Matching pairs"}
+];
+const CAT_COLORS = {"Quantitative":"#0e4d6b","Qualitative":"#2a7d9b","Logic":"#c98a12",
+  "English and Grammar":"#1f7a54","Lagos State Civil Service Rules":"#8a4fa0",
+  "Lagos State Financial Regulations":"#b2603a","Current Affairs":"#3a6ea5","ICT":"#5a3fa0",
+  "Public Policy & Governance":"#2f6f5e","Leadership & Strategic Management":"#9a3f6b",
+  "Road Traffic Law & Management":"#c0392b","Vehicle Inspection & Roadworthiness":"#6b5b2f",
+  "Law Enforcement Practice":"#34495e"};
+const catColor=c=>CAT_COLORS[c]||"#0e4d6b";
+/* Every scope a question can have: COMMON, the shared groups, then each cadre. */
+const ALL_SCOPES=()=>["COMMON",...SCOPE_GROUPS,...CADRES.map(c=>c.name)];
+const glLabel=l=>/^\d+$/.test(l.gl)?`GL ${l.gl} — ${l.post}`:l.post;
+
+/* ---------- helpers ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+function el(tag,attrs={},...kids){const n=document.createElement(tag);
+  for(const k in attrs){if(k==="class")n.className=attrs[k];
+    else if(k==="html")n.innerHTML=attrs[k];
+    else if(k.startsWith("on")&&typeof attrs[k]==="function")n.addEventListener(k.slice(2),attrs[k]);
+    else if(attrs[k]!=null)n.setAttribute(k,attrs[k]);}
+  kids.flat().forEach(c=>n.append(c?.nodeType?c:document.createTextNode(c??"")));return n;}
+const uid=p=>(p||"id")+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3);
+function hash(s){let h=5381;for(let i=0;i<s.length;i++){h=((h<<5)+h)+s.charCodeAt(i);h|=0}return "h"+(h>>>0).toString(36);}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+/* only for strings that go into innerHTML; text passed to el() is already safe */
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(msg,kind=""){const t=el("div",{class:"toast "+kind},msg);document.body.append(t);
+  setTimeout(()=>t.remove(),2800);}
+function modal(node){const bg=el("div",{class:"modal-bg",onclick:e=>{if(e.target===bg)bg.remove();}});
+  const m=el("div",{class:"modal"});m.append(node);bg.append(m);$("#modalMount").append(bg);
+  return{close:()=>bg.remove()};}
+function closeAllModals(){$("#modalMount").innerHTML="";}
+function loadingCard(msg){return el("div",{class:"card",style:"text-align:center;padding:2.4rem"},
+  el("div",{class:"spinner"}),el("div",{style:"margin-top:.8rem;color:var(--muted)"},msg||"Loading…"));}
+function errorCard(msg,retry){
+  const c=el("div",{class:"card",style:"text-align:center;padding:2rem"},
+    el("div",{style:"font-weight:700;color:var(--danger);margin-bottom:.5rem"},"Couldn't load your data"),
+    el("div",{style:"color:var(--muted);margin-bottom:1rem;max-width:620px;margin-left:auto;margin-right:auto"},msg||""),
+    el("button",{class:"btn",onclick:()=>{DB._loaded=false;retry&&retry();}},"Try again"));
+  if(BACKEND&&API_URL)c.append(el("div",{style:"margin-top:.9rem"},
+    el("a",{href:API_URL,target:"_blank",rel:"noopener",style:"color:var(--primary);font-weight:600;font-size:.9rem"},
+      "Open the server link — it should show {\"ok\":true}")));
+  return c;
+}
+function pwProblem(p){return (p&&p.length>=MIN_PASSWORD)?null:`Use at least ${MIN_PASSWORD} characters`;}
+
+let JSONP_N=0;
+function b64urlEnc(str){return btoa(unescape(encodeURIComponent(str))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");}
+/* ---------- API transport: JSONP over doGet (robust for GitHub Pages → Apps Script) ---------- */
+function api(action,payload={}){
+  return new Promise(function(resolve,reject){
+    const sess=DB.session();const token=(sess&&sess.token)||null;
+    let p;
+    try{p=b64urlEnc(JSON.stringify({action,token,...payload}));}
+    catch(e){reject(new Error("Could not encode the request."));return;}
+    const cb="cbtcb"+(++JSONP_N)+"x"+Date.now().toString(36);
+    const sep=API_URL.indexOf("?")>=0?"&":"?";
+    const s=document.createElement("script");
+    let done=false;
+    function fin(){done=true;try{delete window[cb];}catch(e){window[cb]=undefined;}if(s.parentNode)s.parentNode.removeChild(s);clearTimeout(timer);}
+    const timer=setTimeout(function(){if(done)return;fin();reject(new Error("The server didn’t respond. Make sure API_URL is the /exec link and the web app is deployed to ‘Anyone’."));},25000);
+    window[cb]=function(data){
+      fin();
+      if(data&&data.ok===false){
+        if(data.error==="auth"){DB.setSession(null);DB._loaded=false;stopExam();renderAuth();}
+        reject(new Error(data.error||"Request failed"));return;
+      }
+      resolve(data);
+    };
+    s.onerror=function(){if(done)return;fin();reject(new Error("Couldn’t reach the server. Usually the web app isn’t deployed to ‘Anyone’, or API_URL isn’t the /exec link. Open the /exec link in a browser — it should show {\"ok\":true}."));};
+    s.src=API_URL+sep+"callback="+cb+"&p="+p;
+    (document.head||document.documentElement).appendChild(s);
+  });
+}
+async function apiPost(action,payload={}){
+  const sess=DB.session();const token=(sess&&sess.token)||null;
+  let res;
+  try{res=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify({action,token,...payload}),redirect:"follow"});}
+  catch(e){throw new Error("Couldn’t reach the server to save your session.");}
+  let data=null;try{data=JSON.parse(await res.text());}catch(e){return {ok:true,unverified:true};} // save likely succeeded even if the reply can’t be read cross-origin
+  if(data&&data.ok===false){if(data.error==="auth"){DB.setSession(null);DB._loaded=false;}throw new Error(data.error||"Save failed");}
+  return data;
+}
+async function bootstrapData(){
+  const data=await api("bootstrap",{});
+  DB._cache.accounts=data.accounts||[];
+  DB._cache.users=data.users||[];
+  DB._cache.questions=data.questions||[];
+  DB._cache.attempts=data.attempts||[];
+  DB._cache.config=data.config||{};
+  DB._role=data.role;DB._actor=data.actor||DB._actor;DB._loaded=true;
+}
+
+/* ---------- DB (dual mode) ---------- */
+const DB={
+  k:{acc:"cbt_accounts",usr:"cbt_users",q:"cbt_questions",att:"cbt_attempts",cfg:"cbt_config",ses:"cbt_session"},
+  _cache:{accounts:[],users:[],questions:[],attempts:[],config:{}},
+  _loaded:false,_role:null,_actor:null,
+  _r(k,d){try{return JSON.parse(localStorage.getItem(k))??d;}catch{return d;}},
+  _w(k,v){localStorage.setItem(k,JSON.stringify(v));},
+  _bg(p){return p&&p.catch?p.catch(e=>toast("Sync problem: "+e.message,"err")):Promise.resolve();},
+  /* reads */
+  accounts(){return BACKEND?this._cache.accounts:this._r(this.k.acc,[]);},
+  users(){return BACKEND?this._cache.users:this._r(this.k.usr,[]);},
+  questions(){return BACKEND?this._cache.questions:this._r(this.k.q,[]);},
+  attempts(){return BACKEND?this._cache.attempts:this._r(this.k.att,[]);},
+  config(){return BACKEND?this._cache.config:this._r(this.k.cfg,{});},
+  session(){return this._r(this.k.ses,null);},
+  setSession(s){s?this._w(this.k.ses,s):localStorage.removeItem(this.k.ses);},
+  /* local-only bulk writers (used by offline mode + seed) */
+  saveAccounts(a){this._w(this.k.acc,a);}, saveUsers(u){this._w(this.k.usr,u);},
+  saveQuestions(q){this._w(this.k.q,q);}, saveAttempts(a){this._w(this.k.att,a);},
+  /* granular writers (mode-aware; return a promise). Passwords are sent as plaintext
+     in backend mode and hashed on the server; offline mode hashes locally (djb2). */
+  createAccount(rec,password){if(BACKEND)return api("createAccount",{rec,password}).then(r=>{this._cache.accounts.push({...rec,id:r.id||rec.id,mustChange:true});});
+    const a=this.accounts();a.push({...rec,mustChange:true,passHash:hash(password)});this.saveAccounts(a);return Promise.resolve();},
+  updateAccount(id,patch){if(BACKEND){const a=this._cache.accounts.find(x=>x.id===id);if(a)Object.assign(a,patch);return this._bg(api("updateAccount",{id,patch}));}
+    const arr=this.accounts();const r=arr.find(x=>x.id===id);if(r)Object.assign(r,patch);this.saveAccounts(arr);return Promise.resolve();},
+  /* Password changes return the real result so the caller can show success or failure. */
+  setAccountPassword(id,password,self){const done=()=>{const a=(BACKEND?this._cache.accounts:null)?.find(x=>x.id===id);if(a)a.mustChange=!self;if(BACKEND&&self&&this._actor)this._actor.mustChange=false;};
+    if(BACKEND)return api("updateAccount",{id,patch:{},password}).then(done);
+    const arr=this.accounts();const r=arr.find(x=>x.id===id);if(r){r.passHash=hash(password);r.mustChange=!self;}this.saveAccounts(arr);return Promise.resolve();},
+  deleteAccount(id){if(BACKEND){this._cache.accounts=this._cache.accounts.filter(x=>x.id!==id);return this._bg(api("deleteAccount",{id}));}
+    this.saveAccounts(this.accounts().filter(x=>x.id!==id));return Promise.resolve();},
+  createUser(rec,password){if(BACKEND)return api("createUser",{rec,password}).then(r=>{this._cache.users.push({...rec,id:r.id||rec.id});});
+    const u=this.users();u.push({...rec,passHash:hash(password)});this.saveUsers(u);return Promise.resolve();},
+  updateUser(id,patch){if(BACKEND){const u=this._cache.users.find(x=>x.id===id);if(u)Object.assign(u,patch);return this._bg(api("updateUser",{id,patch}));}
+    const arr=this.users();const r=arr.find(x=>x.id===id);if(r)Object.assign(r,patch);this.saveUsers(arr);return Promise.resolve();},
+  setUserPassword(id,password){if(BACKEND)return api("updateUser",{id,patch:{},password});
+    const arr=this.users();const r=arr.find(x=>x.id===id);if(r)r.passHash=hash(password);this.saveUsers(arr);return Promise.resolve();},
+  deleteUser(id){if(BACKEND){this._cache.users=this._cache.users.filter(x=>x.id!==id);this._cache.attempts=this._cache.attempts.filter(a=>a.userId!==id);return this._bg(api("deleteUser",{id}));}
+    this.saveUsers(this.users().filter(x=>x.id!==id));this.saveAttempts(this.attempts().filter(a=>a.userId!==id));return Promise.resolve();},
+  addQuestions(recs){if(BACKEND){this._cache.questions.push(...recs);
+      let pr=Promise.resolve(),rejected=0;
+      for(let i=0;i<recs.length;i+=4){const c=recs.slice(i,i+4);pr=pr.then(()=>api("addQuestions",{recs:c})).then(r=>{rejected+=(r&&r.rejected)||0;});}
+      return this._bg(pr.then(()=>{if(rejected)toast(`${rejected} question(s) were rejected by the server as incomplete`,"err");}));}
+    const q=this.questions();q.push(...recs);this.saveQuestions(q);return Promise.resolve();},
+  deleteQuestion(id){if(BACKEND){this._cache.questions=this._cache.questions.filter(x=>x.id!==id);return this._bg(api("deleteQuestion",{id}));}
+    this.saveQuestions(this.questions().filter(x=>x.id!==id));return Promise.resolve();},
+  /* The server re-grades the attempt; its score replaces the local one. If it refuses (e.g. no attempts left), the local copy is withdrawn. */
+  addAttempt(rec){if(BACKEND){this._cache.attempts.push(rec);
+      return apiPost("addAttempt",{rec}).then(r=>{if(r&&!r.unverified&&typeof r.score==="number"){rec.score=r.score;rec.total=r.total;rec.pct=r.pct;if(Array.isArray(r.per))rec.per=r.per;}})
+        .catch(e=>{this._cache.attempts=this._cache.attempts.filter(a=>a.id!==rec.id);toast("Your result was not saved: "+e.message,"err");});}
+    const a=this.attempts();a.push(rec);this.saveAttempts(a);return Promise.resolve();},
+  saveConfig(patch){if(BACKEND){this._cache.config={...this._cache.config,...patch};return this._bg(api("setConfig",{patch}));}
+    this._w(this.k.cfg,{...this.config(),...patch});return Promise.resolve();},
+  dedupeQuestions(){if(BACKEND)return api("dedupeQuestions",{});
+    const qs=this.questions(),seen={},keep=[];let removed=0;
+    qs.forEach(q=>{const s=(q.scope||"")+"||"+(q.category||"")+"||"+(q.type||"")+"||"+(q.stem||"");if(seen[s])removed++;else{seen[s]=1;keep.push(q);}});
+    if(removed)this.saveQuestions(keep);return Promise.resolve({removed,remaining:keep.length});},
+  logout(){if(BACKEND&&this.session()?.token)api("logout",{}).catch(()=>{});},
+  /* offline seed — idempotent; each bank is added once per device */
+  seed(){
+    const cfg=this.config();
+    if(!cfg.seeded){
+      const accs=this.accounts();
+      if(!accs.some(a=>a.role==="super")){
+        accs.push({id:uid("acc"),role:"super",username:"superadmin",
+          passHash:hash("changeme123"),name:"System Super Admin",createdAt:Date.now(),mustChange:true});
+        this.saveAccounts(accs);
+      }
+      if(this.questions().length===0)this.saveQuestions(SEED_QUESTIONS.map(q=>({id:uid("q"),...q})));
+      this.saveConfig({seeded:true,examLength:20,durationMins:30,
+        aiProvider:"anthropic",aiModel:"claude-opus-5-5",aiKey:""});
+    }
+    getSeedBanks().forEach(b=>{
+      const flag="seeded_"+b.key,c=this.config();
+      if(c[flag]||(b.legacyFlag&&c[b.legacyFlag]))return;
+      if(!this.questions().some(q=>q.scope===b.scope))this.addQuestions(b.data.map(q=>({id:uid("q"),...q})));
+      this.saveConfig({[flag]:true});
+    });
+    if(!this.config().patchV2){
+      const qs=this.questions();let changed=false;
+      qs.forEach(q=>SEED_PATCHES_V2.forEach(p=>{if(q.stem===p.matchStem){Object.assign(q,p.set);changed=true;}}));
+      if(changed)this.saveQuestions(qs);
+      this.saveConfig({patchV2:true});
+    }
+  }
+};
+
+/* ---------- session / current actor ---------- */
+let SESSION=null;
+function currentActor(){
+  const s=DB.session();if(!s)return null;
+  if(BACKEND){
+    if(!DB._loaded)return DB._actor?{...DB._actor}:null;
+    if(s.kind==="staff"){const a=DB._cache.accounts.find(x=>x.id===s.id)||DB._actor;return a?{...a,kind:"staff"}:null;}
+    const u=DB._cache.users.find(x=>x.id===s.id)||DB._actor;return u?{...u,role:"user",kind:"user"}:null;
+  }
+  if(s.kind==="staff"){const a=DB.accounts().find(x=>x.id===s.id);return a?{...a,kind:"staff"}:null;}
+  const u=DB.users().find(x=>x.id===s.id);return u?{...u,role:"user",kind:"user"}:null;
+}
+
+/* ---------- AUTH SCREEN ---------- */
+function renderAuth(){
+  $("#app").classList.add("hidden");
+  closeAllModals();
+  const wrap=$("#auth");wrap.innerHTML="";
+  const uname=el("input",{type:"text",id:"li_u",autocomplete:"username",placeholder:"e.g. superadmin"});
+  const pass=el("input",{type:"password",id:"li_p",autocomplete:"current-password",placeholder:"Your password"});
+  const loginBtn=el("button",{class:"btn",style:"width:100%;margin-top:.4rem"},"Log in");
+  const doLogin=async()=>{
+    const u=uname.value.trim(), p=pass.value;
+    if(!u||!p){toast("Enter your username and password","err");return;}
+    if(BACKEND){
+      loginBtn.disabled=true;loginBtn.textContent="Signing in…";
+      try{
+        const r=await api("login",{username:u,password:p});
+        DB.setSession({kind:r.actor.kind||(r.role==="user"?"user":"staff"),id:r.actor.id,token:r.token});
+        DB._actor=r.actor;DB._loaded=false;boot();
+      }catch(e){toast(e.message||"Login failed","err");loginBtn.disabled=false;loginBtn.textContent="Log in";}
+      return;
+    }
+    const acc=DB.accounts().find(a=>a.username.toLowerCase()===u.toLowerCase());
+    const usr=DB.users().find(a=>a.username.toLowerCase()===u.toLowerCase());
+    const found=acc||usr;
+    if(!found||found.passHash!==hash(p)){toast("Incorrect username or password","err");return;}
+    DB.setSession({kind:acc?"staff":"user",id:found.id});boot();
+  };
+  loginBtn.onclick=doLogin;
+  pass.addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+  const card=el("div",{class:"auth-card"},
+    el("div",{class:"auth-brand"},el("span",{class:"mark"},"CBT"),el("span",{class:"t"},"CBT Platform")),
+    el("div",{class:"auth-sub"},"Civil Service Promotion Examination — Practice Platform"),
+    el("div",{class:"field"},el("label",{},"Username"),uname),
+    el("div",{class:"field"},el("label",{},"Password"),pass),
+    loginBtn
+  );
+  const contact=el("div",{class:"auth-contact"},"Need help? ",
+    el("a",{href:"https://wa.me/19102090087",target:"_blank",rel:"noopener"},"Chat with us on WhatsApp"));
+  card.append(contact);
+  wrap.append(el("div",{class:"auth-wrap"},card));
+}
+
+/* ---------- APP SHELL ---------- */
+async function boot(){
+  const sess=DB.session();
+  if(!sess){renderAuth();return;}
+  if(BACKEND&&!DB._loaded){
+    $("#auth").innerHTML="";$("#app").classList.remove("hidden");
+    $("#whoami").replaceChildren(el("b",{},"Signing in…"));
+    $("#pwBtn").classList.add("hidden");
+    const v=$("#view");v.innerHTML="";v.append(loadingCard("Loading your workspace…"));
+    try{await bootstrapData();}
+    catch(e){
+      if(e.message==="auth"||/log in again|session expired/i.test(e.message)){DB.setSession(null);DB._loaded=false;return renderAuth();}
+      v.innerHTML="";v.append(errorCard(e.message,boot));return;
+    }
+  }
+  const actor=currentActor();
+  if(!actor){renderAuth();return;}
+  SESSION=actor;
+  $("#auth").innerHTML="";
+  $("#app").classList.remove("hidden");
+  const roleLabel={super:"Super Admin",admin:"Admin",user:"Candidate"}[actor.role];
+  $("#whoami").replaceChildren(el("b",{},actor.name||actor.username),roleLabel);
+  $("#logoutBtn").onclick=()=>{stopExam();DB.logout();DB.setSession(null);SESSION=null;DB._loaded=false;
+    DB._cache={accounts:[],users:[],questions:[],attempts:[],config:{}};renderAuth();};
+  const pwBtn=$("#pwBtn");
+  pwBtn.classList.remove("hidden");pwBtn.onclick=()=>changePasswordModal(actor);
+  if(actor.kind==="staff"&&actor.mustChange)return renderForcedPasswordChange(actor);
+  if(actor.role==="user")renderCandidate();
+  else renderStaff();
+}
+/* Staff accounts flagged mustChange (the default super admin, new admins, resets) must pick a new password first. */
+function renderForcedPasswordChange(actor){
+  $("#pwBtn").classList.add("hidden");
+  const view=$("#view");view.innerHTML="";
+  const p1=el("input",{type:"password",autocomplete:"new-password"}),p2=el("input",{type:"password",autocomplete:"new-password"});
+  const btn=el("button",{class:"btn"},"Set new password");
+  btn.onclick=async()=>{
+    const prob=pwProblem(p1.value);if(prob)return toast(prob,"err");
+    if(p1.value!==p2.value)return toast("The two passwords do not match","err");
+    btn.disabled=true;
+    try{await DB.setAccountPassword(actor.id,p1.value,true);toast("Password updated","ok");boot();}
+    catch(e){toast(e.message,"err");btn.disabled=false;}
+  };
+  view.append(el("div",{class:"card",style:"max-width:520px;margin:2rem auto"},
+    el("h2",{},"Choose a new password"),
+    el("p",{style:"color:var(--muted)"},"This account is using a temporary or default password. Set your own password to continue."),
+    el("div",{class:"field"},el("label",{},`New password (at least ${MIN_PASSWORD} characters)`),p1),
+    el("div",{class:"field"},el("label",{},"Confirm new password"),p2),btn));
+}
+/* ============================================================
+   CANDIDATE SIDE
+   ============================================================ */
+function freshUser(){return DB.users().find(u=>u.id===SESSION.id);}
+function userPool(cadre){return DB.questions().filter(q=>scopeVisibleTo(q.scope,cadre));}
+function userAttempts(uid){return DB.attempts().filter(a=>a.userId===uid).sort((a,b)=>a.startedAt-b.startedAt);}
+
+function renderCandidate(){
+  const u=freshUser();
+  if(!u){renderAuth();return;}
+  if(!u.cadre||!u.cadreLocked)return renderCadreSelect();
+  renderCandidateHome("overview");
+}
+
+function renderCadreSelect(){
+  const view=$("#view");view.innerHTML="";
+  const catSel=el("select",{id:"cadreSel"},
+    el("option",{value:""},"— Choose your cadre —"),
+    ...CADRES.map(c=>el("option",{value:c.name},c.name)));
+  const postWrap=el("div",{class:"field hidden",id:"postWrap"});
+  const confirmBtn=el("button",{class:"btn",disabled:"",id:"cadreConfirm"},"Lock in this cadre & continue");
+  let chosen=null,chosenPost=null;
+  catSel.onchange=()=>{
+    chosen=CADRES.find(c=>c.name===catSel.value);chosenPost=null;confirmBtn.disabled=true;
+    postWrap.innerHTML="";postWrap.classList.add("hidden");
+    if(!chosen)return;
+    const posts=el("select",{id:"postSel"},el("option",{value:""},"— Select your grade / target post —"),
+      ...chosen.levels.map(l=>el("option",{value:l.post},glLabel(l))));
+    posts.onchange=()=>{chosenPost=posts.value;confirmBtn.disabled=!chosenPost;};
+    postWrap.append(el("label",{},"Grade level & post"),posts);
+    postWrap.classList.remove("hidden");
+  };
+  confirmBtn.onclick=()=>{
+    if(!chosen||!chosenPost)return;
+    const m=modal(el("div",{},
+      el("h3",{},"Confirm your cadre"),
+      el("p",{},"You are choosing "),
+      el("div",{class:"kv"},el("span",{},"Cadre"),el("b",{},chosen.name)),
+      el("div",{class:"kv"},el("span",{},"Target post"),el("b",{},chosenPost)),
+      el("p",{class:"notice",style:"margin-top:1rem"},
+        "Once locked, your cadre cannot be changed from your account. Only an administrator can reset it."),
+      el("div",{class:"row",style:"margin-top:1rem"},
+        el("button",{class:"btn sec",onclick:()=>m.close()},"Go back"),
+        el("button",{class:"btn warn",onclick:async()=>{
+          await DB.updateUser(SESSION.id,{cadre:chosen.name,targetPost:chosenPost,cadreLocked:true});
+          if(BACKEND)await bootstrapData();
+          m.close();toast("Cadre locked. Welcome aboard.","ok");renderCandidate();
+        }},"Yes, lock it in"))
+    ));
+  };
+  view.append(
+    el("div",{class:"card"},
+      el("h1",{},"Select your cadre"),
+      el("p",{style:"color:var(--muted)"},"Your practice questions are prepared for the cadre you are seeking promotion within. Choose carefully — this selection is locked to your account once confirmed."),
+      el("div",{class:"field"},el("label",{},"Cadre"),catSel),
+      postWrap,
+      el("div",{style:"margin-top:.4rem"},confirmBtn)
+    )
+  );
+}
+
+function candidateHeader(u){
+  const used=userAttempts(u.id).length, allo=u.attemptsAllocated||0;
+  const pct=allo>0?Math.min(100,Math.round(used/allo*100)):0;
+  return el("div",{class:"card"},
+    el("div",{class:"row",style:"align-items:flex-start"},
+      el("div",{style:"flex:2"},
+        el("h1",{style:"margin-bottom:.2rem"},u.cadre),
+        el("div",{style:"color:var(--muted)"},"Target: "+(u.targetPost||"—")),
+        el("div",{style:"margin-top:.3rem"},el("span",{class:"badge lock"},"🔒 Cadre locked"))),
+      el("div",{style:"flex:1;min-width:220px"},
+        el("div",{style:"text-align:center;background:var(--bg);border:1px solid var(--line-soft);border-radius:var(--radius);padding:.8rem 1rem"},
+          el("div",{style:`font-size:2.4rem;font-weight:800;line-height:1;color:${allo-used>0?"var(--primary)":"var(--danger)"}`},String(Math.max(0,allo-used))),
+          el("div",{style:"font-size:.9rem;color:var(--muted);font-weight:600;margin-top:.15rem"},"attempt(s) remaining"),
+          el("div",{class:"progress",style:"margin-top:.7rem"},el("div",{class:"fill",style:`width:${pct}%`})),
+          el("div",{style:"font-size:.85rem;color:var(--muted);margin-top:.4rem"},`${used} of ${allo} attempts used`),
+          allo-used<=0?el("div",{style:"font-size:.8rem;color:var(--danger);margin-top:.35rem"},"Ask your administrator to allocate more"):""))
+    ));
+}
+
+function renderCandidateHome(tab){
+  const u=freshUser();if(!u)return renderAuth();
+  const view=$("#view");view.innerHTML="";
+  view.append(candidateHeader(u));
+  const tabs=el("div",{class:"tabs"},
+    ...[["overview","My progress"],["practice","Practice"],["history","History"]].map(([id,lab])=>
+      el("button",{class:"tab"+(tab===id?" active":""),onclick:()=>renderCandidateHome(id)},lab)));
+  view.append(tabs);
+  const body=el("div");view.append(body);
+  if(tab==="overview")body.append(candidateOverview(u));
+  else if(tab==="practice")body.append(candidatePractice(u));
+  else body.append(candidateHistory(u));
+}
+
+function candidatePractice(u){
+  const pool=userPool(u.cadre);
+  const cfg=DB.config();
+  const len=Math.min(cfg.examLength||20,pool.length);
+  const remaining=(u.attemptsAllocated||0)-userAttempts(u.id).length;
+  const canStart=remaining>0&&len>0;
+  const c=el("div",{class:"card"},
+    el("h2",{},"Start a practice session"),
+    el("p",{},`Each session presents ${len} question(s) drawn from your cadre's bank of ${pool.length}, balanced across the subject areas. You have ${Math.max(0,remaining)} attempt(s) left.`),
+    el("div",{class:"grid cols2",style:"margin:1rem 0"},
+      el("div",{class:"stat"},el("div",{class:"n"},len),el("div",{class:"l"},"Questions")),
+      el("div",{class:"stat"},el("div",{class:"n"},(cfg.durationMins||30)+"m"),el("div",{class:"l"},"Time limit"))),
+    el("button",{class:"btn",disabled:canStart?null:"",onclick:()=>startExam(u)},
+      canStart?"Begin practice session":"Cannot start yet")
+  );
+  if(pool.length===0)c.append(el("div",{class:"notice"},"Your question bank is empty. Ask your administrator to add questions."));
+  else if(remaining<=0)c.append(el("div",{class:"notice"},"You have used all allocated attempts. Your administrator can allocate more."));
+  return c;
+}
+
+/* ---------- EXAM ENGINE ---------- */
+let EXAM=null;
+/* Round-robin across categories so each session covers every subject in the pool. */
+function pickBalanced(pool,len){
+  const byCat={};shuffle(pool).forEach(q=>{(byCat[q.category]=byCat[q.category]||[]).push(q);});
+  const queues=shuffle(Object.values(byCat)),out=[];
+  while(out.length<len&&queues.some(qs=>qs.length))queues.forEach(qs=>{if(out.length<len&&qs.length)out.push(qs.shift());});
+  return shuffle(out);
+}
+function startExam(u){
+  const cfg=DB.config();
+  const pool=userPool(u.cadre);
+  const len=Math.min(cfg.examLength||20,pool.length);
+  const picked=pickBalanced(pool,len).map(q=>{
+    const m={id:q.id,category:q.category,type:q.type,stem:q.stem,explanation:q.explanation,difficulty:q.difficulty};
+    if(q.type==="mcq"){m.options=q.options;m.answer=q.answer;m.order=shuffle(q.options.map((_,i)=>i));}   // display order only; answers stay as original indices
+    else if(q.type==="truefalse"){m.answer=q.answer;}
+    else if(q.type==="shortanswer"){m.accept=q.accept;}
+    else if(q.type==="ordering"){m.items=q.items;let d=shuffle(q.items);
+      for(let t=0;t<10&&JSON.stringify(d)===JSON.stringify(q.items);t++)d=shuffle(q.items);m.display=d;}   // never start in the correct order
+    else if(q.type==="matching"){m.pairs=q.pairs;m.rights=shuffle(q.pairs.map(p=>p.r));}
+    return m;
+  });
+  EXAM={user:u,cadre:u.cadre,questions:picked,responses:{},touched:{},idx:0,
+    startedAt:Date.now(),durationMins:cfg.durationMins||30,deadline:Date.now()+(cfg.durationMins||30)*60000};
+  picked.forEach(q=>{if(q.type==="ordering")EXAM.responses[q.id]=q.display.slice();
+    if(q.type==="matching")EXAM.responses[q.id]={};});
+  renderExam();
+}
+function stopExam(){if(timerHandle){clearInterval(timerHandle);timerHandle=null;}EXAM=null;}
+
+function renderExam(){
+  const view=$("#view");view.innerHTML="";
+  const q=EXAM.questions[EXAM.idx];
+  const total=EXAM.questions.length;
+  const answeredCount=EXAM.questions.filter(x=>isAnswered(x)).length;
+  const timer=el("span",{class:"timer",id:"examTimer"},"—");
+  const head=el("div",{class:"exam-head"},
+    el("div",{style:"flex:1"},
+      el("div",{style:"font-weight:700;font-size:1.05rem"},`Question ${EXAM.idx+1} of ${total}`),
+      el("div",{style:"color:var(--muted);font-size:.9rem"},q.category+" · "+(TYPES.find(t=>t.id===q.type)?.label||q.type))),
+    timer);
+  const palette=el("div",{class:"qpalette"},
+    ...EXAM.questions.map((x,i)=>el("button",{
+      class:"qdot"+(isAnswered(x)?" answered":"")+(i===EXAM.idx?" current":""),
+      onclick:()=>{EXAM.idx=i;renderExam();}},i+1)));
+  const qBox=el("div",{class:"card"},el("div",{class:"qstem"},q.stem),renderQuestionInput(q));
+  const nav=el("div",{class:"row",style:"margin-top:.5rem"},
+    el("button",{class:"btn sec",disabled:EXAM.idx===0?"":null,onclick:()=>{EXAM.idx--;renderExam();}},"‹ Previous"),
+    EXAM.idx<total-1
+      ? el("button",{class:"btn",onclick:()=>{EXAM.idx++;renderExam();}},"Next ›")
+      : el("button",{class:"btn warn",onclick:()=>confirmSubmit()},"Submit session"));
+  const progress=el("div",{class:"progress",style:"margin-bottom:1rem"},
+    el("div",{class:"fill",style:`width:${Math.round(answeredCount/total*100)}%`}));
+  view.append(el("div",{class:"card"},head,palette),progress,qBox,nav,
+    el("div",{style:"text-align:center;margin-top:1rem"},
+      el("button",{class:"btn danger sm",onclick:()=>confirmSubmit()},"Submit & see my results")));
+  tickTimer();
+}
+let timerHandle=null;
+function tickTimer(){
+  if(timerHandle)clearInterval(timerHandle);
+  const upd=()=>{if(!EXAM){clearInterval(timerHandle);timerHandle=null;return;}
+    const left=Math.max(0,Math.floor((EXAM.deadline-Date.now())/1000));
+    if(left<=0){clearInterval(timerHandle);timerHandle=null;toast("Time is up — submitting","err");gradeAndReview();return;}
+    const t=$("#examTimer");if(!t)return;
+    const m=String(Math.floor(left/60)).padStart(2,"0"),s=String(left%60).padStart(2,"0");
+    t.textContent=`${m}:${s}`;t.classList.toggle("low",left<=60);};
+  upd();if(EXAM)timerHandle=setInterval(upd,1000);
+}
+function isAnswered(q){
+  const r=EXAM.responses[q.id];
+  if(q.type==="mcq")return typeof r==="number";
+  if(q.type==="truefalse")return typeof r==="boolean";
+  if(q.type==="shortanswer")return !!r&&r.trim().length>0;
+  if(q.type==="ordering")return !!EXAM.touched[q.id];
+  if(q.type==="matching")return !!r&&q.pairs.every(p=>!!r[p.l]);
+  return false;
+}
+function renderQuestionInput(q){
+  const r=EXAM.responses[q.id];
+  if(q.type==="mcq"){
+    return el("div",{},...q.order.map(i=>
+      el("button",{class:"opt"+(r===i?" sel":""),onclick:()=>{EXAM.responses[q.id]=i;renderExam();}},q.options[i])));
+  }
+  if(q.type==="truefalse"){
+    return el("div",{},[["True",true],["False",false]].map(([lab,val])=>
+      el("button",{class:"opt"+(r===val?" sel":""),onclick:()=>{EXAM.responses[q.id]=val;renderExam();}},lab)));
+  }
+  if(q.type==="shortanswer"){
+    const inp=el("input",{type:"text",placeholder:"Type your answer",value:r||""});
+    inp.oninput=()=>{EXAM.responses[q.id]=inp.value;};
+    inp.onchange=()=>renderExam();
+    return el("div",{},inp,el("div",{class:"hint",style:"margin-top:.4rem;color:var(--muted)"},"Capitals, spacing and ₦ signs or commas in numbers don't matter; give the key word or figure."));
+  }
+  if(q.type==="ordering"){
+    const list=el("ul",{class:"dnd"});
+    const order=EXAM.responses[q.id]||q.display.slice();
+    EXAM.responses[q.id]=order;
+    order.forEach((item,i)=>{
+      const li=el("li",{draggable:"true","data-i":i},
+        el("span",{class:"num"},i+1),el("span",{style:"flex:1"},item),
+        el("span",{class:"updown"},
+          el("button",{class:"btn sec sm",disabled:i===0?"":null,onclick:()=>{move(q.id,i,i-1);}},"↑"),
+          el("button",{class:"btn sec sm",disabled:i===order.length-1?"":null,onclick:()=>{move(q.id,i,i+1);}},"↓")));
+      li.addEventListener("dragstart",e=>{li.classList.add("dragging");e.dataTransfer.setData("text",i);});
+      li.addEventListener("dragend",()=>li.classList.remove("dragging"));
+      li.addEventListener("dragover",e=>e.preventDefault());
+      li.addEventListener("drop",e=>{e.preventDefault();const from=+e.dataTransfer.getData("text");move(q.id,from,i);});
+      list.append(li);
+    });
+    const keep=el("button",{class:"btn sec sm",style:"margin-top:.3rem",onclick:()=>{EXAM.touched[q.id]=true;renderExam();}},"This order is my answer");
+    return el("div",{},el("div",{class:"hint",style:"margin-bottom:.5rem;color:var(--muted)"},"Drag to reorder, or use the arrows."),list,
+      EXAM.touched[q.id]?"":keep);
+  }
+  if(q.type==="matching"){
+    EXAM.responses[q.id]=EXAM.responses[q.id]||{};
+    return el("div",{},...q.pairs.map(p=>{
+      const sel=el("select",{},el("option",{value:""},"— choose —"),
+        ...q.rights.map(r2=>el("option",{value:r2},r2)));
+      sel.onchange=()=>{if(sel.value)EXAM.responses[q.id][p.l]=sel.value;else delete EXAM.responses[q.id][p.l];};
+      if(EXAM.responses[q.id][p.l])sel.value=EXAM.responses[q.id][p.l];
+      return el("div",{class:"match-row"},el("div",{class:"left"},p.l),sel);
+    }));
+  }
+}
+function move(qid,from,to){const arr=EXAM.responses[qid];if(to<0||to>=arr.length)return;
+  const[x]=arr.splice(from,1);arr.splice(to,0,x);EXAM.touched[qid]=true;renderExam();}
+
+function confirmSubmit(){
+  const un=EXAM.questions.filter(x=>!isAnswered(x)).length;
+  const m=modal(el("div",{},
+    el("h3",{},"Submit this session?"),
+    el("p",{},un>0?`You have ${un} unanswered question(s). Unanswered questions are marked wrong (an untouched ordering question is graded in the order shown).`:"All questions answered. Ready to submit?"),
+    el("div",{class:"row",style:"margin-top:1rem"},
+      el("button",{class:"btn sec",onclick:()=>m.close()},"Keep working"),
+      el("button",{class:"btn warn",onclick:()=>{m.close();gradeAndReview();}},"Submit now"))));
+}
+function gradeQuestion(q){return cbtGrade(q,EXAM.responses[q.id]);}
+function gradeAndReview(){
+  if(!EXAM)return;   // already submitted (e.g. timer fired while the confirm dialog was open)
+  if(timerHandle){clearInterval(timerHandle);timerHandle=null;}
+  closeAllModals();
+  const per=EXAM.questions.map(q=>({qid:q.id,category:q.category,type:q.type,correct:gradeQuestion(q),given:EXAM.responses[q.id]}));
+  const score=per.filter(p=>p.correct).length,total=per.length;
+  const attempt={id:uid("att"),userId:EXAM.user.id,cadre:EXAM.cadre,startedAt:EXAM.startedAt,
+    endedAt:Date.now(),score,total,pct:Math.round(score/total*100),per};
+  DB.addAttempt(attempt);
+  EXAM=null;renderReview(attempt,true);
+}
+function answerKeyText(q){
+  if(q.type==="mcq")return q.options[q.answer];
+  if(q.type==="truefalse")return q.answer?"True":"False";
+  if(q.type==="shortanswer")return q.accept[0];
+  if(q.type==="ordering")return q.items.join("  →  ");
+  if(q.type==="matching")return q.pairs.map(p=>`${p.l} = ${p.r}`).join("; ");
+  return "";
+}
+function givenText(p,q){
+  const g=p.given;
+  if(p.type==="ordering")return Array.isArray(g)?g.join("  →  "):"(no answer)";
+  if(p.type==="matching")return g&&Object.keys(g).length?Object.entries(g).map(([l,r])=>`${l} = ${r||"?"}`).join("; "):"(no answer)";
+  if(p.type==="truefalse")return typeof g==="boolean"?(g?"True":"False"):"(no answer)";
+  if(p.type==="mcq")return typeof g==="number"?(q&&q.options?q.options[g]:String.fromCharCode(65+g)):"(no answer)";
+  return g&&String(g).trim()?g:"(no answer)";
+}
+
+function renderReview(att,justFinished){
+  const view=$("#view");view.innerHTML="";
+  const pass=att.pct>=50;
+  view.append(el("div",{class:"card"},
+    el("h1",{},justFinished?"Session complete":"Session review"),
+    el("div",{class:"grid cols4",style:"margin:1rem 0"},
+      el("div",{class:"stat"},el("div",{class:"n"},att.pct+"%"),el("div",{class:"l"},"Score")),
+      el("div",{class:"stat"},el("div",{class:"n"},att.score+"/"+att.total),el("div",{class:"l"},"Correct")),
+      el("div",{class:"stat"},el("div",{class:"n",style:pass?"color:var(--success)":"color:var(--danger)"},pass?"Pass":"Below 50%"),el("div",{class:"l"},"Outcome")),
+      el("div",{class:"stat"},el("div",{class:"n"},Math.round((att.endedAt-att.startedAt)/60000)+"m"),el("div",{class:"l"},"Time taken"))),
+    el("p",{style:"color:var(--muted)"},"Every question you missed is explained below so you can learn from it."),
+    el("button",{class:"btn sec",onclick:()=>renderCandidateHome("overview")},"Back to my dashboard")));
+  const qmap={};DB.questions().forEach(q=>qmap[q.id]=q);
+  const wrong=att.per.filter(p=>!p.correct), right=att.per.filter(p=>p.correct);
+  if(wrong.length){
+    view.append(el("h2",{style:"margin:1.4rem 0 .6rem"},`Questions to review (${wrong.length})`));
+    wrong.forEach((p,i)=>view.append(reviewCard(p,qmap[p.qid],i+1,true)));
+  }
+  if(right.length){
+    view.append(el("h2",{style:"margin:1.4rem 0 .6rem"},`Answered correctly (${right.length})`));
+    right.forEach((p,i)=>view.append(reviewCard(p,qmap[p.qid],i+1,false)));
+  }
+}
+function reviewCard(p,q,n,showExplain){
+  const stem=q?q.stem:"(this question is no longer in the bank)";
+  const answerKey=q?answerKeyText(q):"—";
+  const explanation=q?(q.explanation||"—"):"—";
+  const card=el("div",{class:"review-q "+(p.correct?"correct":"wrong")},
+    el("div",{style:"display:flex;justify-content:space-between;gap:1rem"},
+      el("div",{style:"font-weight:600"},`${n}. ${stem}`),
+      el("span",{class:"badge "+(p.correct?"ok":"bad")},p.correct?"Correct":"Missed")),
+    el("div",{style:"margin-top:.7rem;font-size:.94rem"},
+      el("div",{class:"kv"},el("span",{},"Your answer"),el("b",{style:p.correct?"color:var(--success)":"color:var(--danger)"},givenText(p,q))),
+      el("div",{class:"kv"},el("span",{},"Correct answer"),el("b",{},answerKey))));
+  if(!p.correct||showExplain)
+    card.append(el("div",{class:"explain"},el("b",{},"Why: "),explanation));
+  return card;
+}
+
+function candidateHistory(u){
+  const atts=userAttempts(u.id).slice().reverse();
+  if(!atts.length)return el("div",{class:"card"},el("div",{class:"empty"},"No sessions yet. Head to the Practice tab to begin."));
+  return el("div",{class:"card"},el("h2",{},"Your sessions"),
+    el("div",{class:"table-wrap"},el("table",{},
+      el("thead",{},el("tr",{},el("th",{},"Date"),el("th",{},"Score"),el("th",{},"Correct"),el("th",{},"Outcome"),el("th",{},""))),
+      el("tbody",{},...atts.map(a=>el("tr",{},
+        el("td",{},new Date(a.startedAt).toLocaleString()),
+        el("td",{},el("b",{},a.pct+"%")),
+        el("td",{},a.score+"/"+a.total),
+        el("td",{},el("span",{class:"badge "+(a.pct>=50?"ok":"bad")},a.pct>=50?"Pass":"Below 50%")),
+        el("td",{},el("button",{class:"btn sec sm",onclick:()=>renderReview(a,false)},"Review"))))))));
+}
+
+/* ---------- ANALYTICS (shared) ---------- */
+function categoryStats(attempts){
+  const acc={};CATEGORIES.forEach(c=>acc[c]={correct:0,total:0});
+  attempts.forEach(a=>(a.per||[]).forEach(p=>{if(!acc[p.category])acc[p.category]={correct:0,total:0};
+    acc[p.category].total++;if(p.correct)acc[p.category].correct++;}));
+  return acc;
+}
+function catBars(acc){
+  const items=Object.keys(acc).filter(c=>acc[c].total>0).map(c=>{
+    const pct=Math.round(acc[c].correct/acc[c].total*100);
+    return el("div",{class:"item"},
+      el("div",{class:"lab"},c),
+      el("div",{class:"track"},el("div",{class:"bar",style:`width:${pct}%;background:${catColor(c)}`})),
+      el("div",{class:"pct"},pct+"%"));
+  });
+  return items.length?el("div",{class:"catbar"},...items):el("div",{class:"empty"},"No data yet.");
+}
+function trendSVG(attempts){
+  const pts=attempts.map(a=>a.pct);if(pts.length<1)return el("div",{class:"empty"},"No sessions yet.");
+  const W=520,H=160,pad=28;const n=pts.length;
+  const x=i=>n===1?W/2:pad+i*(W-2*pad)/(n-1);const y=v=>H-pad-(v/100)*(H-2*pad);
+  const path=pts.map((v,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const ns="http://www.w3.org/2000/svg";
+  const svg=document.createElementNS(ns,"svg");svg.setAttribute("viewBox",`0 0 ${W} ${H}`);svg.setAttribute("width","100%");
+  [0,50,100].forEach(g=>{const ln=document.createElementNS(ns,"line");
+    ln.setAttribute("x1",pad);ln.setAttribute("x2",W-pad);ln.setAttribute("y1",y(g));ln.setAttribute("y2",y(g));
+    ln.setAttribute("stroke",g===50?"#c9d3da":"#e8edf1");ln.setAttribute("stroke-dasharray",g===50?"4 4":"");svg.append(ln);
+    const tx=document.createElementNS(ns,"text");tx.setAttribute("x",4);tx.setAttribute("y",y(g)+4);
+    tx.setAttribute("font-size","10");tx.setAttribute("fill","#5b6b78");tx.textContent=g;svg.append(tx);});
+  const pth=document.createElementNS(ns,"path");pth.setAttribute("d",path);pth.setAttribute("fill","none");
+  pth.setAttribute("stroke","#0e4d6b");pth.setAttribute("stroke-width","2.5");svg.append(pth);
+  pts.forEach((v,i)=>{const c=document.createElementNS(ns,"circle");c.setAttribute("cx",x(i));c.setAttribute("cy",y(v));
+    c.setAttribute("r","4");c.setAttribute("fill",v>=50?"#1f7a54":"#b23a3a");svg.append(c);});
+  return svg;
+}
+function candidateOverview(u){
+  const atts=userAttempts(u.id);
+  if(!atts.length)return el("div",{class:"card"},el("div",{class:"empty"},
+    el("p",{},"No results yet."),el("button",{class:"btn",onclick:()=>renderCandidateHome("practice")},"Start your first session")));
+  const avg=Math.round(atts.reduce((s,a)=>s+a.pct,0)/atts.length);
+  const best=Math.max(...atts.map(a=>a.pct));
+  const acc=categoryStats(atts);
+  const withData=Object.keys(acc).filter(c=>acc[c].total>0);
+  const weakest=withData.slice().sort((a,b)=>(acc[a].correct/acc[a].total)-(acc[b].correct/acc[b].total))[0];
+  const wrap=el("div",{});
+  wrap.append(el("div",{class:"grid cols3"},
+    el("div",{class:"card stat"},el("div",{class:"n"},atts.length),el("div",{class:"l"},"Sessions completed")),
+    el("div",{class:"card stat"},el("div",{class:"n"},avg+"%"),el("div",{class:"l"},"Average score")),
+    el("div",{class:"card stat"},el("div",{class:"n"},best+"%"),el("div",{class:"l"},"Best score"))));
+  if(weakest){
+    const wp=Math.round(acc[weakest].correct/acc[weakest].total*100);
+    wrap.append(el("div",{class:"notice"},el("b",{},"Focus area: "),
+      `Your weakest subject is ${weakest} (${wp}% correct). Target this area in your next sessions to lift your overall score.`));
+  }
+  wrap.append(el("div",{class:"card"},el("h2",{},"Accuracy by subject"),catBars(acc)));
+  wrap.append(el("div",{class:"card"},el("h2",{},"Score trend"),
+    el("p",{style:"color:var(--muted);font-size:.9rem;margin-top:-.3rem"},"Each point is one session, oldest to newest. The dashed line is the 50% pass mark."),
+    trendSVG(atts)));
+  return wrap;
+}
+/* ============================================================
+   STAFF SIDE (Super Admin + Admin)
+   ============================================================ */
+function renderStaff(tab){
+  const actor=currentActor();
+  const isSuper=actor.role==="super";
+  const view=$("#view");view.innerHTML="";
+  const tabDefs=[
+    ...(isSuper?[["admins","Admins"]]:[]),
+    ["users","Candidates"],["bank","Question bank"],["analytics","Analytics"],
+    ...(isSuper?[["aigen","AI generator"]]:[])];
+  if(!tab||!tabDefs.some(t=>t[0]===tab))tab=tabDefs[0][0];
+  view.append(el("div",{class:"card",style:"margin-bottom:.8rem"},
+    el("div",{class:"row",style:"align-items:center"},
+      el("div",{style:"flex:1"},
+        el("h1",{style:"margin-bottom:.15rem"},isSuper?"Super Admin console":"Admin console"),
+        el("div",{style:"color:var(--muted)"},"Signed in as "+(actor.name||actor.username))),
+      el("span",{class:"badge role-"+actor.role},isSuper?"Super Admin":"Admin"))));
+  const tabs=el("div",{class:"tabs"},...tabDefs.map(([id,lab])=>
+    el("button",{class:"tab"+(tab===id?" active":""),onclick:()=>renderStaff(id)},lab)));
+  view.append(tabs);const body=el("div");view.append(body);
+  ({admins:staffAdmins,users:staffUsers,bank:staffBank,analytics:staffAnalytics,aigen:staffAIGen}[tab])(body,actor);
+}
+
+/* ---------- Change password (from top bar) ---------- */
+function changePasswordModal(actor){
+  const inp=el("input",{type:"password",placeholder:`New password (at least ${MIN_PASSWORD} characters)`,autocomplete:"new-password"});
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter")save();});
+  const m=modal(el("div",{},el("h3",{},"Change my password"),
+    el("div",{class:"field"},el("label",{},"New password"),inp),
+    el("div",{class:"row"},el("button",{class:"btn sec",onclick:()=>m.close()},"Cancel"),
+      el("button",{class:"btn",onclick:()=>save()},"Update"))));
+  async function save(){
+    const v=inp.value,prob=pwProblem(v);if(prob)return toast(prob,"err");
+    try{
+      if(actor.kind==="staff")await DB.setAccountPassword(actor.id,v,true);
+      else await DB.setUserPassword(actor.id,v);
+      m.close();toast("Password changed","ok");
+    }catch(e){toast(e.message,"err");}
+  }
+}
+
+/* ---------- Admins (super only) ---------- */
+function staffAdmins(body){
+  const admins=DB.accounts().filter(a=>a.role==="admin");
+  body.append(el("div",{class:"card"},el("h2",{},"Create an admin"),
+    el("p",{style:"color:var(--muted);margin-top:-.4rem"},"Admins create and manage candidates and the question bank. They must choose their own password at first login."),
+    formGrid([
+      ["Full name","adm_name","text","e.g. Adebayo Johnson"],
+      ["Username","adm_user","text","e.g. admin.ikeja"],
+      ["Password","adm_pass","text",`Temporary password (${MIN_PASSWORD}+ characters)`]]),
+    el("button",{class:"btn",onclick:async()=>{
+      const name=$("#adm_name").value.trim(),u=$("#adm_user").value.trim(),p=$("#adm_pass").value;
+      if(!name||!u||!p)return toast("Fill all fields","err");
+      const prob=pwProblem(p);if(prob)return toast(prob,"err");
+      if(existsUsername(u))return toast("That username is taken","err");
+      try{await DB.createAccount({id:uid("acc"),role:"admin",username:u,name,createdAt:Date.now()},p);
+        toast("Admin created","ok");renderStaff("admins");}catch(e){toast(e.message,"err");}
+    }},"Create admin")));
+  body.append(el("div",{class:"card"},el("h2",{},`Admins (${admins.length})`),
+    admins.length?el("div",{class:"table-wrap"},el("table",{},
+      el("thead",{},el("tr",{},el("th",{},"Name"),el("th",{},"Username"),el("th",{},"Candidates"),el("th",{},"Created"),el("th",{},""))),
+      el("tbody",{},...admins.map(a=>{
+        const count=DB.users().filter(u=>u.createdBy===a.id).length;
+        return el("tr",{},el("td",{},a.name),el("td",{},a.username),el("td",{},count),
+          el("td",{},new Date(a.createdAt).toLocaleDateString()),
+          el("td",{},el("button",{class:"btn danger sm",onclick:()=>{
+            if(confirm(`Remove admin ${a.name}? Candidates they created are kept and stay visible to the Super Admin.`)){
+              DB.deleteAccount(a.id);renderStaff("admins");}
+          }},"Remove")));
+      })))):el("div",{class:"empty"},"No admins yet.")));
+}
+
+/* ---------- Candidates ---------- */
+function staffUsers(body,actor){
+  const mine=actor.role==="super"?DB.users():DB.users().filter(u=>u.createdBy===actor.id);
+  const cadreOpts=[el("option",{value:""},"Let candidate choose & lock"),
+    ...CADRES.map(c=>el("option",{value:c.name},c.name))];
+  body.append(el("div",{class:"card"},el("h2",{},"Create a candidate"),
+    formGrid([
+      ["Full name","u_name","text","Candidate's name"],
+      ["Username","u_user","text","e.g. staff/12345"],
+      ["Password","u_pass","text",`Temporary password (${MIN_PASSWORD}+ characters)`],
+      ["Attempts allowed","u_att","number","e.g. 3"]]),
+    el("div",{class:"field"},el("label",{},"Cadre (optional)"),
+      el("select",{id:"u_cadre"},...cadreOpts),
+      el("div",{class:"hint"},"Leave as 'Let candidate choose' to have them pick and lock it themselves at first login.")),
+    el("button",{class:"btn",onclick:async()=>{
+      const name=$("#u_name").value.trim(),u=$("#u_user").value.trim(),p=$("#u_pass").value;
+      const att=parseInt($("#u_att").value,10),cadre=$("#u_cadre").value;
+      if(!name||!u||!p)return toast("Fill name, username and password","err");
+      const prob=pwProblem(p);if(prob)return toast(prob,"err");
+      if(!Number.isFinite(att)||att<0)return toast("Enter a valid attempts number","err");
+      if(existsUsername(u))return toast("That username is taken","err");
+      try{await DB.createUser({id:uid("usr"),username:u,name,createdBy:actor.id,createdAt:Date.now(),
+        cadre:cadre||null,targetPost:null,cadreLocked:!!cadre,attemptsAllocated:att},p);
+        toast("Candidate created","ok");renderStaff("users");}catch(e){toast(e.message,"err");}
+    }},"Create candidate")));
+  body.append(el("div",{class:"card"},
+    el("div",{class:"row",style:"align-items:center"},
+      el("h2",{style:"flex:1;margin:0"},`Candidates (${mine.length})`),
+      ...(BACKEND?[refreshBtn("users")]:[])),
+    mine.length?el("div",{class:"table-wrap"},el("table",{},
+      el("thead",{},el("tr",{},el("th",{},"Name"),el("th",{},"Username"),el("th",{},"Cadre"),
+        el("th",{},"Attempts"),el("th",{},"Avg"),el("th",{},"Actions"))),
+      el("tbody",{},...mine.map(u=>{
+        const atts=userAttempts(u.id);const avg=atts.length?Math.round(atts.reduce((s,a)=>s+a.pct,0)/atts.length)+"%":"—";
+        return el("tr",{},
+          el("td",{},u.name),el("td",{},u.username),
+          el("td",{},u.cadre?el("span",{},u.cadre,u.cadreLocked?el("span",{class:"badge lock",style:"margin-left:.4rem"},"🔒"):""):el("span",{style:"color:var(--muted)"},"not set")),
+          el("td",{},`${atts.length}/${u.attemptsAllocated||0}`),
+          el("td",{},avg),
+          el("td",{},el("button",{class:"btn sec sm",onclick:()=>manageUser(u.id)},"Manage")));
+      })))):el("div",{class:"empty"},"No candidates yet.")));
+}
+function refreshBtn(tab){
+  return el("button",{class:"btn ghost sm",onclick:async e=>{const b=e.target;b.disabled=true;b.textContent="Refreshing…";
+    try{await bootstrapData();renderStaff(tab);}catch(err){toast(err.message,"err");b.disabled=false;b.textContent="Refresh";}}},"Refresh");
+}
+function manageUser(id){
+  const u=DB.users().find(x=>x.id===id);const atts=userAttempts(id);
+  const attInput=el("input",{type:"number",value:u.attemptsAllocated||0,min:"0",style:"max-width:120px"});
+  const m=modal(el("div",{},
+    el("h3",{},"Manage: "+u.name),
+    el("div",{class:"kv"},el("span",{},"Username"),el("b",{},u.username)),
+    el("div",{class:"kv"},el("span",{},"Cadre"),el("b",{},u.cadre||"not set")),
+    el("div",{class:"kv"},el("span",{},"Target post"),el("b",{},u.targetPost||"—")),
+    el("div",{class:"kv"},el("span",{},"Sessions taken"),el("b",{},atts.length)),
+    el("div",{class:"field",style:"margin-top:1rem"},el("label",{},"Attempts allowed"),
+      el("div",{class:"row"},attInput,
+        el("button",{class:"btn sm",onclick:()=>{
+          const v=parseInt(attInput.value,10);if(!Number.isFinite(v)||v<0)return toast("Invalid number","err");
+          DB.updateUser(id,{attemptsAllocated:v});toast("Attempts updated","ok");
+        }},"Save"))),
+    el("div",{class:"row",style:"margin-top:.6rem"},
+      el("button",{class:"btn sec sm",onclick:async()=>{
+        const np=prompt(`New temporary password for ${u.username} (at least ${MIN_PASSWORD} characters)`);if(!np)return;
+        const prob=pwProblem(np);if(prob)return toast(prob,"err");
+        try{await DB.setUserPassword(id,np);toast("Password reset","ok");}catch(e){toast(e.message,"err");}
+      }},"Reset password"),
+      el("button",{class:"btn warn sm",disabled:u.cadreLocked?null:"",onclick:()=>{
+        if(!confirm("Unlock this candidate's cadre? They will choose again at next login."))return;
+        DB.updateUser(id,{cadre:null,targetPost:null,cadreLocked:false});
+        m.close();toast("Cadre unlocked","ok");renderStaff("users");
+      }},"Reset cadre lock"),
+      el("button",{class:"btn danger sm",onclick:()=>{
+        if(!confirm("Delete this candidate and their results?"))return;
+        DB.deleteUser(id);m.close();toast("Candidate deleted","ok");renderStaff("users");
+      }},"Delete"))
+  ));
+}
+
+/* ---------- Question bank (also holds practice-session settings) ---------- */
+let BANK_FILTER={category:"",type:"",scope:""};
+const BANK_PAGE=300;
+function scopeOptions(withAll){return [...(withAll?[el("option",{value:""},"All scopes")]:[]),
+  el("option",{value:"COMMON"},"COMMON (all cadres)"),
+  ...SCOPE_GROUPS.map(g=>el("option",{value:g},g)),
+  ...CADRES.map(c=>el("option",{value:c.name},c.name))];}
+function staffBank(body){
+  const qs=DB.questions();const cfg=DB.config();const isSuper=(currentActor()||{}).role==="super";
+  body.append(el("div",{class:"card"},el("h2",{},"Practice session settings"),
+    el("p",{style:"color:var(--muted);margin-top:-.4rem;font-size:.9rem"},"Applies to every candidate's practice sessions."),
+    el("div",{class:"row"},
+      el("div",{class:"field",style:"flex:1"},el("label",{},"Questions per session (1–150)"),
+        el("input",{type:"number",id:"set_len",value:cfg.examLength||20,min:"1",max:"150"})),
+      el("div",{class:"field",style:"flex:1"},el("label",{},"Time limit (minutes)"),
+        el("input",{type:"number",id:"set_dur",value:cfg.durationMins||30,min:"1",max:"600"}))),
+    el("button",{class:"btn",onclick:()=>{
+      const len=Math.floor(+$("#set_len").value),dur=Math.floor(+$("#set_dur").value);
+      if(!(len>=1&&len<=150))return toast("Questions per session must be 1–150","err");
+      if(!(dur>=1&&dur<=600))return toast("Time limit must be 1–600 minutes","err");
+      DB.saveConfig({examLength:len,durationMins:dur});toast("Session settings saved","ok");}},"Save session settings")));
+  body.append(el("div",{class:"card"},
+    el("div",{class:"row",style:"align-items:center"},
+      el("h2",{style:"flex:1;margin:0"},`Question bank — ${qs.length} item(s)`),
+      el("button",{class:"btn sm",onclick:()=>addQuestionModal()},"+ Add question"),
+      el("button",{class:"btn sec sm",onclick:()=>csvModal()},"Bulk upload (CSV)"),
+      ...(BACKEND?[refreshBtn("bank")]:[]),
+      ...(isSuper?[el("button",{class:"btn warn sm",onclick:async e=>{
+        if(!confirm("Scan the database and remove duplicate questions? One copy of each is kept."))return;
+        const btn=e.target;btn.disabled=true;btn.textContent="Cleaning…";
+        try{const r=await DB.dedupeQuestions();if(BACKEND)await bootstrapData();
+          toast(`Removed ${r.removed} duplicate(s); ${r.remaining} remain`,"ok");renderStaff("bank");}
+        catch(err){toast(err.message,"err");btn.disabled=false;btn.textContent="Remove duplicates";}
+      }},"Remove duplicates")]:[])),
+    el("div",{class:"row",style:"margin-top:1rem"},
+      filterSel("Category",["",...CATEGORIES],BANK_FILTER.category,v=>{BANK_FILTER.category=v;renderStaff("bank");}),
+      filterSel("Type",["",...TYPES.map(t=>t.id)],BANK_FILTER.type,v=>{BANK_FILTER.type=v;renderStaff("bank");},id=>TYPES.find(t=>t.id===id)?.label||id),
+      filterSel("Scope",["",...ALL_SCOPES()],BANK_FILTER.scope,v=>{BANK_FILTER.scope=v;renderStaff("bank");}))));
+  const list=qs.filter(q=>(!BANK_FILTER.category||q.category===BANK_FILTER.category)
+    &&(!BANK_FILTER.type||q.type===BANK_FILTER.type)&&(!BANK_FILTER.scope||q.scope===BANK_FILTER.scope));
+  const maxN=Math.max(1,...CATEGORIES.map(c=>qs.filter(q=>q.category===c).length));
+  body.append(el("div",{class:"card"},el("h3",{},"Coverage by subject"),
+    el("div",{class:"catbar"},...CATEGORIES.map(c=>{
+      const n=qs.filter(q=>q.category===c).length;
+      return el("div",{class:"item"},el("div",{class:"lab"},c),
+        el("div",{class:"track"},el("div",{class:"bar",style:`width:${Math.round(n/maxN*100)}%;background:${catColor(c)}`})),
+        el("div",{class:"pct"},n));
+    }))));
+  const listCard=el("div",{class:"card"},el("h3",{},list.length>BANK_PAGE?`Showing the first ${BANK_PAGE} of ${list.length} item(s) — narrow the filters to see the rest`:`Showing ${list.length} item(s)`));
+  if(!list.length)listCard.append(el("div",{class:"empty"},"No questions match these filters."));
+  else list.slice(0,BANK_PAGE).forEach(q=>listCard.append(bankRow(q)));
+  body.append(listCard);
+}
+function bankRow(q){
+  const col=catColor(q.category);
+  return el("div",{style:"border-bottom:1px solid var(--line-soft);padding:.7rem 0"},
+    el("div",{style:"display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.3rem"},
+      el("span",{class:"badge",style:`background:${col}22;color:${col}`},q.category),
+      el("span",{class:"badge lock"},TYPES.find(t=>t.id===q.type)?.label||q.type),
+      el("span",{class:"badge lock"},q.scope),
+      q.difficulty?el("span",{class:"badge lock"},q.difficulty):"",
+      el("span",{style:"flex:1"}),
+      el("button",{class:"btn danger sm",onclick:()=>{
+        if(confirm("Delete this question?")){DB.deleteQuestion(q.id);renderStaff("bank");}
+      }},"Delete")),
+    el("div",{style:"font-weight:600"},q.stem),
+    el("div",{style:"font-size:.86rem;color:var(--muted);margin-top:.25rem"},"Answer: "+answerKeyText(q)));
+}
+function addQuestionModal(){
+  const catSel=el("select",{},...CATEGORIES.map(c=>el("option",{value:c},c)));
+  const typeSel=el("select",{},...TYPES.map(t=>el("option",{value:t.id},t.label)));
+  const scopeSel=el("select",{},...scopeOptions(false));
+  const diffSel=el("select",{},...["easy","medium","hard"].map(d=>el("option",{value:d},d)));
+  const stem=el("textarea",{placeholder:"Question text"});
+  const dyn=el("div",{});
+  const explain=el("textarea",{placeholder:"Explanation shown to learners who miss it"});
+  function renderDyn(){
+    const t=typeSel.value;dyn.innerHTML="";
+    if(t==="mcq")dyn.append(el("div",{class:"field"},el("label",{},"Options — one per line; put * at the start of the correct one"),
+      el("textarea",{id:"aq_opts",placeholder:"*Correct option\nWrong option\nWrong option"})));
+    else if(t==="truefalse")dyn.append(el("div",{class:"field"},el("label",{},"Correct answer"),
+      el("select",{id:"aq_tf"},el("option",{value:"true"},"True"),el("option",{value:"false"},"False"))));
+    else if(t==="shortanswer")dyn.append(el("div",{class:"field"},el("label",{},"Accepted answers — one per line"),
+      el("textarea",{id:"aq_acc",placeholder:"petition\na petition"})));
+    else if(t==="ordering")dyn.append(el("div",{class:"field"},el("label",{},"Items in CORRECT order — one per line"),
+      el("textarea",{id:"aq_items",placeholder:"First\nSecond\nThird"})));
+    else if(t==="matching")dyn.append(el("div",{class:"field"},el("label",{},"Pairs — one per line as  left = right"),
+      el("textarea",{id:"aq_pairs",placeholder:"Concise = Brief and clear\nImpartial = Not favouring one side"})));
+  }
+  typeSel.onchange=renderDyn;renderDyn();
+  const m=modal(el("div",{},el("h3",{},"Add a question"),
+    el("div",{class:"row"},el("div",{class:"field",style:"flex:1"},el("label",{},"Subject"),catSel),
+      el("div",{class:"field",style:"flex:1"},el("label",{},"Type"),typeSel)),
+    el("div",{class:"row"},el("div",{class:"field",style:"flex:1"},el("label",{},"Scope"),scopeSel),
+      el("div",{class:"field",style:"flex:1"},el("label",{},"Difficulty"),diffSel)),
+    el("div",{class:"field"},el("label",{},"Question"),stem),dyn,
+    el("div",{class:"field"},el("label",{},"Explanation"),explain),
+    el("div",{class:"row"},el("button",{class:"btn sec",onclick:()=>m.close()},"Cancel"),
+      el("button",{class:"btn",onclick:()=>{
+        try{const q=buildQuestionFromForm(catSel.value,typeSel.value,scopeSel.value,diffSel.value,stem.value,explain.value);
+          DB.addQuestions([{id:uid("q"),...q}]);
+          m.close();toast("Question added","ok");renderStaff("bank");
+        }catch(e){toast(e.message,"err");}
+      }},"Save question"))));
+}
+function buildQuestionFromForm(category,type,scope,difficulty,stemV,explainV){
+  const stem=stemV.trim();if(!stem)throw new Error("Question text is required");
+  const q={scope,category,type,difficulty,stem,explanation:explainV.trim()};
+  if(type==="mcq"){
+    const lines=$("#aq_opts").value.split("\n").map(s=>s.trim()).filter(Boolean);
+    if(lines.length<2)throw new Error("Give at least two options");
+    const ans=lines.findIndex(l=>l.startsWith("*"));if(ans<0)throw new Error("Mark the correct option with a leading *");
+    q.options=lines.map(l=>l.replace(/^\*/,"").trim());q.answer=ans;
+  }else if(type==="truefalse")q.answer=$("#aq_tf").value==="true";
+  else if(type==="shortanswer"){q.accept=$("#aq_acc").value.split("\n").map(s=>s.trim()).filter(Boolean);
+    if(!q.accept.length)throw new Error("Give at least one accepted answer");}
+  else if(type==="ordering"){q.items=$("#aq_items").value.split("\n").map(s=>s.trim()).filter(Boolean);
+    if(q.items.length<2)throw new Error("Give at least two items");}
+  else if(type==="matching"){q.pairs=$("#aq_pairs").value.split("\n").map(s=>s.trim()).filter(Boolean)
+      .map(l=>{const i=l.indexOf("=");if(i<0)throw new Error("Each pair needs an = sign");
+        return{l:l.slice(0,i).trim(),r:l.slice(i+1).trim()};});
+    if(q.pairs.length<2)throw new Error("Give at least two pairs");}
+  return q;
+}
+
+/* ---------- CSV bulk upload ---------- */
+function csvModal(){
+  const template="scope,category,type,stem,options,answer,explanation,difficulty\n"+
+    'COMMON,Quantitative,mcq,"What is 10% of 500?",50|40|60|45,50,"10% of 500 = 50",easy\n'+
+    'COMMON,Current Affairs,truefalse,"Ikeja is the capital of Lagos State.",,TRUE,"Ikeja is the capital.",easy\n'+
+    'COMMON,English and Grammar,shortanswer,"Plural of memorandum?",,memoranda|memorandums,"Latin plural.",easy\n'+
+    'COMMON,Logic,ordering,"Order smallest to largest.",3|6|12|24,,"Each doubles.",easy\n'+
+    'COMMON,Qualitative,matching,"Match word to meaning.",Concise=Brief|Impartial=Unbiased,,"Definitions.",medium\n';
+  const ta=el("textarea",{placeholder:"Paste CSV rows here",style:"min-height:160px"});
+  const file=el("input",{type:"file",accept:".csv,text/csv"});
+  file.onchange=()=>{const f=file.files[0];if(!f)return;const r=new FileReader();
+    r.onload=()=>{ta.value=r.result;};r.readAsText(f);};
+  const m=modal(el("div",{},el("h3",{},"Bulk upload questions"),
+    el("p",{style:"font-size:.9rem;color:var(--muted)"},
+      "Columns: scope, category, type, stem, options, answer, explanation, difficulty. "+
+      "Scope is COMMON, a cadre name exactly as listed, or a GROUP scope. "+
+      "For mcq use | between options and put the correct option text (or 0-based index) in answer. "+
+      "For ordering, list items in correct order in options. For matching, use left=right pairs in options. "+
+      "For true/false put TRUE/FALSE in answer. For short answer put accepted answers separated by | in answer."),
+    el("div",{class:"row",style:"margin:.5rem 0"},
+      el("button",{class:"btn sec sm",onclick:()=>{
+        const blob=new Blob([template],{type:"text/csv"});const a=el("a",{href:URL.createObjectURL(blob),download:"cbt_question_template.csv"});
+        document.body.append(a);a.click();a.remove();}},"⬇ Download template"),
+      el("label",{class:"btn sec sm",style:"display:inline-block"},"Choose CSV file",file)),
+    el("div",{class:"field"},el("label",{},"Or paste rows"),ta),
+    el("div",{class:"row"},el("button",{class:"btn sec",onclick:()=>m.close()},"Cancel"),
+      el("button",{class:"btn",onclick:()=>{
+        try{const added=importCSV(ta.value);m.close();toast(`${added} question(s) imported`,"ok");renderStaff("bank");}
+        catch(e){toast(e.message,"err");}
+      }},"Import"))));
+}
+function parseCSV(text){
+  const rows=[];let row=[],cur="",q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=c;}
+    else{if(c==='"')q=true;else if(c===","){row.push(cur);cur="";}
+      else if(c==="\n"||c==="\r"){if(c==="\r"&&text[i+1]==="\n")i++;row.push(cur);rows.push(row);row=[];cur="";}
+      else cur+=c;}}
+  if(cur.length||row.length){row.push(cur);rows.push(row);}
+  return rows.filter(r=>r.some(c=>c.trim()!==""));
+}
+function importCSV(text){
+  const rows=parseCSV(text.trim());if(rows.length<2)throw new Error("No data rows found");
+  const head=rows[0].map(h=>h.trim().toLowerCase());
+  const ix=n=>head.indexOf(n);
+  const need=["scope","category","type","stem"];for(const n of need)if(ix(n)<0)throw new Error("Missing column: "+n);
+  const scopes=ALL_SCOPES();
+  const out=[];
+  for(let r=1;r<rows.length;r++){const row=rows[r];const g=n=>ix(n)>=0?(row[ix(n)]||"").trim():"";
+    const type=g("type").toLowerCase();const scope=g("scope")||"COMMON";
+    if(!scopes.includes(scope))throw new Error(`Row ${r+1}: unknown scope "${scope}"`);
+    const category=CATEGORIES.find(c=>c.toLowerCase()===g("category").toLowerCase())||g("category");
+    if(!CATEGORIES.includes(category))throw new Error(`Row ${r+1}: unknown category "${g("category")}"`);
+    const diff=g("difficulty").toLowerCase();
+    const q={scope,category,type,stem:g("stem"),explanation:g("explanation"),difficulty:["easy","medium","hard"].includes(diff)?diff:"medium"};
+    const opts=g("options"),ans=g("answer");
+    if(type==="mcq"){q.options=opts.split("|").map(s=>s.trim()).filter(Boolean);
+      let a=q.options.findIndex(o=>o.toLowerCase()===ans.toLowerCase());
+      if(a<0&&/^\d+$/.test(ans))a=parseInt(ans,10);
+      if(q.options.length<2||a<0||a>=q.options.length)throw new Error(`Row ${r+1}: answer must match an option or be a valid index`);
+      q.answer=a;}
+    else if(type==="truefalse"){
+      if(/^(t|true|y|yes|1)$/i.test(ans))q.answer=true;
+      else if(/^(f|false|n|no|0)$/i.test(ans))q.answer=false;
+      else throw new Error(`Row ${r+1}: answer must be TRUE or FALSE`);}
+    else if(type==="shortanswer"){q.accept=ans.split("|").map(s=>s.trim()).filter(Boolean);
+      if(!q.accept.length)throw new Error(`Row ${r+1}: give at least one accepted answer`);}
+    else if(type==="ordering"){q.items=opts.split("|").map(s=>s.trim()).filter(Boolean);
+      if(q.items.length<2)throw new Error(`Row ${r+1}: give at least two items`);}
+    else if(type==="matching"){q.pairs=opts.split("|").map(s=>s.trim()).filter(Boolean)
+      .map(p=>{const i=p.indexOf("=");if(i<1)throw new Error(`Row ${r+1}: each pair must be left=right`);
+        return{l:p.slice(0,i).trim(),r:p.slice(i+1).trim()};});
+      if(q.pairs.length<2)throw new Error(`Row ${r+1}: give at least two pairs`);}
+    else throw new Error(`Row ${r+1}: unknown type "${type}"`);
+    if(!q.stem)throw new Error(`Row ${r+1}: missing stem`);
+    out.push({id:uid("q"),...q});}
+  DB.addQuestions(out);return out.length;
+}
+
+/* ---------- AI generator (Super Admin only): provider + model config, then generate ---------- */
+const AI_MODELS={
+  anthropic:["claude-opus-5-5","claude-sonnet-5-5","claude-haiku-5-5","claude-fable-5-1"],
+  openrouter:["anthropic/claude-opus-5.5","anthropic/claude-sonnet-5.5","openai/gpt-4o","google/gemini-2.0-flash-exp"]
+};
+const AI_ENDPOINTS={anthropic:"https://api.anthropic.com/v1/messages",openrouter:"https://openrouter.ai/api/v1/chat/completions"};
+function staffAIGen(body){
+  const cfg=DB.config();
+  const provider=cfg.aiProvider||"anthropic";
+  const provSel=el("select",{},
+    el("option",{value:"anthropic",selected:provider==="anthropic"?"":null},"Anthropic — api.anthropic.com"),
+    el("option",{value:"openrouter",selected:provider==="openrouter"?"":null},"OpenRouter — openrouter.ai"));
+  const modelSel=el("select",{});
+  const customModel=el("input",{type:"text",placeholder:"custom model id",class:"hidden"});
+  const keyInp=el("input",{type:"password",value:cfg.aiKey||"",placeholder:provider==="anthropic"?"sk-ant-…":"sk-or-…"});
+  function fillModels(p){
+    modelSel.innerHTML="";
+    AI_MODELS[p].forEach(mm=>modelSel.append(el("option",{value:mm},mm)));
+    modelSel.append(el("option",{value:"__custom__"},"Custom…"));
+    if(cfg.aiModel&&AI_MODELS[p].includes(cfg.aiModel)){modelSel.value=cfg.aiModel;customModel.classList.add("hidden");}
+    else if(cfg.aiModel&&cfg.aiProvider===p){modelSel.value="__custom__";customModel.classList.remove("hidden");customModel.value=cfg.aiModel;}
+    else{modelSel.selectedIndex=0;customModel.classList.add("hidden");}
+    keyInp.placeholder=p==="anthropic"?"sk-ant-…":"sk-or-…";
+  }
+  fillModels(provider);
+  provSel.onchange=()=>fillModels(provSel.value);
+  modelSel.onchange=()=>customModel.classList.toggle("hidden",modelSel.value!=="__custom__");
+  body.append(el("div",{class:"card"},el("h2",{},"AI generator — configuration"),
+    el("p",{style:"color:var(--muted);margin-top:-.3rem;font-size:.9rem"},
+      BACKEND
+        ?"Pick a provider and model and paste the matching API key. The key is saved in the server's Config sheet and is sent only to Super Admin sessions; generation calls go directly from this browser to the provider. Anyone with edit access to the Google Sheet can read the key — restrict sheet access accordingly."
+        :"Pick a provider and model and paste the matching API key. In offline mode the key is stored only in this browser. Generation calls go directly from this browser to the provider."),
+    el("div",{class:"row"},
+      el("div",{class:"field",style:"flex:1"},el("label",{},"Endpoint / provider"),provSel),
+      el("div",{class:"field",style:"flex:1"},el("label",{},"Model"),modelSel)),
+    el("div",{class:"field",id:"cm_wrap"},customModel),
+    el("div",{class:"field"},el("label",{},"API key"),keyInp),
+    el("button",{class:"btn",onclick:()=>{
+      const model=modelSel.value==="__custom__"?customModel.value.trim():modelSel.value;
+      if(!model)return toast("Choose or enter a model","err");
+      DB.saveConfig({aiProvider:provSel.value,aiModel:model,aiKey:keyInp.value.trim()});
+      toast("AI settings saved","ok");renderStaff("aigen");
+    }},"Save AI settings")));
+  const catSel=el("select",{},...CATEGORIES.map(c=>el("option",{value:c},c)));
+  const typeSel=el("select",{},...TYPES.map(t=>el("option",{value:t.id},t.label)));
+  const scopeSel=el("select",{},...scopeOptions(false));
+  const countInp=el("input",{type:"number",value:"5",min:"1",max:"20"});
+  const diffSel=el("select",{},...["mixed","easy","medium","hard"].map(d=>el("option",{value:d},d)));
+  const status=el("div",{style:"margin-top:.6rem;font-size:.92rem"});
+  body.append(el("div",{class:"card"},el("h2",{},"Generate questions"),
+    cfg.aiKey?"":el("div",{class:"notice"},"No API key saved yet. Add one above, or use the Question bank → Bulk upload (CSV), which works fully offline."),
+    el("div",{class:"row"},el("div",{class:"field",style:"flex:1"},el("label",{},"Subject"),catSel),
+      el("div",{class:"field",style:"flex:1"},el("label",{},"Type"),typeSel)),
+    el("div",{class:"row"},el("div",{class:"field",style:"flex:1"},el("label",{},"Scope"),scopeSel),
+      el("div",{class:"field",style:"flex:1"},el("label",{},"How many"),countInp),
+      el("div",{class:"field",style:"flex:1"},el("label",{},"Difficulty"),diffSel)),
+    el("button",{class:"btn warn",onclick:async e=>{
+      const btn=e.target;btn.disabled=true;status.textContent="Generating…";
+      const want=+countInp.value;
+      try{const items=await aiGenerate(catSel.value,typeSel.value,scopeSel.value,want,diffSel.value);
+        DB.addQuestions(items.map(q=>({id:uid("q"),...q})));
+        status.replaceChildren(el("span",{style:"color:var(--success)"},`Added ${items.length} of ${want} requested question(s) to the bank. Review them before candidates see them.`));
+        toast(`${items.length} generated`,"ok");
+      }catch(err){status.replaceChildren(el("span",{style:"color:var(--danger)"},err.message));}
+      finally{btn.disabled=false;}
+    }},"Generate & add to bank"),
+    status));
+}
+async function aiGenerate(category,type,scope,count,difficulty){
+  const cfg=DB.config();
+  if(!cfg.aiKey)throw new Error("Set an API key in the configuration above first.");
+  const provider=cfg.aiProvider||"anthropic";
+  const model=cfg.aiModel||(provider==="anthropic"?"claude-opus-5-5":"anthropic/claude-opus-5.5");
+  const want=Math.max(1,Math.min(50,parseInt(count,10)||1));
+  const BATCH=5;                 // small batches so a reply never hits the token ceiling
+  const all=[];let lastErr=null;let remaining=want;
+  while(remaining>0){
+    const n=Math.min(BATCH,remaining);
+    try{const got=await aiCall(provider,model,cfg.aiKey,category,type,scope,n,difficulty);all.push(...got);}
+    catch(e){lastErr=e;break;}    // keep whatever earlier batches already produced
+    remaining-=n;
+  }
+  if(all.length===0)throw lastErr||new Error("No questions were generated");
+  if(lastErr)toast(`Kept ${all.length}; a later batch failed: ${lastErr.message}`,"err");
+  return all;
+}
+async function aiCall(provider,model,key,category,type,scope,n,difficulty){
+  const schema={mcq:'{"stem":"...","options":["a","b","c","d"],"answer":0,"explanation":"..."}',
+    truefalse:'{"stem":"...","answer":true,"explanation":"..."}',
+    shortanswer:'{"stem":"...","accept":["ans1","ans2"],"explanation":"..."}',
+    ordering:'{"stem":"...","items":["first","second","third"],"explanation":"..."}',
+    matching:'{"stem":"...","pairs":[{"l":"term","r":"meaning"}],"explanation":"..."}'}[type];
+  const audience=scope==="COMMON"?"all cadres":`the "${scope}"`;
+  const prompt=`You are writing practice questions for a Lagos State (Nigeria) public service promotion examination, for ${audience}.
+Subject: ${category}. Question type: ${type}. Produce exactly ${n} question(s)${difficulty==="mixed"?"":" at "+difficulty+" difficulty"}.
+Only state facts you are confident are current and correct; prefer reasoning and procedure over exact fine amounts or dates that change often.
+Respond with ONLY a JSON array of ${n} objects and nothing else — no prose, no markdown, no code fences. Start the reply with [ and end with ].
+Each object must have exactly this shape:
+${schema}
+For ordering, list "items" in the CORRECT order. For matching, "l" is the prompt and "r" is its correct match. Give a clear "explanation" for every question.`;
+  const maxTok=Math.min(16000,1500+n*900);
+  const ref=(typeof location!=="undefined"&&location.origin&&location.origin!=="null")?location.origin:"https://cbt.app";
+  let txt="";
+  if(provider==="openrouter"){
+    const res=await fetch(AI_ENDPOINTS.openrouter,{method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+key,"HTTP-Referer":ref,"X-Title":"CBT Platform"},
+      body:JSON.stringify({model,messages:[{role:"user",content:prompt}],max_tokens:maxTok})});
+    let data=null;try{data=await res.json();}catch(e){}
+    if(!res.ok||(data&&data.error))throw new Error("OpenRouter: "+((data&&data.error&&(data.error.message||data.error))||("HTTP "+res.status)));
+    let c=data&&data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content;
+    txt=Array.isArray(c)?c.map(p=>p.text||p.content||"").join(""):(c||"");
+  }else{
+    const res=await fetch(AI_ENDPOINTS.anthropic,{method:"POST",
+      headers:{"Content-Type":"application/json","x-api-key":key,
+        "anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model,max_tokens:maxTok,messages:[{role:"user",content:prompt}]})});
+    let data=null;try{data=await res.json();}catch(e){}
+    if(!res.ok||(data&&data.type==="error"))throw new Error("Anthropic: "+((data&&data.error&&data.error.message)||("HTTP "+res.status)));
+    if(data&&data.stop_reason==="refusal")throw new Error("Anthropic declined this request"+(data.stop_details&&data.stop_details.explanation?": "+data.stop_details.explanation:"."));
+    if(data&&data.stop_reason==="max_tokens")throw new Error("The reply was cut off by the token limit — try a smaller 'How many'.");
+    txt=((data&&data.content)||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  }
+  const arr=extractJSONArray(txt);
+  return arr.map(q=>({scope,category,type,difficulty:difficulty==="mixed"?"medium":difficulty,
+    stem:q.stem,explanation:q.explanation||"",
+    ...(type==="mcq"?{options:q.options,answer:q.answer}:{}),
+    ...(type==="truefalse"?{answer:!!q.answer}:{}),
+    ...(type==="shortanswer"?{accept:q.accept||[]}:{}),
+    ...(type==="ordering"?{items:q.items||[]}:{}),
+    ...(type==="matching"?{pairs:q.pairs||[]}:{})}))
+    .filter(q=>q.stem&&(type!=="mcq"||(Array.isArray(q.options)&&q.options.length>=2&&Number.isInteger(q.answer)&&q.answer>=0&&q.answer<q.options.length)));
+}
+function extractJSONArray(txt){
+  if(!txt||!txt.trim())throw new Error("Model returned an empty reply (often the token limit was hit — try a smaller 'How many').");
+  let t=txt.trim().replace(/```json/gi,"```");
+  const fence=t.match(/```([\s\S]*?)```/);if(fence)t=fence[1].trim();
+  try{const v=JSON.parse(t);return Array.isArray(v)?v:[v];}catch(e){}
+  const i=t.indexOf("["),j=t.lastIndexOf("]");
+  if(i>=0&&j>i){try{const v=JSON.parse(t.slice(i,j+1));if(Array.isArray(v)&&(v.length===0||typeof v[0]==="object"))return v;}catch(e){}}
+  const oi=t.indexOf("{"),oj=t.lastIndexOf("}");
+  if(oi>=0&&oj>oi){try{const v=JSON.parse(t.slice(oi,oj+1));return[v];}catch(e){}}
+  throw new Error("Could not read JSON from the reply. It began: "+t.slice(0,140).replace(/\s+/g," "));
+}
+
+/* ---------- Analytics (cohort) ---------- */
+function staffAnalytics(body,actor){
+  const users=actor.role==="super"?DB.users():DB.users().filter(u=>u.createdBy===actor.id);
+  const uids=new Set(users.map(u=>u.id));
+  const atts=DB.attempts().filter(a=>uids.has(a.userId));
+  if(BACKEND)body.append(el("div",{class:"row",style:"justify-content:flex-end;margin-bottom:.4rem"},refreshBtn("analytics")));
+  body.append(el("div",{class:"grid cols4"},
+    el("div",{class:"card stat"},el("div",{class:"n"},users.length),el("div",{class:"l"},"Candidates")),
+    el("div",{class:"card stat"},el("div",{class:"n"},DB.questions().length),el("div",{class:"l"},"Questions in bank")),
+    el("div",{class:"card stat"},el("div",{class:"n"},atts.length),el("div",{class:"l"},"Sessions taken")),
+    el("div",{class:"card stat"},el("div",{class:"n"},atts.length?Math.round(atts.reduce((s,a)=>s+a.pct,0)/atts.length)+"%":"—"),el("div",{class:"l"},"Average score"))));
+  body.append(el("div",{class:"card"},el("h2",{},"Where candidates struggle"),
+    el("p",{style:"color:var(--muted);font-size:.9rem;margin-top:-.3rem"},"Accuracy across all sessions, by subject. Low bars show topics to reinforce."),
+    catBars(categoryStats(atts))));
+  if(users.length)body.append(el("div",{class:"card"},el("h2",{},"Candidate performance"),
+    el("div",{class:"table-wrap"},el("table",{},
+      el("thead",{},el("tr",{},el("th",{},"Candidate"),el("th",{},"Cadre"),el("th",{},"Sessions"),el("th",{},"Average"),el("th",{},"Best"))),
+      el("tbody",{},...users.map(u=>{const ua=userAttempts(u.id);
+        return el("tr",{},el("td",{},u.name),el("td",{},u.cadre||"—"),el("td",{},ua.length),
+          el("td",{},ua.length?Math.round(ua.reduce((s,a)=>s+a.pct,0)/ua.length)+"%":"—"),
+          el("td",{},ua.length?Math.max(...ua.map(a=>a.pct))+"%":"—"));}))))));
+}
+
+/* ---------- small form helpers ---------- */
+function formGrid(fields){return el("div",{class:"row"},...fields.map(([label,id,type,ph])=>
+  el("div",{class:"field",style:"flex:1;min-width:200px"},el("label",{},label),
+    el("input",{type,id,placeholder:ph||""}))));}
+function filterSel(label,vals,current,onChange,labelFn){
+  const s=el("select",{},...vals.map(v=>el("option",{value:v,selected:v===current?"":null},
+    v===""?("All "+label.toLowerCase()):(labelFn?labelFn(v):v))));
+  s.onchange=()=>onChange(s.value);
+  return el("div",{class:"field",style:"flex:1;margin:0"},el("label",{},label),s);}
+function existsUsername(u){const l=u.toLowerCase();
+  return DB.accounts().some(a=>a.username.toLowerCase()===l)||DB.users().some(a=>a.username.toLowerCase()===l);}
+
+/* ---------- content protection (deterrent only — answers still reach the browser) ---------- */
+(function lockDown(){
+  const inField=t=>/^(input|textarea|select)$/i.test(t&&t.tagName);
+  document.addEventListener("contextmenu",e=>{e.preventDefault();});
+  document.addEventListener("dragstart",e=>{if(!inField(e.target)&&!e.target.closest?.(".dnd"))e.preventDefault();});
+  ["copy","cut"].forEach(ev=>document.addEventListener(ev,e=>{if(!inField(e.target))e.preventDefault();}));
+  document.addEventListener("keydown",e=>{
+    const k=(e.key||"").toLowerCase();
+    if(k==="f12"){e.preventDefault();return;}
+    if((e.ctrlKey||e.metaKey)&&e.shiftKey&&["i","j","c"].includes(k)){e.preventDefault();return;}
+    if((e.ctrlKey||e.metaKey)&&["u","s","p"].includes(k)){e.preventDefault();return;}
+    if((e.ctrlKey||e.metaKey)&&["c","x","a"].includes(k)&&!inField(e.target)){e.preventDefault();return;}
+  });
+})();
+
+/* ---------- init ---------- */
+if(typeof CADRES==="undefined"||typeof cbtGrade!=="function"){
+  document.body.innerHTML='<p style="padding:2rem;font-family:sans-serif">cbt-shared.js could not be loaded. Keep cbt-shared.js, cbt-bank-permsec.js and cbt-bank-law-enforcement.js in the same folder as index.html.</p>';
+}else if(BACKEND){boot();}
+else{DB.seed();boot();}
+
+</script>
+</body>
+</html>
