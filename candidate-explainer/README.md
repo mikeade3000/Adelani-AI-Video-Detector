@@ -4,7 +4,7 @@ An explainer video for 2026 Public Service Examination candidates. It shows how 
 
 | File | What it is |
 | --- | --- |
-| `pse-certificate-guide.mp4` | The video: 1080p, 4 minutes, narrated, with captions burned into the picture (26 MB) |
+| `pse-certificate-guide.mp4` | The video: 1080p, about 5 minutes, narrated, with captions burned into the picture (26 MB) |
 | `pse-certificate-guide-720p.mp4` | The same video at 720p (13 MB), for sharing on WhatsApp and phones |
 | `index.html` | Interactive player with chapters, a clickable transcript, pause-and-answer checkpoints, an "Am I ready?" checklist and links to the site and portal |
 | `pse-certificate-guide.vtt` / `.srt` | Caption files, for the player, YouTube, Facebook or WhatsApp uploads |
@@ -30,7 +30,7 @@ To share it, upload the MP4 anywhere, or host this folder as is (for example on 
 
 - **ascon.gov.ng homepage scene:** the build machine could not reach ascon.gov.ng, so the homepage in Step 1 is an illustration labelled "Illustration · the live ascon.gov.ng layout may differ". Once the real link is live, swap in a real screenshot by replacing the `#home` block in `build/stage.html` with an `<img>`, then re-render.
 - **Fictional candidate:** the portal screens are real captures of the portal page running in demonstration mode with one made-up candidate, *Okafor Temitope Aisha, ANCSC/2026/001*. No live records were used.
-- **Voice:** an offline neural text-to-speech voice (Kokoro, `am_michael`), with "ASCON" stressed as *AS-con*. To use a human voice-over, record over `build/script.json` line by line and re-run the build from the mix step.
+- **Voice:** an offline neural text-to-speech voice (Kokoro, `bm_george`) at a relaxed pace of about 123 words per minute, with generous pauses between lines. Its pronunciation is reshaped toward Nigerian English by `build/accent.py`: no TH sounds ("di", "dat"), *-shon* endings, flat vowels (*satifikat*, *konfam*), non-rhotic, and "ASCON" said as *AS-con*. "Three" is kept clear because it is the print limit. This is an approximation, not a native Nigerian voice. For a fully authentic sound, have a Nigerian voice artist read `build/script.json` line by line and re-run the build from the mix step. To change the pace, edit `SPEED` and the pauses at the top of `build/tts.py`.
 
 ## Rebuilding
 
@@ -38,7 +38,7 @@ Requirements: Python 3 (`kokoro-onnx`, `soundfile`, `numpy`, `scipy`, `Pillow`),
 
 ```bash
 cd build
-python3 tts.py <model dir> <render dir> am_michael         # narration.wav + timing.json
+python3 tts.py <model dir> <render dir> bm_george          # narration.wav + timing.json
 node capture.js <portal index.html> <shots dir>            # real portal screens (set QR_LIB if cdnjs is blocked)
 python3 prep.py <shots dir> <render dir>                    # data.js + stage.html into the render dir
 node render.js <render dir> <frames dir> 25 <i> <n>        # frames (run n workers, i = 0..n-1)

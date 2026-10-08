@@ -1,13 +1,16 @@
-"""Generate per-line narration with Kokoro (offline) and write timing.json + narration.wav."""
+"""Generate per-line narration with Kokoro (offline) and write timing.json + narration.wav.
+The voice reads British-English phonemes reshaped toward Nigerian English (see accent.py),
+at a relaxed pace with generous pauses so first-time viewers can follow."""
 import json, sys, numpy as np, soundfile as sf
 from kokoro_onnx import Kokoro
+from accent import nigerian
 model_dir, out_dir = sys.argv[1], sys.argv[2]
-VOICE = sys.argv[3] if len(sys.argv) > 3 else "am_michael"
-SPEED = 1.04
+VOICE = sys.argv[3] if len(sys.argv) > 3 else "bm_george"
+SPEED = 0.85   # ~125 words per minute
 SR = 24000
 k = Kokoro(f"{model_dir}/kokoro-v1.0.onnx", f"{model_dir}/voices-v1.0.bin")
 script = json.load(open("script.json"))
-GAP, SCENE_GAP, LEAD = 0.38, 0.9, 0.8   # seconds of silence between lines / scenes / at start
+GAP, SCENE_GAP, LEAD = 0.65, 1.4, 0.9   # seconds of silence between lines / scenes / at start
 audio = [np.zeros(int(LEAD * SR), np.float32)]
 t = LEAD
 timing = []
@@ -18,8 +21,9 @@ for si, sc in enumerate(script):
             n = 4.0; audio.append(np.zeros(int(n * SR), np.float32))
             scene["lines"].append({"text": "", "start": t, "end": t + n, "pause": True}); t += n
             continue
-        ph = k.tokenizer.phonemize(say or disp, "en-us")
-        ph = ph.replace("ɐskˈɑːn", "ˈæskɑːn")   # Nigerian stress: AS-con, not as-KON
+        ph = k.tokenizer.phonemize(say or disp, "en-gb")
+        ph = ph.replace("ɐskˈɒn", "ˈaskɔn")    # AS-con, not as-KON
+        ph = nigerian(ph)
         s, sr = k.create(ph, voice=VOICE, speed=SPEED, is_phonemes=True)
         assert sr == SR
         # trim leading/trailing near-silence for tight pacing
