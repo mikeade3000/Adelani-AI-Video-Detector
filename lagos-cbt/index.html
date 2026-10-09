@@ -737,8 +737,9 @@ function renderQuestionInput(q){
   }
   if(q.type==="shortanswer"){
     const inp=el("input",{type:"text",placeholder:"Type your answer",value:r||""});
-    inp.oninput=()=>{EXAM.responses[q.id]=inp.value;};
-    inp.onchange=()=>renderExam();
+    /* update the palette dot in place: a full re-render on blur would swallow the click on Next */
+    inp.oninput=()=>{EXAM.responses[q.id]=inp.value;
+      $$(".qdot")[EXAM.idx]?.classList.toggle("answered",isAnswered(q));};
     return el("div",{},inp,el("div",{class:"hint",style:"margin-top:.4rem;color:var(--muted)"},"Capitals, spacing and ₦ signs or commas in numbers don't matter; give the key word or figure."));
   }
   if(q.type==="ordering"){

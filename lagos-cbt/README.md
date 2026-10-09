@@ -1,21 +1,37 @@
 # CBT Platform — Lagos State promotion examination practice
 
+## Simplest install: two files (`dist/`)
+
 | File | Where it goes |
 |---|---|
-| `index.html` | Your web host (e.g. GitHub Pages) |
-| `cbt-shared.js`, `cbt-bank-permsec.js`, `cbt-bank-law-enforcement.js` | **Both** places: next to `index.html` on the web host, **and** pasted into the Apps Script project as `cbt-shared.gs`, `cbt-bank-permsec.gs`, `cbt-bank-law-enforcement.gs` |
-| `Code.gs` | Apps Script project only |
-| `tools/` | Checks to run locally (`node tools/validate-banks.js`, `node tools/test-backend.js`) |
+| `dist/index.html` | Your web host. Replace your current `index.html`. |
+| `dist/Code.gs` | Apps Script editor. Replace everything in your current `Code.gs`. |
 
-## Updating an existing deployment
+These two files contain everything (all cadres and question banks). No other files are needed.
 
-1. In the Apps Script editor, replace `Code.gs` and add the three `.gs` files above.
-2. *(Recommended)* Project Settings ▸ Script properties ▸ add `PEPPER` with **exactly** the current value of `PEPPER_FALLBACK` in `Code.gs` (`cbt::change-this-secret::9f3a7`). Do not change it, or existing passwords stop working.
-3. Deploy ▸ Manage deployments ▸ edit ▸ **New version**, so the `/exec` URL stays the same.
-4. Upload `index.html` and the three `.js` files to the web host.
-5. On the next request the server adds the new banks once (Permanent Secretary, the Law Enforcement group, Traffic/LASTMA, VIS, Environmental Enforcement and LNSC) and fixes two old questions. Existing questions, users and attempts are left alone.
-6. The super admin is asked to set a new password at the next login if the account still has `mustChange`. Admins you create from now on must also set their own password at first login.
-7. *(Optional)* Add a daily time-driven trigger for `pruneSessions`.
+1. **Back up.** Make a copy of the Google Sheet (File ▸ Make a copy), and copy your old `Code.gs` text into Notepad.
+2. **Check PEPPER.** In the old `Code.gs`, find `var PEPPER=`. If its value is not `cbt::change-this-secret::9f3a7`, open Project Settings ▸ Script properties and add `PEPPER` with your old value. Otherwise nobody can log in.
+3. **Replace `Code.gs`** with `dist/Code.gs` and press Ctrl+S.
+4. **Run `diagnostics`** once from the function dropdown and approve the permissions. This loads the new questions.
+5. **Deploy ▸ Manage deployments ▸ ✏️ Edit ▸ Version: New version ▸ Deploy.** The `/exec` link stays the same.
+6. **Upload `dist/index.html`** to your web host in place of the old one. Then open the site and press Ctrl+F5.
+7. Log in as **superadmin**. You may be asked to choose a new password (8+ characters).
+
+Optional: add a daily time-driven trigger for `pruneSessions`.
+
+## For developers: source files
+
+The `dist/` files are generated. Edit the sources, then run `node tools/build-single.js`:
+
+| Source | Contents |
+|---|---|
+| `index.html` | Page and application logic |
+| `Code.gs` | Backend logic |
+| `cbt-shared.js` | Cadres, scope groups, grading, base + ICT banks |
+| `cbt-bank-permsec.js` | Permanent Secretary bank |
+| `cbt-bank-law-enforcement.js` | Law-enforcement banks |
+
+Checks: `node tools/validate-banks.js` and `node tools/test-backend.js`.
 
 ## Question banks
 
