@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Handwritten Theory Grader</title>
+  <meta name="description" content="Browser-based OCR and rubric-scoring tool for handwritten theory examinations. Runs offline; the examiner confirms every mark." />
+  <meta name="theme-color" content="#1f5fbf" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <strong>Handwritten Theory Grader</strong>
+      <span>OCR + rubric scoring · first reader under examiner review</span>
+    </div>
+    <span id="privacyBadge" class="badge green">● Offline · scripts stay on this device</span>
+    <span id="netBadge" class="badge grey">online</span>
+    <button class="btn small" id="themeBtn" title="Toggle light/dark theme">Theme</button>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="rubric" aria-selected="true">1 · Rubric</button>
+    <button role="tab" data-tab="scripts">2 · Scripts &amp; OCR <span class="count" id="countScripts">0</span></button>
+    <button role="tab" data-tab="review">3 · Review &amp; mark</button>
+    <button role="tab" data-tab="results">4 · Results</button>
+    <button role="tab" data-tab="evaluation">5 · Evaluation</button>
+    <button role="tab" data-tab="settings">Settings</button>
+    <button role="tab" data-tab="help">Help</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ======================================================= RUBRIC -->
+  <section class="tab active" id="tab-rubric">
+    <div class="grid2">
+      <div class="card">
+        <div class="row spread">
+          <h2>Rubric (plain text)</h2>
+          <div class="row">
+            <button class="btn small" id="rubricSample">Load sample</button>
+            <label class="btn small">Import .txt<input type="file" id="rubricImport" accept=".txt,text/plain" /></label>
+            <button class="btn small" id="rubricExport">Export</button>
+          </div>
+        </div>
+        <p class="muted small">For each question, give a header with the maximum mark, a <code>Model:</code> answer and
+          <code>Keywords:</code> groups. Each line is one group, and <code>|</code> separates acceptable alternatives.
+          End a keyword with <code>*</code> to accept any ending (e.g. <code>encrypt*</code>).</p>
+        <textarea id="rubricText" class="code" rows="26" spellcheck="false" placeholder="Q1 [5] Title&#10;Model: ...&#10;Keywords:&#10;- store | save | retain&#10;- ..."></textarea>
+      </div>
+      <div class="card">
+        <div class="row spread">
+          <h2>Parsed rubric</h2>
+          <span id="rubricTotal" class="badge blue">0 marks</span>
+        </div>
+        <div id="rubricMessages"></div>
+        <div id="rubricPreview"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= SCRIPTS -->
+  <section class="tab" id="tab-scripts">
+    <div class="card">
+      <h2>Upload scanned scripts</h2>
+      <div class="dropzone" id="dropzone">
+        <p><strong>Drop JPG, PNG or PDF files here</strong> or
+          <label class="btn small">choose files<input type="file" id="fileInput" multiple accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" /></label></p>
+        <div class="row" style="justify-content:center">
+          <label class="small">Group files into scripts:
+            <select id="groupMode">
+              <option value="file">One script per file (multi-page PDF = one script)</option>
+              <option value="prefix">By filename prefix (e.g. S01_p1.jpg, S01_p2.jpg)</option>
+              <option value="single">All files are one script</option>
+            </select>
+          </label>
+          <button class="btn small" id="demoBtn" title="Creates a synthetic handwritten page so you can try the workflow">Add demo script</button>
+        </div>
+        <p class="small muted">Scan at 300 dpi or more, with flat pages and even lighting. Images are kept in this browser only.</p>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn primary" id="processAllBtn">Run OCR &amp; score all pending</button>
+        <button class="btn" id="stopBtn" disabled>Stop after current page</button>
+        <span id="engineLabel" class="small muted"></span>
+      </div>
+      <div style="margin-top:10px" class="stack">
+        <div class="progress"><div id="progressBar"></div></div>
+        <div id="progressText" class="small muted">Idle.</div>
+      </div>
+    </div>
+    <div id="scriptList"></div>
+  </section>
+
+  <!-- ======================================================= REVIEW -->
+  <section class="tab" id="tab-review">
+    <div id="reviewEmpty" class="card"><p>No scripts processed yet. Add scripts and run OCR on the <strong>Scripts</strong> tab.</p></div>
+    <div id="reviewArea" class="hidden">
+      <div class="card">
+        <div class="script-bar">
+          <div class="row">
+            <button class="btn small" id="prevScript" title="Previous script (Alt+←)">◀</button>
+            <select id="scriptSelect"></select>
+            <button class="btn small" id="nextScript" title="Next script (Alt+→)">▶</button>
+            <span id="scriptStatus" class="badge grey"></span>
+          </div>
+          <div class="totals">
+            <div><div class="small muted">Suggested</div><span class="big" id="totSuggested">–</span></div>
+            <div><div class="small muted">Final</div><span class="big" id="totFinal">–</span></div>
+            <div><div class="small muted">Decision</div><span id="totDecision" class="badge grey">–</span></div>
+            <div><div class="small muted">Marking time</div><span class="mono" id="timer">0:00</span></div>
+          </div>
+          <div class="row">
+            <button class="btn" id="acceptAllBtn" title="Accept every green suggestion that is still pending">Accept all green</button>
+            <button class="btn primary" id="confirmBtn">Confirm script</button>
+          </div>
+        </div>
+        <div id="scriptFlags" style="margin-top:8px"></div>
+      </div>
+      <div class="review-layout">
+        <div class="viewer card">
+          <div class="row spread">
+            <div class="page-tabs" id="pageTabs"></div>
+            <div class="row">
+              <label class="small check" style="margin:0"><input type="checkbox" id="showProcessed" /> processed</label>
+              <button class="btn small" id="zoomOut">−</button>
+              <button class="btn small" id="zoomIn">+</button>
+            </div>
+          </div>
+          <div class="stage" id="stage"><img id="stageImg" alt="Scanned page" /></div>
+          <details style="margin-top:10px">
+            <summary>Unassigned text <span id="unassignedCount" class="muted small"></span></summary>
+            <p class="small muted">Text the tool could not link to a question (e.g. the cover page). Cut and paste it into a question below if needed.</p>
+            <textarea id="unassignedText" rows="5"></textarea>
+            <div class="row" style="margin-top:6px">
+              <button class="btn small" id="resegmentBtn" title="Rebuild answers from the page OCR text and page assignments (discards text edits)">Re-segment from OCR</button>
+            </div>
+          </details>
+        </div>
+        <div id="questionCards"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= RESULTS -->
+  <section class="tab" id="tab-results">
+    <div class="card">
+      <div class="row spread">
+        <h2>Results</h2>
+        <div class="row no-print">
+          <button class="btn small" id="exportCsvLong">Export marks CSV (per question)</button>
+          <button class="btn small" id="exportCsvWide">Export marks CSV (per script)</button>
+          <button class="btn small" id="exportJson">Save session (.json)</button>
+          <label class="btn small">Load session<input type="file" id="importJson" accept=".json,application/json" /></label>
+          <button class="btn small" onclick="window.print()">Print</button>
+          <button class="btn small danger" id="clearAll">Clear everything</button>
+        </div>
+      </div>
+      <label class="check small no-print"><input type="checkbox" id="includeImages" /> Include page images when saving the session (larger file)</label>
+      <div id="summary" class="row" style="gap:10px;margin:10px 0"></div>
+      <div class="table-wrap"><table class="data" id="resultsTable"></table></div>
+    </div>
+  </section>
+
+  <!-- ======================================================= EVALUATION -->
+  <section class="tab" id="tab-evaluation">
+    <div class="card">
+      <h2>Agreement with examiners (RQ2–RQ3)</h2>
+      <p class="small muted">Compare the tool's <em>unedited</em> suggested marks with a reference standard. Paste or load a CSV with the columns
+        <code>script,question,max,tool,reference</code>. You can also add <code>examiner1,examiner2</code> columns for the human–human baseline;
+        if <code>reference</code> is blank it is built from them (mean, or <code>examiner3</code> when they differ by more than 20% of the maximum).</p>
+      <div class="row">
+        <button class="btn small" id="evalFromSession">Fill tool marks from this session</button>
+        <button class="btn small" id="evalFinalAsRef">…and use confirmed final marks as reference</button>
+        <label class="btn small">Load CSV<input type="file" id="evalImport" accept=".csv,text/csv,text/plain" /></label>
+        <button class="btn small" id="evalTemplate">Download CSV template</button>
+      </div>
+      <textarea id="evalCsv" class="code" rows="8" spellcheck="false" style="margin-top:8px" placeholder="script,question,max,tool,reference,examiner1,examiner2"></textarea>
+      <div class="row" style="margin-top:8px">
+        <label class="small">Pass mark (% of max) <input type="number" id="evalPass" value="50" min="1" max="99" style="width:70px" /></label>
+        <label class="small">Bootstrap resamples <input type="number" id="evalB" value="2000" min="200" max="10000" step="100" style="width:90px" /></label>
+        <button class="btn primary" id="evalRun">Compute agreement</button>
+      </div>
+      <div id="evalOut" style="margin-top:14px"></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>OCR accuracy (RQ1)</h2>
+        <p class="small muted">Paste a manual transcription and the OCR output for the same response, then add the pair. CER and WER are pooled over all pairs.</p>
+        <div class="field"><span>Ground truth (manual transcription)</span><textarea id="cerRef" rows="4"></textarea></div>
+        <div class="field"><span>OCR output</span><textarea id="cerHyp" rows="4"></textarea></div>
+        <div class="row">
+          <select id="cerFromSession"><option value="">Fill OCR output from a session response…</option></select>
+          <input type="text" id="cerLabel" placeholder="Label (e.g. Tesseract, no preprocessing)" />
+          <button class="btn primary small" id="cerAdd">Add pair</button>
+          <button class="btn small" id="cerClear">Clear</button>
+        </div>
+        <div id="cerOut" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <h2>Marking time &amp; overrides (RQ4)</h2>
+        <p class="small muted">CSV with <code>script,hand_minutes,tool_minutes</code>. Tool times recorded by this session can be filled in for you.</p>
+        <div class="row"><button class="btn small" id="timeFromSession">Fill tool times from session</button></div>
+        <textarea id="timeCsv" class="code" rows="6" spellcheck="false" style="margin-top:8px" placeholder="script,hand_minutes,tool_minutes"></textarea>
+        <div class="row" style="margin-top:8px"><button class="btn primary small" id="timeRun">Compare times</button></div>
+        <div id="timeOut" style="margin-top:10px"></div>
+        <div id="overrideOut" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= SETTINGS -->
+  <section class="tab" id="tab-settings">
+    <div class="grid2">
+      <div class="card">
+        <h2>Scoring model</h2>
+        <p class="small muted">S = M × [ w · cos(answer, model) + (1 − w) · keyword coverage ]. Fix these before marking a session and keep them the same for every script.</p>
+        <div class="field"><span>Similarity weight w</span><input type="number" id="setW" min="0" max="1" step="0.05" /><small>0 = keywords only, 1 = similarity only (default 0.50)</small></div>
+        <div class="field"><span>Keyword match threshold θ</span><input type="number" id="setTheta" min="0.5" max="1" step="0.05" /><small>Normalised Levenshtein similarity needed for a fuzzy match (default 0.80)</small></div>
+        <div class="field"><span>Off-topic threshold τ</span><input type="number" id="setTau" min="0" max="0.5" step="0.01" /><small>Answers with cosine below τ and no keywords are flagged (default 0.10)</small></div>
+        <div class="field"><span>Round suggested marks to</span>
+          <select id="setStep"><option value="1">whole marks</option><option value="0.5">half marks</option><option value="0.25">quarter marks</option><option value="0">no rounding</option></select></div>
+        <label class="check"><input type="checkbox" id="setStop" /> Ignore common stop-words in the similarity</label>
+        <label class="check"><input type="checkbox" id="setStem" /> Light stemming (passwords → password)</label>
+        <div class="field"><span>Pass mark (% of total)</span><input type="number" id="setPass" min="1" max="99" step="1" /></div>
+        <div class="field"><span>Re-mark band around the pass mark (% of total)</span><input type="number" id="setBand" min="0" max="50" step="1" /><small>Scripts whose suggested total is this close to the pass mark are flagged for full re-marking (default 10% → 8–12 out of 20).</small></div>
+        <div class="field"><span>Question markers</span>
+          <select id="setSeg"><option value="strict">Strict: "Q1", "Question 2", "Qn 3"</option><option value="loose">Loose: also bare numbers "1.", "2)"</option></select>
+          <small>How answers are split when a page is not assigned to a specific question.</small></div>
+        <div class="field"><span>OCR substitution list</span><textarea id="setSubs" class="code" rows="6" spellcheck="false"></textarea><small>One per line: <code>wrong => right</code>. Applied to words before scoring.</small></div>
+        <div class="row"><button class="btn" id="resetSettings">Restore defaults</button></div>
+      </div>
+      <div>
+        <div class="card">
+          <h2>OCR engine</h2>
+          <div class="field"><span>Engine</span>
+            <select id="setEngine">
+              <option value="tesseract">Tesseract.js only (offline, nothing leaves the device)</option>
+              <option value="ocrspace">OCR.space only (cloud, needs key)</option>
+              <option value="best">Best of two (runs both, keeps the more readable output)</option>
+            </select></div>
+          <div id="cloudFields">
+            <div class="field"><span>OCR.space API key</span><input type="password" id="setKey" autocomplete="off" placeholder="Get a free key at ocr.space/ocrapi" /></div>
+            <label class="check"><input type="checkbox" id="setRemember" /> Remember the key in this browser</label>
+            <div class="field"><span>OCR.space engine</span>
+              <select id="setOcrEngine"><option value="2">Engine 2 (better for handwriting)</option><option value="1">Engine 1</option><option value="3">Engine 3</option></select></div>
+            <div class="notice warn small">With the cloud engine on, page images are sent to OCR.space. Check your institution's data-protection rules first.</div>
+          </div>
+          <div class="row"><button class="btn small" id="warmTesseract">Pre-load offline OCR model</button><span id="warmStatus" class="small muted"></span></div>
+        </div>
+        <div class="card">
+          <h2>Handwriting boost (preprocessing)</h2>
+          <label class="check"><input type="checkbox" id="ppEnabled" /> Enable preprocessing</label>
+          <div class="field"><span>Median filter (speckle removal)</span><select id="ppMedian"><option value="0">off</option><option value="1">3 × 3</option><option value="2">5 × 5</option></select></div>
+          <div class="field"><span>Contrast stretch <span class="muted" id="ppContrastV"></span></span><input type="range" id="ppContrast" min="0" max="1" step="0.05" /></div>
+          <div class="field"><span>Sharpen <span class="muted" id="ppSharpenV"></span></span><input type="range" id="ppSharpen" min="0" max="2" step="0.1" /></div>
+          <div class="field"><span>Binarisation</span><select id="ppBinarize"><option value="off">off (greyscale)</option><option value="otsu">Otsu (global)</option><option value="adaptive">Adaptive (uneven lighting)</option></select></div>
+          <div class="field"><span>Morphological closing (after binarisation)</span><select id="ppClosing"><option value="0">off</option><option value="1">1 pass</option><option value="2">2 passes</option></select></div>
+          <p class="small muted">Settings that help faint pencil can damage heavy ink. Preview on a page before processing a batch.</p>
+          <div class="row"><select id="ppPreviewPage"><option value="">Preview on page…</option></select><button class="btn small" id="ppPreviewBtn">Preview</button></div>
+          <div id="ppPreview" class="grid2" style="margin-top:10px"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= HELP -->
+  <section class="tab" id="tab-help">
+    <div class="card">
+      <h2>How to use the tool</h2>
+      <ol>
+        <li><strong>Rubric.</strong> Write each question's maximum mark, model answer and keyword groups. The parsed preview shows exactly what the scorer will use.</li>
+        <li><strong>Scripts.</strong> Upload scans (JPG, PNG or PDF). Check each page is complete and legible, rotate it if needed, and either leave it on <em>auto</em> (answers are split on "Q1", "Question 2" … markers) or assign the page to one question.</li>
+        <li><strong>OCR &amp; score.</strong> Pages are cleaned (handwriting boost), recognised and scored. Tesseract.js runs entirely in this browser. OCR.space is used only if you switch it on and supply a key.</li>
+        <li><strong>Review.</strong> For every question you see the scan, the recognised text (editable — scores update as you correct it), the similarity, matched and missing keywords and the suggested mark. Green, amber and red show how confident the scoring is, so start with amber and red. Accept or change each mark, then confirm the script. Scripts near the pass mark are flagged for full re-marking.</li>
+        <li><strong>Results.</strong> Export marks as CSV and save the session as JSON (a backup, or to move to another computer).</li>
+        <li><strong>Evaluation.</strong> Optional: compare the tool's unedited marks with examiners' marks (MAE, RMSE, Bland–Altman, QWK, ICC, Spearman, confusion matrix, κ, McNemar), compute OCR error rates and compare marking times.</li>
+      </ol>
+      <h3>Rubric format</h3>
+<pre class="ocr-text">Q1 [5] Define the CIA triad
+Model: Confidentiality keeps information secret from unauthorised users;
+integrity keeps it accurate and unaltered; availability means it is
+accessible to authorised users when needed.
+Keywords:
+- confidentiality | secrecy | privacy
+- integrity | unaltered | accurate
+- availability | accessible
+- unauthorised | unauthorized
+
+Q2 (5 marks)
+Max: 5
+Model: ...
+Keywords: firewall; filter* | block; rule* | policy</pre>
+      <h3>Important limits</h3>
+      <ul>
+        <li>The suggested score is a <strong>first reading, not a final grade</strong>. Every mark must be reviewed by an examiner.</li>
+        <li>Scoring measures word overlap, not meaning. Answers in vocabulary the rubric did not anticipate can be under-scored, and lists of keywords can be over-scored. Add alternatives to the keyword groups.</li>
+        <li>Mathematical notation, formulae and diagrams are not recognised reliably. Use the tool for prose answers.</li>
+        <li>Faint, skewed, shadowed or low-resolution scans (below about 150 dpi) give much worse OCR.</li>
+      </ul>
+      <h3>Privacy and offline use</h3>
+      <p>Everything (rendering, preprocessing, OCR with Tesseract.js, scoring and storage) runs in this browser. Sessions are saved in this browser's local storage. After the first visit the app works without an internet connection. Serve the folder over HTTP (e.g. GitHub Pages, or <code>python3 -m http.server</code> in this folder). Opening <code>index.html</code> directly from disk blocks the OCR web worker in most browsers.</p>
+      <p class="small muted">Based on: Adewusi, M. A. <em>AI-Powered Grading of Handwritten Theory Examinations: A Browser-Based OCR and Rubric-Scoring Tool for Low-Resource Settings.</em> Kampala International University.</p>
+    </div>
+  </section>
+</main>
+
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true"><div class="inner"><div class="row spread"><strong id="modalTitle"></strong><button class="btn small" id="modalClose">Close</button></div><div id="modalBody" style="margin-top:8px"></div></div></div>
+<div id="toast" class="toast hidden" role="status"></div>
+
+<script src="js/words.js"></script>
+<script src="js/scoring.js"></script>
+<script src="js/stats.js"></script>
+<script src="js/preprocess.js"></script>
+<script src="js/ocr.js"></script>
+<script src="js/store.js"></script>
+<script src="js/evaluation.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

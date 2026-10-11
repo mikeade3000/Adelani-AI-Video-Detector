@@ -1,0 +1,11 @@
+{
+  "name": "handwritten-theory-grader",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser-based OCR and rubric-scoring tool for handwritten theory examinations.",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "start": "npx --yes http-server -c-1 -p 8080 ."
+  },
+  "license": "MIT"
+}
