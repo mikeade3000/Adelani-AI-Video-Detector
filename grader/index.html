@@ -2,12 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Handwritten Theory Grader</title>
   <meta name="description" content="Browser-based OCR and rubric-scoring tool for handwritten theory examinations. Runs offline; the examiner confirms every mark." />
   <meta name="theme-color" content="#1f5fbf" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Grader" />
   <link rel="stylesheet" href="css/app.css" />
 </head>
 <body>
@@ -66,8 +70,11 @@
     <div class="card">
       <h2>Upload scanned scripts</h2>
       <div class="dropzone" id="dropzone">
-        <p><strong>Drop JPG, PNG or PDF files here</strong> or
-          <label class="btn small">choose files<input type="file" id="fileInput" multiple accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" /></label></p>
+        <p class="row" style="justify-content:center">
+          <label class="btn primary">📷 Photograph a script<input type="file" id="cameraInput" accept="image/*" capture="environment" /></label>
+          <label class="btn">Choose files<input type="file" id="fileInput" multiple accept="image/jpeg,image/png,image/webp,image/heic,application/pdf,.pdf" /></label>
+        </p>
+        <p class="small"><strong>On a computer:</strong> drop JPG, PNG or PDF files here. <strong>On a phone:</strong> photograph page 1, then tap "📷 + page" on the script card for each further page.</p>
         <div class="row" style="justify-content:center">
           <label class="small">Group files into scripts:
             <select id="groupMode">
@@ -78,7 +85,7 @@
           </label>
           <button class="btn small" id="demoBtn" title="Creates a synthetic handwritten page so you can try the workflow">Add demo script</button>
         </div>
-        <p class="small muted">Scan at 300 dpi or more, with flat pages and even lighting. Images are kept in this browser only.</p>
+        <p class="small muted">Scan at 300 dpi or more, or photograph pages flat, in even light, filling the frame. Images are kept on this device only.</p>
       </div>
       <div class="row" style="margin-top:12px">
         <button class="btn primary" id="processAllBtn">Run OCR &amp; score all pending</button>
@@ -299,6 +306,13 @@ Keywords: firewall; filter* | block; rule* | policy</pre>
         <li>Scoring measures word overlap, not meaning. Answers in vocabulary the rubric did not anticipate can be under-scored, and lists of keywords can be over-scored. Add alternatives to the keyword groups.</li>
         <li>Mathematical notation, formulae and diagrams are not recognised reliably. Use the tool for prose answers.</li>
         <li>Faint, skewed, shadowed or low-resolution scans (below about 150 dpi) give much worse OCR.</li>
+      </ul>
+      <h3>Using it on a phone or tablet</h3>
+      <ul>
+        <li>Open the app's web address in Chrome (Android) or Safari (iPhone/iPad). On Android, choose <em>⋮ → Add to Home screen / Install app</em>. On iPhone, tap <em>Share → Add to Home Screen</em>. It then opens like an ordinary app.</li>
+        <li>In <strong>Settings → OCR engine</strong>, tap <em>Pre-load offline OCR model</em> once while you are online (about 7 MB). After that, marking works with no connection.</li>
+        <li>Tap <em>📷 Photograph a script</em>, then <em>📷 + page</em> for more pages. Hold the phone directly above the page, in good light, with no shadow.</li>
+        <li>Phones get smaller working images to save memory. Each page takes about 10–30 seconds to read, depending on the phone.</li>
       </ul>
       <h3>Privacy and offline use</h3>
       <p>Everything (rendering, preprocessing, OCR with Tesseract.js, scoring and storage) runs in this browser. Sessions are saved in this browser's local storage. After the first visit the app works without an internet connection. Serve the folder over HTTP (e.g. GitHub Pages, or <code>python3 -m http.server</code> in this folder). Opening <code>index.html</code> directly from disk blocks the OCR web worker in most browsers.</p>

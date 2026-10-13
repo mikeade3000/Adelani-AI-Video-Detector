@@ -344,6 +344,28 @@ Keywords:
     updateCounts();
   }
 
+  async function addPhotoToScript(s, file) {
+    if (!file) return;
+    try {
+      const blob = await O.normaliseImage(file);
+      const id = uid('p');
+      await ST.putBlob(id, blob);
+      s.pages.push({ id: id, name: 'photo ' + (s.pages.length + 1), rotation: 0, assign: 'auto', ocr: null });
+      if (s.status === 'review') s.status = 'new';
+      if (!state.scripts.includes(s)) state.scripts.push(s);
+      save(); renderScripts(); updateCounts();
+      toast('Page ' + s.pages.length + ' added to ' + s.name + '. Use "📷 + page" on its card for the next page.');
+    } catch (e) {
+      toast('Could not read the photo: ' + e.message, 6000);
+    }
+  }
+
+  function newCameraScript(file) {
+    const n = state.scripts.length + 1;
+    const s = { id: uid('s'), name: 'Script ' + String(n).padStart(2, '0'), created: Date.now(), pages: [], status: 'new', answers: {}, unassigned: '', timeMs: 0 };
+    return addPhotoToScript(s, file);
+  }
+
   function setProgress(frac, text) {
     $('progressBar').style.width = Math.round(Math.max(0, Math.min(1, frac)) * 100) + '%';
     if (text !== undefined) $('progressText').textContent = text;
@@ -375,8 +397,8 @@ Keywords:
           try {
             const blob = await ST.getBlob(p.id);
             if (!blob) throw new Error('page image is missing (reload the file)');
-            const canvas = await O.blobToCanvas(blob, p.rotation, 3200);
-            const pc = P.processCanvas(canvas, state.settings.pp);
+            const canvas = await O.blobToCanvas(blob, p.rotation, O.LIMITS.process);
+            const pc = P.processCanvas(canvas, Object.assign({}, state.settings.pp, { maxSide: Math.min(state.settings.pp.maxSide || 2600, O.LIMITS.ppMaxSide) }));
             const pb = await O.canvasToBlob(pc, 'image/jpeg', 0.85);
             dropUrl(p.id + ':proc');
             await ST.putBlob(p.id + ':proc', pb);
@@ -475,12 +497,14 @@ Keywords:
         if (s.status === 'review') s.status = 'new';
         save(); renderScripts();
       } }));
+      const addPhoto = el('label', { class: 'btn small', title: 'Photograph another page with the camera' }, '📷 + page', el('input', { type: 'file', accept: 'image/*', capture: 'environment', onchange: e => { const f = e.target.files[0]; e.target.value = ''; addPhotoToScript(s, f); } }));
       const t = s.status === 'review' || s.status === 'confirmed' ? scriptTotals(s) : null;
       box.append(el('div', { class: 'script-card' },
         el('div', { class: 'row spread' },
           el('div', { class: 'row' }, el('strong', { text: '#' + (si + 1) }), nameInput, statusBadge(s),
             t ? el('span', { class: 'small muted', text: 'Total ' + fmtMark(t.final) + ' / ' + fmtMark(t.max) }) : null),
           el('div', { class: 'row' },
+            s.status !== 'confirmed' ? addPhoto : null,
             s.status !== 'confirmed' ? addPages : null,
             el('button', { class: 'btn small primary', disabled: busy || s.status === 'confirmed', onclick: () => processScripts([s], s.status === 'review') }, s.status === 'review' ? 'Re-run OCR' : 'Run OCR & score'),
             s.status === 'review' || s.status === 'confirmed' ? el('button', { class: 'btn small', onclick: () => { state.selectedId = s.id; switchTab('review'); } }, 'Review →') : null,
@@ -1296,6 +1320,8 @@ Keywords:
     ['dragleave', 'drop'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.remove('drag'); }));
     dz.addEventListener('drop', e => addFiles(e.dataTransfer.files));
     $('demoBtn').addEventListener('click', addDemoScript);
+    $('cameraInput').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; newCameraScript(f); });
+    if (O.LOW_MEMORY) document.documentElement.classList.add('touch');
     $('processAllBtn').addEventListener('click', () => {
       const todo = state.scripts.filter(s => s.status === 'new' || s.status === 'processing');
       if (!todo.length) { toast('Nothing pending. Use "Re-run OCR" on a script to process it again.'); return; }

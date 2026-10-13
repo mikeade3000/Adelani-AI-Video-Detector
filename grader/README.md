@@ -35,6 +35,17 @@ It also works on GitHub Pages: open `/grader/` on the Pages site. After the firs
 
 Quick start: **Rubric** → *Load sample*, then **Scripts** → *Add demo script* → *Run OCR & score*, then **Review**.
 
+## Phones and tablets
+
+The same app runs on Android (Chrome) and iPhone/iPad (Safari 16.4+), but it has to be opened from a web address, such as GitHub Pages. A phone can't serve a local folder.
+
+1. Enable GitHub Pages: **Settings → Pages → Source: Deploy from a branch**, pick the branch, folder **/ (root)**, then **Save**.
+2. On the phone, open `https://<user>.github.io/Adelani-AI-Video-Detector/grader/`. Then choose **Add to Home Screen** (Safari: Share menu; Chrome: ⋮ menu) to install it like an app.
+3. In **Settings**, tap **Pre-load offline OCR model** once while online. After that it works with no connection.
+4. Tap **📷 Photograph a script** for page 1, then **📷 + page** on the script card for each further page.
+
+On touch or low-memory devices the app automatically works on smaller images (about 2,200 px). This avoids crashes on 12-megapixel photos. Layouts are single-column with large touch targets.
+
 ## Tests
 
 ```bash

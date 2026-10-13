@@ -91,8 +91,8 @@ button.btn, label.btn {
   font: inherit; font-weight: 600; font-size: .9rem; cursor: pointer; white-space: nowrap;
 }
 button.btn:hover, label.btn:hover { background: var(--surface-2); }
-button.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-button.btn.primary:hover { filter: brightness(1.08); }
+button.btn.primary, label.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.btn.primary:hover, label.btn.primary:hover { filter: brightness(1.08); }
 button.btn.danger { color: var(--red); }
 button.btn.small, label.btn.small { padding: 4px 9px; font-size: .8rem; }
 button.btn:disabled { opacity: .55; cursor: not-allowed; }
@@ -206,3 +206,40 @@ svg.plot .loa { stroke: var(--red); stroke-dasharray: 5 4; }
   section.tab.active { display: block !important; }
   .card { box-shadow: none; }
 }
+
+/* ---------- phones & touch screens */
+body { padding-bottom: env(safe-area-inset-bottom); -webkit-text-size-adjust: 100%; }
+@media (pointer: coarse) {
+  button.btn, label.btn { min-height: 42px; padding: 8px 14px; }
+  button.btn.small, label.btn.small { min-height: 38px; padding: 6px 11px; font-size: .85rem; }
+  nav.tabs button { padding: 12px 12px; }
+  input[type=checkbox] { width: 20px; height: 20px; }
+  input[type=range] { height: 32px; }
+}
+@media (max-width: 700px) {
+  /* 16px stops iOS Safari zooming into fields on focus */
+  input[type=text], input[type=number], input[type=password], select, textarea { font-size: 16px; }
+  .top-inner { padding: 8px 12px; gap: 6px; }
+  .brand span, #netBadge { display: none; }
+  #privacyBadge { font-size: .72rem; white-space: normal; }
+  nav.tabs { padding: 0 6px; }
+  .grid2 { grid-template-columns: 1fr; }
+  .script-bar { flex-direction: column; align-items: stretch; }
+  .script-bar > .row { justify-content: space-between; }
+  .script-bar select { flex: 1; min-width: 0; }
+  .totals { justify-content: space-between; gap: 10px; }
+  .totals .big { font-size: 1.25rem; }
+  .viewer .stage { max-height: 45vh; }
+  .page-tile { width: calc(50% - 5px); }
+  .page-tile img { height: 160px; }
+  .script-card .row input[type=text] { width: 9em; }
+  .qcard { padding: 10px; }
+  .qcard textarea { min-height: 9em; }
+  .mark-box input { width: 90px; }
+  .dropzone { padding: 14px 10px; }
+  table.data { font-size: .8rem; }
+  .modal { padding: 6px; }
+}
+
+#groupMode { max-width: 100%; }
+@media (max-width: 700px) { .dropzone label.small { display: flex; flex-direction: column; gap: 4px; width: 100%; } #groupMode { width: 100%; } }

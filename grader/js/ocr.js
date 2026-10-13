@@ -26,6 +26,18 @@
     lang: 'vendor/lang'
   };
 
+  // Phones and low-memory devices get smaller working images to avoid crashes.
+  var LOW_MEMORY = (function () {
+    try {
+      var coarse = root.matchMedia && root.matchMedia('(pointer: coarse)').matches;
+      var mem = root.navigator && root.navigator.deviceMemory;
+      return !!(coarse || (mem && mem <= 4));
+    } catch (e) { return false; }
+  })();
+  var LIMITS = LOW_MEMORY
+    ? { store: 2200, process: 2200, pdfWidth: 1700, ppMaxSide: 2000 }
+    : { store: 3000, process: 3200, pdfWidth: 2400, ppMaxSide: 2600 };
+
   var loaded = {};
   var usingLocal = {};
 
@@ -80,7 +92,7 @@
         (function (n) {
           chain = chain.then(function () { return pdf.getPage(n); }).then(function (page) {
             var vp1 = page.getViewport({ scale: 1 });
-            var scale = Math.min(200 / 72, 2400 / vp1.width);
+            var scale = Math.min(200 / 72, LIMITS.pdfWidth / vp1.width);
             var vp = page.getViewport({ scale: scale });
             var c = document.createElement('canvas');
             c.width = Math.round(vp.width); c.height = Math.round(vp.height);
@@ -101,7 +113,7 @@
 
   /** Image file → normalised JPEG blob (EXIF orientation applied, ≤ 3000 px). */
   function normaliseImage(file) {
-    return blobToCanvas(file, 0, 3000).then(function (c) { return canvasToBlob(c, 'image/jpeg', 0.92); });
+    return blobToCanvas(file, 0, LIMITS.store).then(function (c) { return canvasToBlob(c, 'image/jpeg', 0.92); });
   }
 
   function blobToCanvas(blob, rotation, maxSide) {
@@ -241,6 +253,8 @@
     canvasToBlob: canvasToBlob,
     getTesseract: getTesseract,
     recognize: recognize,
-    engineStatus: engineStatus
+    engineStatus: engineStatus,
+    LOW_MEMORY: LOW_MEMORY,
+    LIMITS: LIMITS
   };
 })(typeof self !== 'undefined' ? self : this);
