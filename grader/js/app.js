@@ -96,6 +96,7 @@ Keywords:
   state.cerPairs = state.cerPairs || [];
 
   let apiKey = ST.getPref('ocrspaceKey', '') || '';
+  let claudeKey = ST.getPref('claudeKey', '') || '';
   let rubric = { questions: [], errors: [], warnings: [] };
   let subsMap = {};
   let vocab = {};
@@ -284,19 +285,22 @@ Keywords:
 
   function renderPrivacy() {
     const b = $('privacyBadge');
-    if (state.settings.engine === 'tesseract') {
+    const e = state.settings.engine;
+    if (e === 'tesseract') {
       b.className = 'badge green';
       b.textContent = '● Offline OCR · scripts stay on this device';
     } else {
+      const dest = e === 'claude' ? 'Anthropic (Claude)' : e === 'ocrspace' ? 'OCR.space' : [claudeKey && 'Anthropic', apiKey && 'OCR.space'].filter(Boolean).join(' + ') || 'cloud OCR';
       b.className = 'badge amber';
-      b.textContent = '● Cloud OCR on · page images are sent to OCR.space';
+      b.textContent = '● Cloud OCR on · page images are sent to ' + dest;
     }
     const n = $('netBadge');
     n.className = 'badge ' + (navigator.onLine ? 'grey' : 'blue');
     n.textContent = navigator.onLine ? 'online' : 'offline';
-    $('engineLabel').textContent = 'Engine: ' + { tesseract: 'Tesseract.js (offline)', ocrspace: 'OCR.space (cloud)', best: 'best of Tesseract.js + OCR.space' }[state.settings.engine] +
+    $('engineLabel').textContent = 'Engine: ' + { tesseract: 'Tesseract.js (offline)', claude: 'AI handwriting reader (Claude, cloud)', ocrspace: 'OCR.space (cloud)', best: 'best of Tesseract.js + configured cloud engines' }[state.settings.engine] +
       (state.settings.pp.enabled ? ' · handwriting boost on' : ' · preprocessing off');
-    $('cloudFields').classList.toggle('hidden', state.settings.engine === 'tesseract');
+    $('cloudFields').classList.toggle('hidden', !['ocrspace', 'best'].includes(state.settings.engine));
+    $('claudeFields').classList.toggle('hidden', !['claude', 'best'].includes(state.settings.engine));
   }
 
   // ------------------------------------------------------------ uploads
@@ -376,7 +380,10 @@ Keywords:
   async function processScripts(list, force) {
     if (busy) return;
     if (rubric.errors.length || !rubric.questions.length) { toast('Fix the rubric first (tab 1).'); switchTab('rubric'); return; }
-    if (state.settings.engine !== 'tesseract' && !apiKey) { toast('Enter an OCR.space API key in Settings, or switch to Tesseract.js.'); switchTab('settings'); return; }
+    const eng = state.settings.engine;
+    if (eng === 'ocrspace' && !apiKey) { toast('Enter an OCR.space API key in Settings, or switch engine.'); switchTab('settings'); return; }
+    if (eng === 'claude' && !claudeKey) { toast('Enter an Anthropic API key in Settings for the AI handwriting reader.'); switchTab('settings'); return; }
+    if (eng === 'best' && !apiKey && !claudeKey) { toast('Best-of mode needs at least one cloud key (Anthropic or OCR.space) in Settings.'); switchTab('settings'); return; }
     busy = true;
     stopRequested = false;
     $('stopBtn').disabled = false;
@@ -406,6 +413,8 @@ Keywords:
             const res = await O.recognize(pc, {
               mode: state.settings.engine,
               apiKey: apiKey,
+              claudeKey: claudeKey,
+              original: canvas,
               ocrSpaceEngine: state.settings.ocrSpaceEngine,
               score: t => G.dictionaryRatio(t, vocab, subsMap),
               onProgress: m => {
@@ -473,7 +482,7 @@ Keywords:
         const sel = el('select', { 'aria-label': 'Question for this page', disabled: s.status === 'confirmed', onchange: e => { p.assign = e.target.value; if (s.status === 'review') { compileScript(s); toast('Answers rebuilt from OCR text.'); } save(); } },
           qOpts.map(([v, t]) => el('option', { value: v, text: t, selected: p.assign === v })));
         const ocrInfo = p.ocr
-          ? el('span', { class: 'badge ' + (p.ocr.dictRatio >= 0.75 ? 'green' : p.ocr.dictRatio >= 0.5 ? 'amber' : 'red'), title: 'Share of recognisable words', text: (p.ocr.engine === 'ocrspace' ? 'OCR.space' : 'Tesseract') + ' · ' + pct(p.ocr.dictRatio, 0) })
+          ? el('span', { class: 'badge ' + (p.ocr.dictRatio >= 0.75 ? 'green' : p.ocr.dictRatio >= 0.5 ? 'amber' : 'red'), title: 'Share of recognisable words', text: ({ ocrspace: 'OCR.space', claude: 'AI reader', tesseract: 'Tesseract' }[p.ocr.engine] || p.ocr.engine) + ' · ' + pct(p.ocr.dictRatio, 0) })
           : p.error ? el('span', { class: 'badge red', title: p.error, text: 'error' }) : el('span', { class: 'badge grey', text: 'no OCR yet' });
         pages.append(el('div', { class: 'page-tile' }, img,
           el('div', { class: 'meta' },
@@ -1184,12 +1193,14 @@ Keywords:
     ['setStop', 'removeStopwords', 'bool'], ['setStem', 'stem', 'bool'], ['setPass', 'passPct', 'num'], ['setBand', 'bandPct', 'num'],
     ['setSeg', 'segMode', 'str'], ['setSubs', 'subs', 'str'], ['setEngine', 'engine', 'str'], ['setOcrEngine', 'ocrSpaceEngine', 'str']
   ];
-  const ppBindings = [['ppEnabled', 'enabled', 'bool'], ['ppMedian', 'median', 'num'], ['ppContrast', 'contrast', 'num'], ['ppSharpen', 'sharpen', 'num'], ['ppBinarize', 'binarize', 'str'], ['ppClosing', 'closing', 'num']];
+  const ppBindings = [['ppEnabled', 'enabled', 'bool'], ['ppInk', 'inkOnly', 'bool'], ['ppLines', 'removeLines', 'bool'], ['ppMedian', 'median', 'num'], ['ppContrast', 'contrast', 'num'], ['ppSharpen', 'sharpen', 'num'], ['ppBinarize', 'binarize', 'str'], ['ppClosing', 'closing', 'num']];
 
   function loadSettingsUI() {
     bindings.forEach(([id, k, t]) => { const n = $(id); if (t === 'bool') n.checked = !!state.settings[k]; else n.value = state.settings[k]; });
     ppBindings.forEach(([id, k, t]) => { const n = $(id); if (t === 'bool') n.checked = !!state.settings.pp[k]; else n.value = state.settings.pp[k]; });
     $('setKey').value = apiKey;
+    $('setClaudeKey').value = claudeKey;
+    $('setClaudeRemember').checked = ST.getPref('claudeKey', null) !== null;
     $('setRemember').checked = ST.getPref('ocrspaceKey', null) !== null;
     $('ppContrastV').textContent = fmt(state.settings.pp.contrast);
     $('ppSharpenV').textContent = fmt(state.settings.pp.sharpen, 1);
@@ -1224,6 +1235,12 @@ Keywords:
       if ($('setRemember').checked) ST.setPref('ocrspaceKey', apiKey);
     });
     $('setRemember').addEventListener('change', e => ST.setPref('ocrspaceKey', e.target.checked ? apiKey : null));
+    $('setClaudeKey').addEventListener('change', e => {
+      claudeKey = e.target.value.trim();
+      renderPrivacy();
+      if ($('setClaudeRemember').checked) ST.setPref('claudeKey', claudeKey);
+    });
+    $('setClaudeRemember').addEventListener('change', e => ST.setPref('claudeKey', e.target.checked ? claudeKey : null));
     $('resetSettings').addEventListener('click', () => {
       if (!confirm('Restore all scoring, OCR and preprocessing settings to their defaults?')) return;
       state.settings = clone(DEFAULT_SETTINGS);

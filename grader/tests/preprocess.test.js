@@ -62,3 +62,20 @@ test('full pipeline keeps dimensions', () => {
   const out = P.processGray(page(w, h), w, h, { binarize: 'adaptive' });
   assert.strictEqual(out.length, w * h);
 });
+
+test('ink-only greyscale fades pale blue rules but keeps dark ink', () => {
+  // paper, pale-blue rule, dark-blue ink
+  const rgba = new Uint8ClampedArray([245, 243, 236, 255, 150, 180, 225, 255, 27, 42, 110, 255]);
+  const g = P.inkGray(rgba, 3, 1);
+  assert.ok(g[1] > 215, 'rule should be near paper: ' + g[1]);
+  assert.ok(g[2] < 120, 'ink should stay dark: ' + g[2]);
+});
+
+test('horizontal rule removal keeps strokes that cross the line', () => {
+  const w = 200, h = 9, g = new Uint8ClampedArray(w * h).fill(255);
+  for (let x = 0; x < w; x++) g[4 * w + x] = 0;            // ruled line
+  for (let y = 0; y < h; y++) g[y * w + 100] = 0;          // vertical stroke crossing it
+  const out = P.removeHorizontalLines(g, w, h);
+  assert.strictEqual(out[4 * w + 20], 255);
+  assert.strictEqual(out[4 * w + 100], 0);
+});

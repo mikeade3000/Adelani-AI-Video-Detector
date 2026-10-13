@@ -15,12 +15,14 @@
   var CDN = {
     pdf: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
     pdfWorker: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
-    tesseract: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js'
+    tesseract: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
+    anthropic: null // bundled only (vendor/anthropic), no CDN build exists
   };
   var LOCAL = {
     pdf: 'vendor/pdfjs/pdf.min.js',
     pdfWorker: 'vendor/pdfjs/pdf.worker.min.js',
     tesseract: 'vendor/tesseract/tesseract.min.js',
+    anthropic: 'vendor/anthropic/anthropic-sdk.min.js',
     tesseractWorker: 'vendor/tesseract/worker.min.js',
     core: 'vendor/tesseract-core',
     lang: 'vendor/lang'
@@ -57,7 +59,7 @@
   function loadLib(name, globalName) {
     if (loaded[name]) return loaded[name];
     loaded[name] = loadScript(LOCAL[name]).then(function () { usingLocal[name] = true; })
-      .catch(function () { return loadScript(CDN[name]).then(function () { usingLocal[name] = false; }); })
+      .catch(function (e) { if (!CDN[name]) throw e; return loadScript(CDN[name]).then(function () { usingLocal[name] = false; }); })
       .then(function () {
         if (!root[globalName]) throw new Error(globalName + ' failed to initialise');
         return root[globalName];
@@ -218,6 +220,65 @@
     });
   }
 
+  // ------------------------------------------------------------ Claude (AI handwriting reader)
+
+  var CLAUDE_MODEL = 'claude-opus-5-5';
+  var CLAUDE_SYSTEM = [
+    'You transcribe photographed or scanned handwritten examination answers for a marking tool.',
+    'Write out exactly what the student wrote, line by line, in reading order.',
+    'Keep the student\'s own wording, spelling, grammar and punctuation. Do not correct, complete, summarise or improve anything: the transcription is used for marking, so errors must stay as written.',
+    'Keep question labels such as "Q1", "Question 2" or "2(a)" at the start of the line where they appear.',
+    'Leave out words the student crossed out. Where a word cannot be read, write [illegible].',
+    'Output only the transcription, with no commentary, headings or formatting.'
+  ].join('\n');
+
+  function canvasToBase64Jpeg(canvas, maxSide) {
+    var c = canvas;
+    var s = Math.min(1, maxSide / Math.max(canvas.width, canvas.height));
+    if (s < 1) {
+      c = document.createElement('canvas');
+      c.width = Math.round(canvas.width * s); c.height = Math.round(canvas.height * s);
+      c.getContext('2d').drawImage(canvas, 0, 0, c.width, c.height);
+    }
+    return c.toDataURL('image/jpeg', 0.88).split(',')[1];
+  }
+
+  function claudeRecognize(canvas, key) {
+    if (!key) return Promise.reject(new Error('the AI handwriting reader needs an Anthropic API key (Settings → OCR engine).'));
+    if (!navigator.onLine) return Promise.reject(new Error('the AI handwriting reader is unavailable offline.'));
+    return loadLib('anthropic', 'AnthropicSDK').then(function (Anthropic) {
+      // The key is the examiner's own and stays in this browser; requests go straight to the Claude API.
+      var client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true, maxRetries: 2 });
+      return client.beta.messages.create({
+        model: CLAUDE_MODEL,
+        max_tokens: 16000,
+        betas: ['server-side-fallback-2026-07-01'],
+        fallbacks: 'default',
+        output_config: { effort: 'medium' },
+        system: CLAUDE_SYSTEM,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: canvasToBase64Jpeg(canvas, 2000) } },
+            { type: 'text', text: 'Transcribe the handwriting on this page.' }
+          ]
+        }]
+      }).then(function (resp) {
+        if (resp.stop_reason === 'refusal') throw new Error('the AI reader declined this page' + (resp.stop_details && resp.stop_details.category ? ' (' + resp.stop_details.category + ')' : '') + '.');
+        var text = resp.content.filter(function (b) { return b.type === 'text'; }).map(function (b) { return b.text; }).join('\n').trim();
+        if (resp.stop_reason === 'max_tokens') text += '\n[transcription cut off]';
+        return { engine: 'claude', text: text, confidence: null };
+      }).catch(function (e) {
+        if (e instanceof Anthropic.AuthenticationError) throw new Error('the Anthropic API key was rejected. Check it in Settings.');
+        if (e instanceof Anthropic.PermissionDeniedError) throw new Error('this API key may not use ' + CLAUDE_MODEL + '.');
+        if (e instanceof Anthropic.RateLimitError) throw new Error('the Claude API rate limit was reached. Wait a minute and re-run.');
+        if (e instanceof Anthropic.APIConnectionError) throw new Error('could not reach the Claude API. Check the connection.');
+        if (e instanceof Anthropic.APIError) throw new Error('Claude API error ' + (e.status || '') + ': ' + e.message);
+        throw e;
+      });
+    });
+  }
+
   // ------------------------------------------------------------ dispatcher
 
   /**
@@ -229,12 +290,15 @@
     var mode = opts.mode || 'tesseract';
     var tasks = [];
     if (mode === 'tesseract' || mode === 'best') tasks.push(tesseractRecognize(canvas, opts.onProgress).catch(function (e) { return { engine: 'tesseract', error: e.message }; }));
-    if (mode === 'ocrspace' || mode === 'best') tasks.push(ocrSpaceRecognize(canvas, opts.apiKey, opts.ocrSpaceEngine).catch(function (e) { return { engine: 'ocrspace', error: e.message }; }));
+    if (mode === 'ocrspace' || (mode === 'best' && opts.apiKey)) tasks.push(ocrSpaceRecognize(canvas, opts.apiKey, opts.ocrSpaceEngine).catch(function (e) { return { engine: 'ocrspace', error: e.message }; }));
+    // The AI reader gets the original colour image: binarisation only removes cues it can use.
+    if (mode === 'claude' || (mode === 'best' && opts.claudeKey)) tasks.push(claudeRecognize(opts.original || canvas, opts.claudeKey).catch(function (e) { return { engine: 'claude', error: e.message }; }));
     return Promise.all(tasks).then(function (results) {
       results.forEach(function (r) { if (!r.error) r.dictRatio = opts.score(r.text); });
       var ok = results.filter(function (r) { return !r.error; });
       if (!ok.length) throw new Error(results.map(function (r) { return r.engine + ': ' + r.error; }).join(' · '));
-      ok.sort(function (a, b) { return b.dictRatio - a.dictRatio; });
+      // Prefer the AI transcription in best-of mode unless it is clearly worse.
+      ok.sort(function (a, b) { return (b.dictRatio + (b.engine === 'claude' ? 0.1 : 0)) - (a.dictRatio + (a.engine === 'claude' ? 0.1 : 0)); });
       return { chosen: ok[0], candidates: results };
     });
   }
@@ -255,6 +319,7 @@
     recognize: recognize,
     engineStatus: engineStatus,
     LOW_MEMORY: LOW_MEMORY,
+    CLAUDE_MODEL: CLAUDE_MODEL,
     LIMITS: LIMITS
   };
 })(typeof self !== 'undefined' ? self : this);

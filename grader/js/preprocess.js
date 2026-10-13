@@ -14,6 +14,8 @@
     median: 1,        // filter radius: 0 (off), 1 (3×3), 2 (5×5)
     contrast: 0.8,    // 0..1 strength of percentile contrast stretch
     sharpen: 0.6,     // 0..2 unsharp-mask amount
+    inkOnly: true,    // brightest RGB channel: fades coloured ruled lines/margins, keeps dark ink
+    removeLines: true, // erase long horizontal rules (after binarisation)
     binarize: 'off',  // 'off' | 'otsu' | 'adaptive'
     adaptiveK: 0.12,  // adaptive threshold offset (fraction of local mean)
     closing: 1,       // closing iterations (only after binarisation)
@@ -27,6 +29,39 @@
       g[i] = (rgba[p] * 299 + rgba[p + 1] * 587 + rgba[p + 2] * 114) / 1000;
     }
     return g;
+  }
+
+  // Brightest channel per pixel. Pale blue/red printed rules become near-white,
+  // while blue or black pen ink (dark in every channel) stays dark.
+  function inkGray(rgba, w, h) {
+    var g = new Uint8ClampedArray(w * h);
+    for (var i = 0, p = 0; i < g.length; i++, p += 4) {
+      var r = rgba[p], gg = rgba[p + 1], b = rgba[p + 2];
+      g[i] = r > gg ? (r > b ? r : b) : (gg > b ? gg : b);
+    }
+    return g;
+  }
+
+  /** Erase horizontal ink runs much longer than any letter (ruled lines, underlines). */
+  function removeHorizontalLines(g, w, h, minLen) {
+    var out = new Uint8ClampedArray(g);
+    minLen = minLen || Math.max(40, Math.round(w / 8));
+    for (var y = 0; y < h; y++) {
+      var x = 0;
+      while (x < w) {
+        if (g[y * w + x] !== 0) { x++; continue; }
+        var s = x;
+        while (x < w && g[y * w + x] === 0) x++;
+        if (x - s >= minLen) {
+          for (var k = s; k < x; k++) {
+            // keep pixels where a stroke crosses the line vertically
+            var up = y > 1 ? g[(y - 2) * w + k] : 255, dn = y < h - 2 ? g[(y + 2) * w + k] : 255;
+            if (up !== 0 || dn !== 0) out[y * w + k] = 255;
+          }
+        }
+      }
+    }
+    return out;
   }
 
   function median(g, w, h, r) {
@@ -185,6 +220,7 @@
     g = sharpen(g, w, h, +o.sharpen);
     if (o.binarize === 'otsu') g = binarizeOtsu(g);
     else if (o.binarize === 'adaptive') g = binarizeAdaptive(g, w, h, +o.adaptiveK);
+    if (o.binarize !== 'off' && o.removeLines) g = removeHorizontalLines(g, w, h);
     if (o.binarize !== 'off' && o.closing > 0) g = closeInk(g, w, h, o.closing | 0);
     return g;
   }
@@ -206,7 +242,7 @@
     ctx.drawImage(src, 0, 0, W, H);
     if (!o.enabled) return c;
     var img = ctx.getImageData(0, 0, W, H);
-    var g = processGray(toGray(img.data, W, H), W, H, o);
+    var g = processGray(o.inkOnly ? inkGray(img.data, W, H) : toGray(img.data, W, H), W, H, o);
     for (var i = 0, p = 0; i < g.length; i++, p += 4) {
       img.data[p] = img.data[p + 1] = img.data[p + 2] = g[i];
       img.data[p + 3] = 255;
@@ -216,7 +252,7 @@
   }
 
   var api = {
-    DEFAULTS: DEFAULTS, toGray: toGray, median: median, contrastStretch: contrastStretch,
+    DEFAULTS: DEFAULTS, toGray: toGray, inkGray: inkGray, removeHorizontalLines: removeHorizontalLines, median: median, contrastStretch: contrastStretch,
     sharpen: sharpen, otsuThreshold: otsuThreshold, binarizeOtsu: binarizeOtsu,
     binarizeAdaptive: binarizeAdaptive, closeInk: closeInk, processGray: processGray,
     processCanvas: processCanvas

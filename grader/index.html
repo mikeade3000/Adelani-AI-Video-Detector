@@ -244,10 +244,17 @@
           <h2>OCR engine</h2>
           <div class="field"><span>Engine</span>
             <select id="setEngine">
-              <option value="tesseract">Tesseract.js only (offline, nothing leaves the device)</option>
+              <option value="tesseract">Tesseract.js only (offline, nothing leaves the device; printed or neat writing)</option>
+              <option value="claude">AI handwriting reader — Claude (cloud, best for cursive and joined-up writing)</option>
               <option value="ocrspace">OCR.space only (cloud, needs key)</option>
-              <option value="best">Best of two (runs both, keeps the more readable output)</option>
-            </select></div>
+              <option value="best">Best of all configured engines (keeps the most readable output)</option>
+            </select>
+            <small>Tesseract reads print and neat writing well but struggles with cursive. For real handwritten scripts, use the AI handwriting reader.</small></div>
+          <div id="claudeFields">
+            <div class="field"><span>Anthropic API key (AI handwriting reader)</span><input type="password" id="setClaudeKey" autocomplete="off" placeholder="sk-ant-…  (console.anthropic.com → API keys)" /></div>
+            <label class="check"><input type="checkbox" id="setClaudeRemember" /> Remember the key in this browser</label>
+            <div class="notice warn small">With the AI reader on, page photos are sent to Anthropic's Claude API for transcription, at roughly US$0.01–0.03 per page billed to your key. Check your institution's data-protection rules first, and only save the key on a device you control.</div>
+          </div>
           <div id="cloudFields">
             <div class="field"><span>OCR.space API key</span><input type="password" id="setKey" autocomplete="off" placeholder="Get a free key at ocr.space/ocrapi" /></div>
             <label class="check"><input type="checkbox" id="setRemember" /> Remember the key in this browser</label>
@@ -260,6 +267,8 @@
         <div class="card">
           <h2>Handwriting boost (preprocessing)</h2>
           <label class="check"><input type="checkbox" id="ppEnabled" /> Enable preprocessing</label>
+          <label class="check"><input type="checkbox" id="ppInk" /> Keep pen ink only (fades blue/red printed ruled lines and margins)</label>
+          <label class="check"><input type="checkbox" id="ppLines" /> Remove ruled lines (after binarisation)</label>
           <div class="field"><span>Median filter (speckle removal)</span><select id="ppMedian"><option value="0">off</option><option value="1">3 × 3</option><option value="2">5 × 5</option></select></div>
           <div class="field"><span>Contrast stretch <span class="muted" id="ppContrastV"></span></span><input type="range" id="ppContrast" min="0" max="1" step="0.05" /></div>
           <div class="field"><span>Sharpen <span class="muted" id="ppSharpenV"></span></span><input type="range" id="ppSharpen" min="0" max="2" step="0.1" /></div>
@@ -312,6 +321,7 @@ Keywords: firewall; filter* | block; rule* | policy</pre>
         <li>Open the app's web address in Chrome (Android) or Safari (iPhone/iPad). On Android, choose <em>⋮ → Add to Home screen / Install app</em>. On iPhone, tap <em>Share → Add to Home Screen</em>. It then opens like an ordinary app.</li>
         <li>In <strong>Settings → OCR engine</strong>, tap <em>Pre-load offline OCR model</em> once while you are online (about 7 MB). After that, marking works with no connection.</li>
         <li>Tap <em>📷 Photograph a script</em>, then <em>📷 + page</em> for more pages. Hold the phone directly above the page, in good light, with no shadow.</li>
+        <li>Cursive or joined-up writing: choose <em>AI handwriting reader</em> in Settings (needs an Anthropic API key and a connection). The offline engine is reliable only for print and neat separated letters.</li>
         <li>Phones get smaller working images to save memory. Each page takes about 10–30 seconds to read, depending on the phone.</li>
       </ul>
       <h3>Privacy and offline use</h3>

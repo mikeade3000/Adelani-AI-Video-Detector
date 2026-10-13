@@ -3,12 +3,12 @@
  * first visit, then serve them from the cache (network first for the app's
  * own HTML/JS so updates arrive when online).
  */
-const CACHE = 'hwgrader-v2';
+const CACHE = 'hwgrader-v3';
 const SHELL = [
   './', 'index.html', 'css/app.css', 'icon.svg', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',
   'js/words.js', 'js/scoring.js', 'js/stats.js', 'js/preprocess.js', 'js/ocr.js', 'js/store.js', 'js/evaluation.js', 'js/app.js',
   'vendor/pdfjs/pdf.min.js', 'vendor/pdfjs/pdf.worker.min.js',
-  'vendor/tesseract/tesseract.min.js', 'vendor/tesseract/worker.min.js'
+  'vendor/tesseract/tesseract.min.js', 'vendor/tesseract/worker.min.js', 'vendor/anthropic/anthropic-sdk.min.js'
 ];
 // Large files: cached on first use rather than at install time.
 const LAZY = /vendor\/(tesseract-core|lang)\//;
