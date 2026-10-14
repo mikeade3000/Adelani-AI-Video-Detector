@@ -9,6 +9,12 @@
  * Works in modern browsers and in Node 18+ (uses DecompressionStream).
  *
  *   const result = await CATValidator.validateDocx(arrayBuffer, fileName);
+ *
+ * Servers without DecompressionStream (e.g. Google Apps Script) unzip the
+ * file themselves and call the synchronous core directly:
+ *
+ *   const result = CATValidator.validatePackage({ names, files }, fileName, size);
+ *   // names: every entry in the ZIP; files: { 'word/document.xml': '<xml…>', … }
  *   result.accepted  -> true / false
  *   result.checks    -> [{ section, label, ok, detail }]
  *   result.data      -> extracted lecturer / course / question details
@@ -213,7 +219,24 @@
   // ---------------------------------------------------------------------------
   // Main validation
   // ---------------------------------------------------------------------------
+  // ZIP entries the checks need to read.
+  const NEEDED = n => n === 'word/document.xml' || n === '[Content_Types].xml' || /^word\/footer\d*\.xml$/.test(n);
+
   async function validateDocx(buffer, fileName) {
+    let pkg;
+    try {
+      const zip = await readZip(buffer);
+      const files = {};
+      for (const n of zip.names.filter(NEEDED)) files[n] = await zip.text(n);
+      pkg = { names: zip.names, files };
+    } catch (e) {
+      pkg = { error: e.message };
+    }
+    return validatePackage(pkg, fileName, buffer.byteLength);
+  }
+
+  // Synchronous core: pkg = { names, files } or { error }.
+  function validatePackage(pkg, fileName, size) {
     const checks = [];
     const data = {};
     const add = (section, label, ok, detail) => { checks.push({ section, label, ok: !!ok, detail: detail || '' }); return !!ok; };
@@ -221,24 +244,21 @@
 
     // ---- 1. File -----------------------------------------------------------
     const F = '1. File';
-    const size = buffer.byteLength;
     add(F, 'File is a Word .docx document', /\.docx$/i.test(fileName || ''),
       `"${fileName}" is not a .docx file. Save the template in Word as "Word Document (*.docx)" — not .doc, .pdf or .odt.`);
     if (!add(F, 'File size is within 10 MB', size > 0 && size <= TEMPLATE.maxFileBytes,
       size ? `File is ${(size / 1048576).toFixed(1)} MB; the limit is 10 MB.` : 'The file is empty.')) return result();
 
-    let zip, docXml;
-    try {
-      zip = await readZip(buffer);
-      docXml = await zip.text('word/document.xml');
-    } catch (e) {
-      add(F, 'File opens as a valid Word document', false, `The file could not be read (${e.message}). Re-save it from Word as .docx without a password.`);
+    if (pkg.error) {
+      add(F, 'File opens as a valid Word document', false, `The file could not be read (${pkg.error}). Re-save it from Word as .docx without a password.`);
       return result();
     }
+    const zip = { names: pkg.names || [], text: n => (pkg.files && pkg.files[n]) || null };
+    const docXml = zip.text('word/document.xml');
     if (!add(F, 'File opens as a valid Word document', !!docXml,
       'No Word document body found. Upload the official template saved as .docx.')) return result();
 
-    const types = (await zip.text('[Content_Types].xml')) || '';
+    const types = zip.text('[Content_Types].xml') || '';
     add(F, 'No macros embedded', !/macroEnabled|vbaProject/i.test(types) && !zip.names.some(n => /vbaProject\.bin$/i.test(n)),
       'The document contains macros (.docm). Save it as a plain .docx.');
     add(F, 'No unaccepted tracked changes', !/<w:(ins|del|moveFrom|moveTo)\b/.test(docXml),
@@ -259,7 +279,7 @@
       'Page margins were changed. Layout → Margins → Normal (2.54 cm).');
 
     let footerText = '';
-    for (const n of zip.names.filter(n => /^word\/footer\d*\.xml$/.test(n))) footerText += runText(await zip.text(n)) + '\n';
+    for (const n of zip.names.filter(n => /^word\/footer\d*\.xml$/.test(n))) footerText += runText(zip.text(n) || '') + '\n';
     add(L, `Footer form code "${TEMPLATE.formCode}" is intact`,
       norm(footerText).replace(/\s/g, '').includes(norm(TEMPLATE.formCode).replace(/\s/g, '')),
       `The footer must read "Form code: ${TEMPLATE.formCode}". It was removed or edited — use the official template.`);
@@ -441,7 +461,26 @@
     return result();
   }
 
-  const api = { validateDocx, TEMPLATE, parseDate };
+  // Exam date/time supplied on the upload form (the Word template has no time field).
+  // exam = { examDate: 'YYYY-MM-DD', startTime: 'HH:MM', endTime: 'HH:MM' }, today = 'YYYY-MM-DD'.
+  function timingChecks(data, exam, today) {
+    const out = [];
+    const add = (label, ok, detail) => out.push({ section: '7. Exam timing', label, ok: !!ok, detail });
+    const date = exam.examDate || '', start = exam.startTime || '', end = exam.endTime || '';
+    const okFmt = /^\d{4}-\d{2}-\d{2}$/.test(date) && /^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end);
+    add('Examination date and times provided', okFmt, 'Enter the examination date, start time and end time.');
+    if (okFmt) {
+      add('End time is after start time', end > start, `End time ${end} is not after start time ${start}.`);
+      add('Examination date is not in the past', date >= today, `${date} has already passed.`);
+      const sub = data.submissionDate && parseDate(data.submissionDate);
+      const subISO = sub && sub.toISOString().slice(0, 10);
+      if (subISO) add('Examination date is on or after the Date of Submission', date >= subISO,
+        `The form's Date of Submission is ${data.submissionDate}, but the exam date is ${date}.`);
+    }
+    return out;
+  }
+
+  const api = { validateDocx, validatePackage, timingChecks, TEMPLATE, parseDate };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.CATValidator = api;
 })(typeof self !== 'undefined' ? self : this);

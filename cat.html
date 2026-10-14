@@ -100,7 +100,7 @@
       <div class="actions">
         <button id="submitBtn" class="primary" type="submit">Run autocheck &amp; submit</button>
         <button class="secondary" type="reset">Clear</button>
-        <span class="hint">The file is checked in your browser; question content is never published.</span>
+        <span class="hint">Question content is never published on this page.</span>
       </div>
     </form>
   </section>
@@ -123,7 +123,7 @@
       </table>
     </div>
     <p id="schedEmpty" class="empty" hidden>No CAT examinations scheduled yet.</p>
-    <p class="note">Accepted submissions update this schedule instantly in this browser. Entries published by the
+    <p class="note" id="schedNote">Accepted submissions update this schedule instantly in this browser. Entries published by the
       administrator are loaded from <code>cat/schedule.json</code>; use “Download schedule” to publish new entries for everyone.</p>
   </section>
 </div>
@@ -132,18 +132,25 @@
 <script>
 (function () {
   'use strict';
+
+  // Paste your Google Apps Script web-app URL here (see backend/README.md).
+  // Leave empty to run without a backend: checks still work, but files are
+  // not stored and the schedule is kept only in each visitor's browser.
+  const API_URL = '';
+
   const STORE_KEY = 'kiu-cat-schedule-v1';
   const $ = id => document.getElementById(id);
   const form = $('form'), fileIn = $('file'), submitBtn = $('submitBtn');
   const resultPanel = $('resultPanel'), resultEl = $('result');
   const schedBody = $('schedBody'), schedEmpty = $('schedEmpty'), search = $('search');
 
-  let published = [];   // from cat/schedule.json (shared)
-  let local = [];       // accepted in this browser
+  let published = [];   // shared schedule (server, or cat/schedule.json)
+  let local = [];       // accepted in this browser (no-backend mode only)
   let lastAddedId = null;
 
   // ---------- storage ----------
   function loadLocal() {
+    if (API_URL) return;
     try { local = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { local = []; }
     if (!Array.isArray(local)) local = [];
   }
@@ -152,9 +159,15 @@
   }
   async function loadPublished() {
     try {
-      const res = await fetch('cat/schedule.json', { cache: 'no-store' });
-      if (res.ok) { const j = await res.json(); published = Array.isArray(j) ? j : []; }
-    } catch (e) { published = []; }
+      if (API_URL) {
+        const res = await fetch(API_URL, { cache: 'no-store' });
+        const j = await res.json();
+        if (j.ok && Array.isArray(j.schedule)) published = j.schedule;
+      } else {
+        const res = await fetch('cat/schedule.json', { cache: 'no-store' });
+        if (res.ok) { const j = await res.json(); published = Array.isArray(j) ? j : []; }
+      }
+    } catch (e) { /* keep what we have */ }
   }
   function allEntries() {
     const map = new Map();
@@ -170,43 +183,41 @@
     return n;
   };
   const todayISO = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
-  const fmtDate = iso => { const [y, m, d] = iso.split('-'); return new Date(+y, m - 1, +d).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }); };
-  const ddmmyyyyToISO = s => { const d = CATValidator.parseDate(s); return d ? d.toISOString().slice(0, 10) : null; };
-
-  // ---------- exam timing checks (the template has no time field) ----------
-  function timingChecks(data) {
-    const out = [];
-    const date = $('examDate').value, start = $('startTime').value, end = $('endTime').value;
-    const add = (label, ok, detail) => out.push({ section: '7. Exam timing', label, ok: !!ok, detail });
-    add('Examination date and times provided', date && start && end, 'Enter the examination date, start time and end time.');
-    if (date && start && end) {
-      add('End time is after start time', end > start, `End time ${end} is not after start time ${start}.`);
-      add('Examination date is not in the past', date >= todayISO(), `${fmtDate(date)} has already passed.`);
-      const sub = data.submissionDate && ddmmyyyyToISO(data.submissionDate);
-      if (sub) add('Examination date is on or after the Date of Submission', date >= sub,
-        `The form's Date of Submission is ${data.submissionDate}, but the exam date is ${fmtDate(date)}.`);
-    }
-    return out;
-  }
+  const fmtDate = iso => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+    return m ? new Date(+m[1], m[2] - 1, +m[3]).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) : (iso || '—');
+  };
+  const examInput = () => ({ examDate: $('examDate').value, startTime: $('startTime').value, endTime: $('endTime').value, venue: $('venue').value.trim() });
+  const toBase64 = file => new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(',')[1] || '');
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
 
   // ---------- result rendering ----------
-  function renderResult(file, result, entry) {
+  function banner(cls, title, small) {
+    return el('div', { className: 'banner ' + cls }, title, el('small', null, small));
+  }
+
+  function renderResult(file, checks, entry, failure) {
     resultPanel.hidden = false;
     resultEl.replaceChildren();
-    const errors = result.checks.filter(c => !c.ok);
-    if (entry) {
-      resultEl.append(el('div', { className: 'banner ok' }, '✔ ACCEPTED — your submission conforms to the template.',
-        el('small', null, `${entry.courseCode} · ${entry.courseTitle} has been added to the CAT schedule below.`)));
+    const errors = checks.filter(c => !c.ok);
+    if (failure) {
+      resultEl.append(banner('bad', '✘ NOT SUBMITTED — the submission server could not be reached.', failure));
+    } else if (entry) {
+      resultEl.append(banner('ok', '✔ ACCEPTED — your submission conforms to the template.',
+        `${entry.courseCode} · ${entry.courseTitle} ${API_URL ? 'was received and' : 'has been'} added to the CAT schedule below.`));
       const dl = el('dl', { className: 'summary' });
       [['Lecturer', entry.lecturer], ['Course', `${entry.courseCode} — ${entry.courseTitle}`],
        ['Programme', entry.programme], ['Level / Semester', `${entry.level} · Semester ${entry.semester} · ${entry.academicYear}`],
-       ['Topic', entry.topic], ['Examination', `${fmtDate(entry.examDate)}, ${entry.startTime}–${entry.endTime}${entry.venue ? ' · ' + entry.venue : ''}`],
-       ['Paper', `${entry.appear} questions appear, attempt ${entry.attempt}; Question 1 compulsory: ${entry.compulsory}`]
+       ['Examination', `${fmtDate(entry.examDate)}, ${entry.startTime}–${entry.endTime}${entry.venue ? ' · ' + entry.venue : ''}`]
       ].forEach(([k, v]) => dl.append(el('dt', null, k), el('dd', null, v)));
       resultEl.append(dl);
     } else {
-      resultEl.append(el('div', { className: 'banner bad' }, `✘ REJECTED — ${errors.length} problem${errors.length === 1 ? '' : 's'} found.`,
-        el('small', null, `"${file.name}" was not accepted. Fix the items below in the official template and upload again.`)));
+      resultEl.append(banner('bad', `✘ REJECTED — ${errors.length} problem${errors.length === 1 ? '' : 's'} found.`,
+        `"${file.name}" was not accepted. Fix the items below in the official template and upload again.`));
       const wrap = el('div', { className: 'issues' });
       const bySection = {};
       errors.forEach(e => (bySection[e.section] = bySection[e.section] || []).push(e));
@@ -216,10 +227,12 @@
       });
       resultEl.append(wrap);
     }
-    const passed = result.checks.length - errors.length;
-    resultEl.append(el('details', null, el('summary', null, `Show all ${result.checks.length} checks (${passed} passed)`),
-      el('ul', { className: 'checklist' }, result.checks.map(c =>
-        el('li', { className: c.ok ? 'pass' : 'fail' }, (c.ok ? '✔ ' : '✘ ') + c.label)))));
+    if (checks.length) {
+      const passed = checks.length - errors.length;
+      resultEl.append(el('details', null, el('summary', null, `Show all ${checks.length} checks (${passed} passed)`),
+        el('ul', { className: 'checklist' }, checks.map(c =>
+          el('li', { className: c.ok ? 'pass' : 'fail' }, (c.ok ? '✔ ' : '✘ ') + c.label)))));
+    }
     resultPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
@@ -248,6 +261,16 @@
   }
 
   // ---------- submit ----------
+  async function sendToServer(file, exam) {
+    const res = await fetch(API_URL, {
+      method: 'POST', // text/plain body: no CORS preflight, which Apps Script cannot answer
+      body: JSON.stringify(Object.assign({ fileName: file.name, fileBase64: await toBase64(file) }, exam))
+    });
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.error || 'The server returned an error.');
+    return j;
+  }
+
   form.addEventListener('submit', async ev => {
     ev.preventDefault();
     const file = fileIn.files && fileIn.files[0];
@@ -255,36 +278,46 @@
     submitBtn.disabled = true;
     submitBtn.textContent = 'Checking…';
     resultEl.replaceChildren();
+    const exam = examInput();
     try {
-      const result = await CATValidator.validateDocx(await file.arrayBuffer(), file.name);
-      result.checks.push(...timingChecks(result.data));
-      const accepted = result.checks.every(c => c.ok);
+      // Instant check in the browser first; only conforming files are sent.
+      const local = await CATValidator.validateDocx(await file.arrayBuffer(), file.name);
+      let checks = local.checks.concat(CATValidator.timingChecks(local.data, exam, todayISO()));
+      let accepted = checks.every(c => c.ok);
       let entry = null;
-      if (accepted) {
-        const d = result.data;
+      if (accepted && API_URL) {
+        submitBtn.textContent = 'Uploading…';
+        const server = await sendToServer(file, exam); // the server re-checks and stores the file
+        checks = server.checks;
+        accepted = server.accepted;
+        entry = server.entry;
+        if (entry) { lastAddedId = entry.id; await loadPublished(); renderSchedule(); }
+      } else if (accepted) {
+        const d = local.data;
         entry = {
           id: [d.courseCode, d.academicYear, d.semester].join('|').toUpperCase().replace(/\s+/g, ''),
           lecturer: d.lecturer, courseCode: d.courseCode.toUpperCase(), courseTitle: d.courseTitle,
           programme: d.programme, level: d.level, semester: d.semester, academicYear: d.academicYear,
-          school: d.school, department: d.department, topic: d.topic,
-          appear: d.appear, attempt: d.attempt, compulsory: d.compulsory, totalMarks: d.totalMarks,
-          submissionDate: d.submissionDate,
-          examDate: $('examDate').value, startTime: $('startTime').value, endTime: $('endTime').value,
-          venue: $('venue').value.trim(), fileName: file.name, acceptedAt: new Date().toISOString()
+          department: d.department, examDate: exam.examDate, startTime: exam.startTime,
+          endTime: exam.endTime, venue: exam.venue
         };
-        local = local.filter(e => e.id !== entry.id).concat(entry);
-        saveLocal();
-        lastAddedId = entry.id;
-        renderSchedule();
+        localSave(entry);
       }
-      renderResult(file, result, entry);
+      renderResult(file, checks, accepted ? entry : null);
     } catch (e) {
-      renderResult(file, { checks: [{ section: '1. File', label: 'File could be checked', ok: false, detail: e.message }] }, null);
+      renderResult(file, [], null, `Your form was not received (${e.message}). Check your internet connection and try again.`);
     } finally {
       submitBtn.disabled = false;
       submitBtn.textContent = 'Run autocheck & submit';
     }
   });
+
+  function localSave(entry) {
+    local = local.filter(e => e.id !== entry.id).concat(entry);
+    saveLocal();
+    lastAddedId = entry.id;
+    renderSchedule();
+  }
 
   $('exportBtn').addEventListener('click', () => {
     const blob = new Blob([JSON.stringify(allEntries(), null, 2)], { type: 'application/json' });
@@ -294,6 +327,10 @@
   });
   search.addEventListener('input', renderSchedule);
   $('examDate').min = todayISO();
+  if (API_URL) {
+    $('exportBtn').hidden = true;
+    $('schedNote').textContent = 'The schedule updates for everyone as soon as a submission is accepted.';
+  }
 
   loadLocal();
   renderSchedule();
