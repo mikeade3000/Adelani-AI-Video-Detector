@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KIU CAT Submission Portal</title>
+  <style>
+    :root {
+      --bg: #f0f2f5; --card: #ffffff; --ink: #222; --muted: #666; --line: #e0e0e0;
+      --blue: #007bff; --ok-bg: #d4edda; --ok: #155724; --bad-bg: #f8d7da; --bad: #721c24;
+      --warn-bg: #fff3cd; --warn: #856404; --soft: #fafafa;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: var(--bg); color: var(--ink); margin: 0; }
+    .app { background: var(--card); margin: 20px auto; padding: 20px; max-width: 1100px;
+      box-shadow: 0 4px 15px rgba(0,0,0,.1); border-radius: 10px; }
+    @media (max-width: 1140px) { .app { margin: 16px; } }
+    h1 { margin: 0 0 4px; text-align: center; }
+    .sub { text-align: center; color: var(--muted); margin: 0 0 16px; }
+    nav { text-align: center; margin-bottom: 16px; font-size: .9rem; }
+    nav a { color: var(--blue); }
+    .panel { background: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-bottom: 18px; }
+    .panel h2 { font-size: 1.05rem; margin: 0 0 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    label { display: block; font-weight: 600; font-size: .85rem; margin-bottom: 4px; color: #444; }
+    input[type=date], input[type=time], input[type=text], input[type=search] {
+      width: 100%; padding: 7px 8px; border: 1px solid #ccc; border-radius: 6px; font: inherit; }
+    input[type=file] { max-width: 100%; }
+    button { padding: 9px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: .9rem; }
+    button.primary { background: var(--blue); color: #fff; }
+    button.primary:disabled { opacity: .6; cursor: not-allowed; }
+    button.secondary { background: #e2e6ea; color: #333; }
+    .actions { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .hint { font-size: .8rem; color: var(--muted); }
+    ul.req { margin: 6px 0 0; padding-left: 20px; font-size: .9rem; }
+    ul.req li { margin-bottom: 3px; }
+    .banner { padding: 12px 14px; border-radius: 8px; font-weight: 700; margin-bottom: 10px; }
+    .banner.ok { background: var(--ok-bg); color: var(--ok); }
+    .banner.bad { background: var(--bad-bg); color: var(--bad); }
+    .banner small { display: block; font-weight: 400; margin-top: 4px; }
+    .issues h3 { font-size: .9rem; margin: 12px 0 4px; }
+    .issues ol { margin: 0; padding-left: 22px; }
+    .issues li { margin-bottom: 6px; font-size: .9rem; }
+    .issues li .fix { color: #444; display: block; font-size: .85rem; }
+    details { margin-top: 10px; font-size: .85rem; }
+    .checklist { list-style: none; padding: 0; margin: 6px 0 0; columns: 2 320px; }
+    .checklist li { padding: 2px 0; break-inside: avoid; }
+    .pass { color: var(--ok); } .fail { color: var(--bad); }
+    .summary { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; font-size: .9rem; margin-top: 8px; }
+    .summary dt { font-weight: 600; color: #555; }
+    .summary dd { margin: 0; }
+    .table-wrap { overflow-x: auto; }
+    table.sched { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    table.sched th, table.sched td { text-align: left; padding: 7px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+    table.sched th { background: #eef1f4; position: sticky; top: 0; }
+    tr.flash { animation: flash 2.5s ease; }
+    @keyframes flash { from { background: #fff3a0; } to { background: transparent; } }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .75rem; font-weight: 600; white-space: nowrap; }
+    .pill.up { background: #d1ecf1; color: #0c5460; } .pill.today { background: var(--warn-bg); color: var(--warn); }
+    .pill.past { background: #e2e3e5; color: #383d41; }
+    .empty { color: var(--muted); font-style: italic; padding: 10px 0; }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+    .toolbar input { max-width: 320px; }
+    .note { background: var(--warn-bg); border: 1px solid #ffeeba; color: var(--warn); padding: 8px 12px; border-radius: 6px; font-size: .8rem; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <h1>KIU CAT Submission Portal</h1>
+  <p class="sub">Kampala International University · Continuous Assessment Test (CAT) question submissions</p>
+  <nav><a href="index.html">← AI Video / Clip Detector</a></nav>
+
+  <section class="panel">
+    <h2>Before you upload</h2>
+    <p style="margin:0;font-size:.9rem">Your file is checked automatically against the official
+      <strong>CAT Question Submission Form (form code CAT-GEN-v 1)</strong>. It is accepted only if it matches the template exactly:</p>
+    <ul class="req">
+      <li>Saved as a Word <strong>.docx</strong> file (not .doc / .pdf), under 10 MB, with no tracked changes or macros.</li>
+      <li>A4 portrait, normal margins, footer "Form code: CAT-GEN-v 1" untouched.</li>
+      <li>All headings, the Instructions and the Note are unchanged; no paragraphs or tables added or removed.</li>
+      <li>Section A: all 10 rows filled (course code like <em>CYB 3201</em>, year like <em>2026/2027</em>, date as <em>DD-MM-YYYY</em>).</li>
+      <li>Section B: topic, number to appear (1–5), number to attempt (≤ number to appear), compulsory Yes/No. Topic must match the Section C heading.</li>
+      <li>Section C: exactly 5 questions numbered 1–5, each with a stem, parts (a), (b)… each ending "(N marks)", a "Screenshots:" line, and part marks that add up to the Marks column.</li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2>1. Upload your CAT form</h2>
+    <form id="form">
+      <div class="grid">
+        <div style="grid-column: 1 / -1">
+          <label for="file">Completed CAT form (.docx)</label>
+          <input id="file" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required />
+        </div>
+        <div><label for="examDate">Examination date</label><input id="examDate" type="date" required /></div>
+        <div><label for="startTime">Start time</label><input id="startTime" type="time" required /></div>
+        <div><label for="endTime">End time</label><input id="endTime" type="time" required /></div>
+        <div><label for="venue">Venue (optional)</label><input id="venue" type="text" maxlength="80" placeholder="e.g. Computer Lab 2" /></div>
+      </div>
+      <div class="actions">
+        <button id="submitBtn" class="primary" type="submit">Run autocheck &amp; submit</button>
+        <button class="secondary" type="reset">Clear</button>
+        <span class="hint">The file is checked in your browser; question content is never published.</span>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel" id="resultPanel" hidden>
+    <h2>2. Autocheck result</h2>
+    <div id="result" aria-live="polite"></div>
+  </section>
+
+  <section class="panel">
+    <h2>3. CAT examination schedule</h2>
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="Search lecturer, course code or title…" aria-label="Search schedule" />
+      <button id="exportBtn" class="secondary" type="button">Download schedule (JSON)</button>
+    </div>
+    <div class="table-wrap">
+      <table class="sched">
+        <thead><tr><th>Status</th><th>Date</th><th>Time</th><th>Course</th><th>Course title</th><th>Lecturer</th><th>Programme / Level</th><th>Venue</th></tr></thead>
+        <tbody id="schedBody"></tbody>
+      </table>
+    </div>
+    <p id="schedEmpty" class="empty" hidden>No CAT examinations scheduled yet.</p>
+    <p class="note">Accepted submissions update this schedule instantly in this browser. Entries published by the
+      administrator are loaded from <code>cat/schedule.json</code>; use “Download schedule” to publish new entries for everyone.</p>
+  </section>
+</div>
+
+<script src="cat/validator.js"></script>
+<script>
+(function () {
+  'use strict';
+  const STORE_KEY = 'kiu-cat-schedule-v1';
+  const $ = id => document.getElementById(id);
+  const form = $('form'), fileIn = $('file'), submitBtn = $('submitBtn');
+  const resultPanel = $('resultPanel'), resultEl = $('result');
+  const schedBody = $('schedBody'), schedEmpty = $('schedEmpty'), search = $('search');
+
+  let published = [];   // from cat/schedule.json (shared)
+  let local = [];       // accepted in this browser
+  let lastAddedId = null;
+
+  // ---------- storage ----------
+  function loadLocal() {
+    try { local = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { local = []; }
+    if (!Array.isArray(local)) local = [];
+  }
+  function saveLocal() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(local)); } catch (e) { /* storage unavailable */ }
+  }
+  async function loadPublished() {
+    try {
+      const res = await fetch('cat/schedule.json', { cache: 'no-store' });
+      if (res.ok) { const j = await res.json(); published = Array.isArray(j) ? j : []; }
+    } catch (e) { published = []; }
+  }
+  function allEntries() {
+    const map = new Map();
+    published.forEach(e => map.set(e.id, e));
+    local.forEach(e => map.set(e.id, e)); // a newer local resubmission replaces the published one
+    return [...map.values()];
+  }
+
+  // ---------- helpers ----------
+  const el = (tag, props, ...kids) => {
+    const n = Object.assign(document.createElement(tag), props || {});
+    kids.flat().forEach(k => n.append(k instanceof Node ? k : document.createTextNode(k == null ? '' : String(k))));
+    return n;
+  };
+  const todayISO = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+  const fmtDate = iso => { const [y, m, d] = iso.split('-'); return new Date(+y, m - 1, +d).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }); };
+  const ddmmyyyyToISO = s => { const d = CATValidator.parseDate(s); return d ? d.toISOString().slice(0, 10) : null; };
+
+  // ---------- exam timing checks (the template has no time field) ----------
+  function timingChecks(data) {
+    const out = [];
+    const date = $('examDate').value, start = $('startTime').value, end = $('endTime').value;
+    const add = (label, ok, detail) => out.push({ section: '7. Exam timing', label, ok: !!ok, detail });
+    add('Examination date and times provided', date && start && end, 'Enter the examination date, start time and end time.');
+    if (date && start && end) {
+      add('End time is after start time', end > start, `End time ${end} is not after start time ${start}.`);
+      add('Examination date is not in the past', date >= todayISO(), `${fmtDate(date)} has already passed.`);
+      const sub = data.submissionDate && ddmmyyyyToISO(data.submissionDate);
+      if (sub) add('Examination date is on or after the Date of Submission', date >= sub,
+        `The form's Date of Submission is ${data.submissionDate}, but the exam date is ${fmtDate(date)}.`);
+    }
+    return out;
+  }
+
+  // ---------- result rendering ----------
+  function renderResult(file, result, entry) {
+    resultPanel.hidden = false;
+    resultEl.replaceChildren();
+    const errors = result.checks.filter(c => !c.ok);
+    if (entry) {
+      resultEl.append(el('div', { className: 'banner ok' }, '✔ ACCEPTED — your submission conforms to the template.',
+        el('small', null, `${entry.courseCode} · ${entry.courseTitle} has been added to the CAT schedule below.`)));
+      const dl = el('dl', { className: 'summary' });
+      [['Lecturer', entry.lecturer], ['Course', `${entry.courseCode} — ${entry.courseTitle}`],
+       ['Programme', entry.programme], ['Level / Semester', `${entry.level} · Semester ${entry.semester} · ${entry.academicYear}`],
+       ['Topic', entry.topic], ['Examination', `${fmtDate(entry.examDate)}, ${entry.startTime}–${entry.endTime}${entry.venue ? ' · ' + entry.venue : ''}`],
+       ['Paper', `${entry.appear} questions appear, attempt ${entry.attempt}; Question 1 compulsory: ${entry.compulsory}`]
+      ].forEach(([k, v]) => dl.append(el('dt', null, k), el('dd', null, v)));
+      resultEl.append(dl);
+    } else {
+      resultEl.append(el('div', { className: 'banner bad' }, `✘ REJECTED — ${errors.length} problem${errors.length === 1 ? '' : 's'} found.`,
+        el('small', null, `"${file.name}" was not accepted. Fix the items below in the official template and upload again.`)));
+      const wrap = el('div', { className: 'issues' });
+      const bySection = {};
+      errors.forEach(e => (bySection[e.section] = bySection[e.section] || []).push(e));
+      Object.keys(bySection).sort().forEach(sec => {
+        wrap.append(el('h3', null, sec.replace(/^\d+\.\s*/, '')),
+          el('ol', null, bySection[sec].map(e => el('li', null, el('strong', null, e.label), el('span', { className: 'fix' }, e.detail)))));
+      });
+      resultEl.append(wrap);
+    }
+    const passed = result.checks.length - errors.length;
+    resultEl.append(el('details', null, el('summary', null, `Show all ${result.checks.length} checks (${passed} passed)`),
+      el('ul', { className: 'checklist' }, result.checks.map(c =>
+        el('li', { className: c.ok ? 'pass' : 'fail' }, (c.ok ? '✔ ' : '✘ ') + c.label)))));
+    resultPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ---------- schedule rendering ----------
+  function renderSchedule() {
+    const q = search.value.trim().toLowerCase();
+    const today = todayISO();
+    const rows = allEntries()
+      .filter(e => !q || [e.lecturer, e.courseCode, e.courseTitle, e.programme, e.department].join(' ').toLowerCase().includes(q))
+      .sort((a, b) => (a.examDate + a.startTime).localeCompare(b.examDate + b.startTime));
+    schedBody.replaceChildren(...rows.map(e => {
+      const st = e.examDate === today ? ['today', 'Today'] : e.examDate > today ? ['up', 'Upcoming'] : ['past', 'Done'];
+      const tr = el('tr', null,
+        el('td', null, el('span', { className: 'pill ' + st[0] }, st[1])),
+        el('td', null, fmtDate(e.examDate)),
+        el('td', null, `${e.startTime}–${e.endTime}`),
+        el('td', null, el('strong', null, e.courseCode)),
+        el('td', null, e.courseTitle),
+        el('td', null, e.lecturer),
+        el('td', null, `${e.programme} · ${e.level}, Sem ${e.semester}`),
+        el('td', null, e.venue || '—'));
+      if (e.id === lastAddedId) tr.className = 'flash';
+      return tr;
+    }));
+    schedEmpty.hidden = rows.length > 0;
+  }
+
+  // ---------- submit ----------
+  form.addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const file = fileIn.files && fileIn.files[0];
+    if (!file) return;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Checking…';
+    resultEl.replaceChildren();
+    try {
+      const result = await CATValidator.validateDocx(await file.arrayBuffer(), file.name);
+      result.checks.push(...timingChecks(result.data));
+      const accepted = result.checks.every(c => c.ok);
+      let entry = null;
+      if (accepted) {
+        const d = result.data;
+        entry = {
+          id: [d.courseCode, d.academicYear, d.semester].join('|').toUpperCase().replace(/\s+/g, ''),
+          lecturer: d.lecturer, courseCode: d.courseCode.toUpperCase(), courseTitle: d.courseTitle,
+          programme: d.programme, level: d.level, semester: d.semester, academicYear: d.academicYear,
+          school: d.school, department: d.department, topic: d.topic,
+          appear: d.appear, attempt: d.attempt, compulsory: d.compulsory, totalMarks: d.totalMarks,
+          submissionDate: d.submissionDate,
+          examDate: $('examDate').value, startTime: $('startTime').value, endTime: $('endTime').value,
+          venue: $('venue').value.trim(), fileName: file.name, acceptedAt: new Date().toISOString()
+        };
+        local = local.filter(e => e.id !== entry.id).concat(entry);
+        saveLocal();
+        lastAddedId = entry.id;
+        renderSchedule();
+      }
+      renderResult(file, result, entry);
+    } catch (e) {
+      renderResult(file, { checks: [{ section: '1. File', label: 'File could be checked', ok: false, detail: e.message }] }, null);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Run autocheck & submit';
+    }
+  });
+
+  $('exportBtn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(allEntries(), null, 2)], { type: 'application/json' });
+    const a = el('a', { href: URL.createObjectURL(blob), download: 'schedule.json' });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  search.addEventListener('input', renderSchedule);
+  $('examDate').min = todayISO();
+
+  loadLocal();
+  renderSchedule();
+  loadPublished().then(renderSchedule);
+})();
+</script>
+</body>
+</html>
