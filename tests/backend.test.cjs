@@ -26,8 +26,13 @@ function unzipSync(buf) {
 }
 function blob(bytes, mime, name) {
   const b = Buffer.from(bytes);
-  return { bytes: b, getName: () => name, getDataAsString: () => b.toString('utf8') };
+  const o = {
+    bytes: b, getName: () => name, getDataAsString: () => b.toString('utf8'),
+    getBytes: () => [...b], getContentType: () => mime, setName: n => { name = n; return o; }
+  };
+  return o;
 }
+const driveFiles = {};
 
 function fakeSheet() {
   const rows = [];
@@ -55,13 +60,24 @@ function fakeFolder(name) {
     getId: () => 'folder-' + name, getUrl: () => 'https://drive/' + name,
     createFolder: n => (f.subs[n] = fakeFolder(n)),
     getFoldersByName: n => { const has = !!f.subs[n]; return { hasNext: () => has, next: () => f.subs[n] }; },
-    createFile: b => { const file = { name: b.getName(), setDescription() {}, getUrl: () => 'https://drive/file/' + b.getName() }; f.files.push(file); return file; }
+    createFile: b => {
+      const id = 'id' + Object.keys(driveFiles).length;
+      const file = {
+        name: b.getName(), setDescription() {}, getId: () => id, getName: () => b.getName(),
+        getUrl: () => 'https://drive/file/' + id, getBlob: () => blob(b.bytes, 'application/docx', b.getName()),
+        getParents: () => { let done = false; return { hasNext: () => !done, next: () => { done = true; return f; } }; }
+      };
+      driveFiles[id] = file;
+      f.files.push(file);
+      return file;
+    }
   };
   return f;
 }
 
 function makeBackend() {
-  const props = {};
+  const props = { ADMIN_PASSWORD: 'Secret-Pass-2026' };
+  const cache = {};
   const root = fakeFolder('root');
   const sheets = {};
   const ss = {
@@ -72,7 +88,11 @@ function makeBackend() {
     console,
     Logger: { log() {} },
     PropertiesService: { getScriptProperties: () => ({ getProperty: k => props[k] || null, setProperty: (k, v) => (props[k] = v) }) },
-    DriveApp: { createFolder: () => root, getFolderById: () => root, getFileById: () => ({ moveTo() {} }) },
+    DriveApp: {
+      createFolder: () => root, getFolderById: () => root,
+      getFileById: id => { if (id === 'ss') return { moveTo() {}, getParents: () => { let done = false; return { hasNext: () => !done, next: () => { done = true; return root; } }; } }; if (!driveFiles[id]) throw new Error('no file'); return driveFiles[id]; }
+    },
+    CacheService: { getScriptCache: () => ({ get: k => cache[k] ?? null, put: (k, v) => (cache[k] = v), remove: k => delete cache[k] }) },
     SpreadsheetApp: { create: () => ss, openById: () => ss },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: s => ({ setMimeType: () => JSON.parse(s) }) },
@@ -80,7 +100,12 @@ function makeBackend() {
       base64Decode: s => { if (/[^A-Za-z0-9+/=]/.test(s)) throw new Error('bad base64'); return [...Buffer.from(s, 'base64')]; },
       newBlob: blob,
       unzip: b => unzipSync(b.bytes),
-      formatDate: (d, tz, fmt) => fmt === 'yyyy-MM-dd' ? '2026-10-14' : '2026-10-14 12:00:00'
+      formatDate: (d, tz, fmt) => fmt === 'yyyy-MM-dd' ? '2026-10-14' : '2026-10-14 12:00:00',
+      getUuid: () => 'tok-' + Math.random(),
+      DigestAlgorithm: { SHA_256: 'sha256' }, Charset: { UTF_8: 'utf8' },
+      computeDigest: (alg, s) => [...require('crypto').createHash('sha256').update(s, 'utf8').digest()],
+      base64Encode: bytes => Buffer.from(bytes).toString('base64'),
+      zip: (blobs, name) => blob(Buffer.from(blobs.map(b => b.getName()).join('\n')), 'application/zip', name)
     }
   };
   vm.createContext(ctx);
@@ -153,4 +178,47 @@ test('formula-like values are neutralised in the sheet', () => {
   const { ctx, sheets } = makeBackend();
   post(ctx, upload({}, { venue: '=IMPORTXML("x")' }));
   assert.strictEqual(sheets.Schedule.rows[1][18], "'=IMPORTXML(\"x\")");
+});
+
+test('administrator: password sign-in, list and download accepted files', () => {
+  const { ctx, root } = makeBackend();
+  post(ctx, upload());
+  post(ctx, upload({}, { startTime: '14:00', endTime: '16:00' }));
+  const d = defaults();
+  d.details[6][1] = '';
+  post(ctx, upload({ details: d.details }));         // rejected: must never be listed
+
+  assert.strictEqual(post(ctx, { action: 'list' }).signedOut, true);
+  assert.strictEqual(post(ctx, { action: 'list', token: 'forged' }).signedOut, true);
+  assert.strictEqual(post(ctx, { action: 'login', password: 'wrong' }).ok, false);
+
+  const login = post(ctx, { action: 'login', password: 'Secret-Pass-2026' });
+  assert.strictEqual(login.ok, true);
+  const list = post(ctx, { action: 'list', token: login.token });
+  assert.strictEqual(list.submissions.length, 2);
+  assert.strictEqual(list.submissions[0].startTime, '14:00');      // newest first
+  assert.deepStrictEqual(list.submissions.map(s => s.current), [true, false]);
+
+  const file = post(ctx, { action: 'download', token: login.token, fileId: list.submissions[0].fileId });
+  assert.strictEqual(file.ok, true);
+  assert.match(file.fileName, /^CSC 2105 - DR\. JANE AKELLO/);
+  const bytes = Buffer.from(file.base64, 'base64');
+  assert.strictEqual(bytes.readUInt32LE(0), 0x04034b50);               // the original .docx (ZIP)
+
+  const rejectedId = root.subs.Rejected.files[0].getId();
+  assert.strictEqual(post(ctx, { action: 'download', token: login.token, fileId: rejectedId }).ok, false);
+  assert.strictEqual(post(ctx, { action: 'download', token: login.token, fileId: 'ss' }).ok, false);
+
+  const all = post(ctx, { action: 'downloadAll', token: login.token });
+  assert.strictEqual(all.ok, true);
+  assert.match(all.fileName, /\.zip$/);
+  assert.strictEqual(Buffer.from(all.base64, 'base64').toString().split('\n').length, 2);
+});
+
+test('administrator: sign-in locks after repeated wrong passwords', () => {
+  const { ctx } = makeBackend();
+  for (let i = 0; i < 5; i++) assert.match(post(ctx, { action: 'login', password: 'nope' }).error, /Wrong password/);
+  const r = post(ctx, { action: 'login', password: 'Secret-Pass-2026' });
+  assert.strictEqual(r.ok, false);
+  assert.match(r.error, /locked/);
 });

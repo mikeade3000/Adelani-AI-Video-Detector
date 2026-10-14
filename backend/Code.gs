@@ -9,6 +9,9 @@
  *   Code.gs       — this file
  *   Validator.gs  — an exact copy of cat/validator.js
  *
+ * Administrator downloads are protected by the ADMIN_PASSWORD script property
+ * (Project Settings → Script properties).
+ *
  * Setup: see backend/README.md. Run setup() once, then Deploy → Web app
  * (Execute as: Me, Who has access: Anyone).
  */
@@ -17,7 +20,10 @@ const CONFIG = {
   FOLDER_NAME: 'KIU CAT Submissions',
   SPREADSHEET_NAME: 'KIU CAT Submissions Register',
   TIMEZONE: 'Africa/Kampala',
-  MAX_BYTES: 10 * 1024 * 1024
+  MAX_BYTES: 10 * 1024 * 1024,
+  ADMIN_SESSION_SECONDS: 60 * 60,  // sign-in lasts one hour
+  MAX_FAILED_LOGINS: 5,            // then sign-in is locked…
+  LOCKOUT_SECONDS: 15 * 60         // …for 15 minutes
 };
 
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -26,11 +32,11 @@ const SCHEDULE_HEADERS = [
   'ID', 'Lecturer', 'Course Code', 'Course Title', 'Programme', 'Level', 'Semester', 'Academic Year',
   'School', 'Department', 'Topic', 'Questions to Appear', 'Questions to Attempt', 'Q1 Compulsory',
   'Total Marks', 'Exam Date', 'Start Time', 'End Time', 'Venue', 'Date of Submission (form)',
-  'Accepted At', 'Original File Name', 'File Link'
+  'Accepted At', 'Original File Name', 'File Link', 'File ID'
 ];
 const LOG_HEADERS = [
   'Received At', 'Result', 'Original File Name', 'Lecturer', 'Course Code', 'Course Title',
-  'Exam Date', 'Start Time', 'End Time', 'Problems Found', 'File Link'
+  'Exam Date', 'Start Time', 'End Time', 'Problems Found', 'File Link', 'File ID'
 ];
 
 // Fields published to the portal (no file links, no question content).
@@ -95,6 +101,7 @@ function doPost(e) {
   } catch (err) {
     return json_({ ok: false, error: 'Invalid request.' });
   }
+  if (req.action) return json_(admin_(req));
   const fileName = String(req.fileName || '').slice(0, 200);
   const exam = {
     examDate: String(req.examDate || '').slice(0, 10),
@@ -134,7 +141,7 @@ function doPost(e) {
     sheet_('Submissions Log').appendRow(cells_([
       stamp, accepted ? 'ACCEPTED' : 'REJECTED', fileName, d.lecturer, d.courseCode, d.courseTitle,
       exam.examDate, exam.startTime, exam.endTime,
-      errors.map(c => c.label + ' — ' + c.detail).join('\n'), file.getUrl()
+      errors.map(c => c.label + ' — ' + c.detail).join('\n'), file.getUrl(), file.getId()
     ]));
 
     let entry = null;
@@ -150,13 +157,94 @@ function doPost(e) {
         entry.id, d.lecturer, entry.courseCode, d.courseTitle, d.programme, d.level, d.semester,
         d.academicYear, d.school, d.department, d.topic, d.appear, d.attempt, d.compulsory,
         d.totalMarks, exam.examDate, exam.startTime, exam.endTime, venue, d.submissionDate,
-        stamp, fileName, file.getUrl()
+        stamp, fileName, file.getUrl(), file.getId()
       ]);
     }
     return json_({ ok: true, accepted: accepted, checks: result.checks, entry: entry });
   } finally {
     lock.releaseLock();
   }
+}
+
+// ---------------------------------------------------------------------------
+// Administrator: sign in with the password, list and download accepted files.
+//   { action: 'login', password }        → { token }
+//   { action: 'list', token }            → { submissions: [...] }
+//   { action: 'download', token, fileId }→ { fileName, mimeType, base64 }
+//   { action: 'downloadAll', token }     → { fileName, mimeType, base64 } (zip)
+// ---------------------------------------------------------------------------
+function admin_(req) {
+  const cache = CacheService.getScriptCache();
+  if (req.action === 'login') {
+    const failed = Number(cache.get('failedLogins') || 0);
+    if (failed >= CONFIG.MAX_FAILED_LOGINS) {
+      return { ok: false, error: 'Too many wrong passwords. Sign-in is locked for 15 minutes.' };
+    }
+    const real = PropertiesService.getScriptProperties().getProperty('ADMIN_PASSWORD') || '';
+    if (real.length < 8) return { ok: false, error: 'No administrator password is set on the server (ADMIN_PASSWORD, at least 8 characters).' };
+    if (digest_(String(req.password || '')) !== digest_(real)) {
+      cache.put('failedLogins', String(failed + 1), CONFIG.LOCKOUT_SECONDS);
+      return { ok: false, error: 'Wrong password.' };
+    }
+    cache.remove('failedLogins');
+    const token = Utilities.getUuid();
+    cache.put('admin:' + token, '1', CONFIG.ADMIN_SESSION_SECONDS);
+    return { ok: true, token: token, expiresIn: CONFIG.ADMIN_SESSION_SECONDS };
+  }
+
+  if (!req.token || !cache.get('admin:' + req.token)) {
+    return { ok: false, signedOut: true, error: 'Your session has expired. Please sign in again.' };
+  }
+  if (req.action === 'list') return { ok: true, submissions: acceptedSubmissions_() };
+  if (req.action === 'download') {
+    const file = acceptedFile_(String(req.fileId || ''));
+    if (!file) return { ok: false, error: 'File not found.' };
+    return fileResponse_(file.getBlob(), file.getName());
+  }
+  if (req.action === 'downloadAll') {
+    const blobs = acceptedSubmissions_().map(s => acceptedFile_(s.fileId)).filter(Boolean)
+      .map(f => f.getBlob().setName(f.getName()));
+    if (!blobs.length) return { ok: false, error: 'There are no accepted submissions yet.' };
+    const name = 'KIU CAT Submissions ' + Utilities.formatDate(new Date(), CONFIG.TIMEZONE, 'yyyy-MM-dd') + '.zip';
+    return fileResponse_(Utilities.zip(blobs, name), name);
+  }
+  return { ok: false, error: 'Unknown action.' };
+}
+
+// Every accepted upload (newest first), marking the version currently on the schedule.
+function acceptedSubmissions_() {
+  const log = sheet_('Submissions Log').getDataRange().getDisplayValues();
+  const head = log.shift() || [];
+  const c = {};
+  head.forEach((h, i) => (c[h] = i));
+  const sched = sheet_('Schedule').getDataRange().getDisplayValues();
+  const sc = sched.shift() || [];
+  const current = {};
+  sched.forEach(r => (current[r[sc.indexOf('File ID')]] = true));
+  return log.filter(r => r[c.Result] === 'ACCEPTED' && r[c['File ID']]).map(r => ({
+    receivedAt: r[c['Received At']], lecturer: r[c.Lecturer], courseCode: r[c['Course Code']],
+    courseTitle: r[c['Course Title']], examDate: r[c['Exam Date']], startTime: r[c['Start Time']],
+    endTime: r[c['End Time']], originalName: r[c['Original File Name']], fileId: r[c['File ID']],
+    current: !!current[r[c['File ID']]]
+  })).reverse();
+}
+
+// Only files inside the Accepted folder can ever be downloaded.
+function acceptedFile_(id) {
+  const file = tryGet_(() => DriveApp.getFileById(id));
+  if (!file) return null;
+  const accepted = subfolder_(DriveApp.getFolderById(prop_('FOLDER_ID')), 'Accepted').getId();
+  const parents = file.getParents();
+  while (parents.hasNext()) if (parents.next().getId() === accepted) return file;
+  return null;
+}
+
+function fileResponse_(blob, name) {
+  return { ok: true, fileName: name, mimeType: blob.getContentType(), base64: Utilities.base64Encode(blob.getBytes()) };
+}
+
+function digest_(s) {
+  return Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, s, Utilities.Charset.UTF_8));
 }
 
 // ---------------------------------------------------------------------------

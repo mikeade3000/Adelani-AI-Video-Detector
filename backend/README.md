@@ -14,8 +14,9 @@ Google Apps Script backend runs on your own Google account and:
   - **Submissions Log** tab: every file the server received, with its result and any problems found;
 - **serves the CAT schedule** to the website, so every visitor sees new entries instantly.
 
-The files and sheet are private to you. The website shows only the schedule, never
-file links or question content.
+The files and sheet are private to you. To the public, the website shows only the
+schedule. The submitted files can be downloaded from the website only with your
+administrator password.
 
 ## One-time setup (about 10 minutes)
 
@@ -29,12 +30,19 @@ file links or question content.
    **Advanced → Go to KIU CAT Portal (unsafe)** → **Allow**. It is your own script, so this
    warning is expected.
    The *Execution log* then shows the links to the new Drive folder and sheet.
-5. Click **Deploy → New deployment**. Click the gear ⚙ and choose **Web app**:
+5. **Set your administrator password.** Click **Project Settings** (⚙ on the left), scroll to
+   **Script properties**, click **Add script property**, and enter:
+   - *Property*: `ADMIN_PASSWORD`
+   - *Value*: your password (at least 8 characters; use a strong one)
+
+   Click **Save script properties**. The password is stored only in your Google account,
+   never in the website code. To change it later, edit this value. No redeploy is needed.
+6. Click **Deploy → New deployment**. Click the gear ⚙ and choose **Web app**:
    - *Execute as*: **Me**
    - *Who has access*: **Anyone**
 
    Click **Deploy** and copy the **Web app URL**. It ends in `/exec`.
-6. In your GitHub repository, open the portal page (`index.html`, or `cat.html` in the
+7. In your GitHub repository, open the portal page (`index.html`, or `cat.html` in the
    detector repo). Find this line near the bottom:
 
    ```js
@@ -48,6 +56,17 @@ The live site now sends accepted forms to your Drive.
 
 ## Downloading the lecturers' files
 
+**From the portal (recommended).** Scroll to **4. Administrator: download accepted
+submissions**, enter your password and click **Sign in**. You will see every accepted
+upload, newest first, with the lecturer, course and exam time. The entry currently on the
+schedule is marked **ON SCHEDULE**; older ones are earlier resubmissions.
+- **Download**: saves that lecturer's original .docx, exactly as they uploaded it.
+- **Download all (.zip)**: saves every accepted file in one zip.
+
+Sign-in lasts one hour. After 5 wrong passwords, sign-in is locked for 15 minutes.
+Rejected files can never be downloaded through the portal.
+
+**From Google Drive / Sheets.**
 - **One file**: open the sheet, go to the **Schedule** tab and click the lecturer's **File Link**.
   Or open the Drive folder `KIU CAT Submissions → Accepted` and right-click the file → **Download**.
 - **All files at once**: in Drive, right-click the `Accepted` folder → **Download**. Drive
