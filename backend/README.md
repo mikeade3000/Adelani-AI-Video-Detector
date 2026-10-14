@@ -10,7 +10,7 @@ Google Apps Script backend runs on your own Google account and:
   passed in the browser but failed on the server;
 - **records every submission** in a Google Sheet, `KIU CAT Submissions Register`:
   - **Schedule** tab: one row per course, with lecturer, course, exam date and time,
-    venue and a **link to the file**. A resubmission replaces that course's row.
+    number of students, venue and a **link to the file**. A resubmission replaces that course's row.
   - **Submissions Log** tab: every file the server received, with its result and any problems found;
 - **serves the CAT schedule** to the website, so every visitor sees new entries instantly.
 
@@ -83,6 +83,8 @@ the sheet.
 - **Updating the code later**: paste the new code, then go to **Deploy → Manage deployments**,
   click ✏️, set *Version* to **New version** and click **Deploy**. The URL stays the same.
   `Validator.gs` must always be an exact copy of `cat/validator.js`.
+  If an update adds new columns, as the *Number of Students* update did, also run **`setup`**
+  once more. It adds the new column headings and keeps all existing data.
 
 ## Notes
 

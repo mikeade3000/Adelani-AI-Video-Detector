@@ -116,7 +116,7 @@ function makeBackend() {
 }
 
 const post = (ctx, body) => ctx.doPost({ postData: { contents: JSON.stringify(body) } });
-const exam = { examDate: '2026-11-20', startTime: '09:00', endTime: '11:00', venue: 'Lab 2' };
+const exam = { examDate: '2026-11-20', startTime: '09:00', endTime: '11:00', students: '120', venue: 'Lab 2' };
 const upload = (over, extra) => Object.assign({ fileName: 'CAT.docx', fileBase64: Buffer.from(buildDocx(over)).toString('base64') }, exam, extra);
 
 test('Validator.gs is an exact copy of cat/validator.js', () => {
@@ -138,6 +138,7 @@ test('accepted upload is stored in Drive, registered and published', () => {
   assert.strictEqual(g.schedule.length, 1);
   assert.strictEqual(g.schedule[0].lecturer, 'DR. JANE AKELLO');
   assert.strictEqual(g.schedule[0].examDate, '2026-11-20');
+  assert.strictEqual(g.schedule[0].students, '120');
   assert.ok(!JSON.stringify(g).includes('drive/'), 'file links must not be public');
 
   // A resubmission for the same course replaces the schedule row but keeps both files.
@@ -159,8 +160,12 @@ test('server re-checks: a non-conforming upload is rejected and kept in Rejected
   assert.strictEqual(sheets.Schedule.rows.length, 1);
 });
 
-test('server re-checks exam timing', () => {
+test('server re-checks exam timing and number of students', () => {
   const { ctx } = makeBackend();
+  assert.strictEqual(post(ctx, upload({}, { students: '' })).accepted, false);
+  assert.strictEqual(post(ctx, upload({}, { students: '0' })).accepted, false);
+  assert.strictEqual(post(ctx, upload({}, { students: '12.5' })).accepted, false);
+  assert.strictEqual(post(ctx, upload({}, { students: 'many' })).accepted, false);
   assert.strictEqual(post(ctx, upload({}, { examDate: '2026-01-05' })).accepted, false);
   assert.strictEqual(post(ctx, upload({}, { endTime: '08:00' })).accepted, false);
 });
@@ -198,6 +203,7 @@ test('administrator: password sign-in, list and download accepted files', () => 
   assert.strictEqual(list.submissions.length, 2);
   assert.strictEqual(list.submissions[0].startTime, '14:00');      // newest first
   assert.deepStrictEqual(list.submissions.map(s => s.current), [true, false]);
+  assert.strictEqual(list.submissions[0].students, '120');
 
   const file = post(ctx, { action: 'download', token: login.token, fileId: list.submissions[0].fileId });
   assert.strictEqual(file.ok, true);

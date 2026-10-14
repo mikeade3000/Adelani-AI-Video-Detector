@@ -24,7 +24,7 @@
     .panel h2 { font-size: 1.05rem; margin: 0 0 10px; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
     label { display: block; font-weight: 600; font-size: .85rem; margin-bottom: 4px; color: #444; }
-    input[type=date], input[type=time], input[type=text], input[type=search], input[type=password] {
+    input[type=date], input[type=time], input[type=text], input[type=search], input[type=password], input[type=number] {
       width: 100%; padding: 7px 8px; border: 1px solid #ccc; border-radius: 6px; font: inherit; }
     input[type=file] { max-width: 100%; }
     button { padding: 9px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: .9rem; }
@@ -102,6 +102,7 @@
         <div><label for="examDate">Examination date</label><input id="examDate" type="date" required /></div>
         <div><label for="startTime">Start time</label><input id="startTime" type="time" required /></div>
         <div><label for="endTime">End time</label><input id="endTime" type="time" required /></div>
+        <div><label for="students">Number of students</label><input id="students" type="number" min="1" max="5000" step="1" inputmode="numeric" required placeholder="e.g. 120" /></div>
         <div><label for="venue">Venue (optional)</label><input id="venue" type="text" maxlength="80" placeholder="e.g. Computer Lab 2" /></div>
       </div>
       <div class="actions">
@@ -125,7 +126,7 @@
     </div>
     <div class="table-wrap">
       <table class="sched">
-        <thead><tr><th>Status</th><th>Date</th><th>Time</th><th>Course</th><th>Course title</th><th>Lecturer</th><th>Programme / Level</th><th>Venue</th></tr></thead>
+        <thead><tr><th>Status</th><th>Date</th><th>Time</th><th>Course</th><th>Course title</th><th>Lecturer</th><th>Programme / Level</th><th>Students</th><th>Venue</th></tr></thead>
         <tbody id="schedBody"></tbody>
       </table>
     </div>
@@ -150,7 +151,7 @@
       </div>
       <div class="table-wrap">
         <table class="sched">
-          <thead><tr><th>Received</th><th>Course</th><th>Lecturer</th><th>Exam</th><th>Original file</th><th></th></tr></thead>
+          <thead><tr><th>Received</th><th>Course</th><th>Lecturer</th><th>Exam</th><th>Students</th><th>Original file</th><th></th></tr></thead>
           <tbody id="adminBody"></tbody>
         </table>
       </div>
@@ -219,7 +220,7 @@
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
     return m ? new Date(+m[1], m[2] - 1, +m[3]).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) : (iso || '—');
   };
-  const examInput = () => ({ examDate: $('examDate').value, startTime: $('startTime').value, endTime: $('endTime').value, venue: $('venue').value.trim() });
+  const examInput = () => ({ examDate: $('examDate').value, startTime: $('startTime').value, endTime: $('endTime').value, students: $('students').value.trim(), venue: $('venue').value.trim() });
   const toBase64 = file => new Promise((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(String(r.result).split(',')[1] || '');
@@ -244,7 +245,8 @@
       const dl = el('dl', { className: 'summary' });
       [['Lecturer', entry.lecturer], ['Course', `${entry.courseCode} — ${entry.courseTitle}`],
        ['Programme', entry.programme], ['Level / Semester', `${entry.level} · Semester ${entry.semester} · ${entry.academicYear}`],
-       ['Examination', `${fmtDate(entry.examDate)}, ${entry.startTime}–${entry.endTime}${entry.venue ? ' · ' + entry.venue : ''}`]
+       ['Examination', `${fmtDate(entry.examDate)}, ${entry.startTime}–${entry.endTime}${entry.venue ? ' · ' + entry.venue : ''}`],
+       ['Number of students', entry.students]
       ].forEach(([k, v]) => dl.append(el('dt', null, k), el('dd', null, v)));
       resultEl.append(dl);
     } else {
@@ -285,6 +287,7 @@
         el('td', null, e.courseTitle),
         el('td', null, e.lecturer),
         el('td', null, `${e.programme} · ${e.level}, Sem ${e.semester}`),
+        el('td', null, e.students || '—'),
         el('td', null, e.venue || '—'));
       if (e.id === lastAddedId) tr.className = 'flash';
       return tr;
@@ -331,7 +334,7 @@
           lecturer: d.lecturer, courseCode: d.courseCode.toUpperCase(), courseTitle: d.courseTitle,
           programme: d.programme, level: d.level, semester: d.semester, academicYear: d.academicYear,
           department: d.department, examDate: exam.examDate, startTime: exam.startTime,
-          endTime: exam.endTime, venue: exam.venue
+          endTime: exam.endTime, venue: exam.venue, students: Number(exam.students)
         };
         localSave(entry);
       }
@@ -411,6 +414,7 @@
           el('td', null, el('strong', null, s.courseCode), ' ', s.courseTitle, s.current ? el('span', { className: 'tag' }, 'ON SCHEDULE') : ''),
           el('td', null, s.lecturer),
           el('td', null, `${fmtDate(s.examDate)}, ${s.startTime}–${s.endTime}`),
+          el('td', null, s.students || '—'),
           el('td', null, s.originalName),
           el('td', null, btn));
       }));

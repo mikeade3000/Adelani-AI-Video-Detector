@@ -32,11 +32,11 @@ const SCHEDULE_HEADERS = [
   'ID', 'Lecturer', 'Course Code', 'Course Title', 'Programme', 'Level', 'Semester', 'Academic Year',
   'School', 'Department', 'Topic', 'Questions to Appear', 'Questions to Attempt', 'Q1 Compulsory',
   'Total Marks', 'Exam Date', 'Start Time', 'End Time', 'Venue', 'Date of Submission (form)',
-  'Accepted At', 'Original File Name', 'File Link', 'File ID'
+  'Accepted At', 'Original File Name', 'File Link', 'File ID', 'Number of Students'
 ];
 const LOG_HEADERS = [
   'Received At', 'Result', 'Original File Name', 'Lecturer', 'Course Code', 'Course Title',
-  'Exam Date', 'Start Time', 'End Time', 'Problems Found', 'File Link', 'File ID'
+  'Exam Date', 'Start Time', 'End Time', 'Problems Found', 'File Link', 'File ID', 'Number of Students'
 ];
 
 // Fields published to the portal (no file links, no question content).
@@ -44,7 +44,7 @@ const PUBLIC_FIELDS = {
   id: 'ID', lecturer: 'Lecturer', courseCode: 'Course Code', courseTitle: 'Course Title',
   programme: 'Programme', level: 'Level', semester: 'Semester', academicYear: 'Academic Year',
   department: 'Department', examDate: 'Exam Date', startTime: 'Start Time', endTime: 'End Time',
-  venue: 'Venue'
+  venue: 'Venue', students: 'Number of Students'
 };
 
 // ---------------------------------------------------------------------------
@@ -92,7 +92,7 @@ function doGet() {
 }
 
 // ---------------------------------------------------------------------------
-// POST → { fileName, fileBase64, examDate, startTime, endTime, venue }
+// POST → { fileName, fileBase64, examDate, startTime, endTime, students, venue }
 // ---------------------------------------------------------------------------
 function doPost(e) {
   let req;
@@ -106,7 +106,8 @@ function doPost(e) {
   const exam = {
     examDate: String(req.examDate || '').slice(0, 10),
     startTime: String(req.startTime || '').slice(0, 5),
-    endTime: String(req.endTime || '').slice(0, 5)
+    endTime: String(req.endTime || '').slice(0, 5),
+    students: String(req.students == null ? '' : req.students).trim().slice(0, 6)
   };
   const venue = String(req.venue || '').trim().slice(0, 80);
 
@@ -141,7 +142,7 @@ function doPost(e) {
     sheet_('Submissions Log').appendRow(cells_([
       stamp, accepted ? 'ACCEPTED' : 'REJECTED', fileName, d.lecturer, d.courseCode, d.courseTitle,
       exam.examDate, exam.startTime, exam.endTime,
-      errors.map(c => c.label + ' — ' + c.detail).join('\n'), file.getUrl(), file.getId()
+      errors.map(c => c.label + ' — ' + c.detail).join('\n'), file.getUrl(), file.getId(), exam.students
     ]));
 
     let entry = null;
@@ -151,13 +152,13 @@ function doPost(e) {
         lecturer: d.lecturer, courseCode: d.courseCode.toUpperCase(), courseTitle: d.courseTitle,
         programme: d.programme, level: d.level, semester: d.semester, academicYear: d.academicYear,
         department: d.department, examDate: exam.examDate, startTime: exam.startTime,
-        endTime: exam.endTime, venue: venue
+        endTime: exam.endTime, venue: venue, students: Number(exam.students)
       };
       upsertSchedule_(entry, [
         entry.id, d.lecturer, entry.courseCode, d.courseTitle, d.programme, d.level, d.semester,
         d.academicYear, d.school, d.department, d.topic, d.appear, d.attempt, d.compulsory,
         d.totalMarks, exam.examDate, exam.startTime, exam.endTime, venue, d.submissionDate,
-        stamp, fileName, file.getUrl(), file.getId()
+        stamp, fileName, file.getUrl(), file.getId(), exam.students
       ]);
     }
     return json_({ ok: true, accepted: accepted, checks: result.checks, entry: entry });
@@ -224,7 +225,7 @@ function acceptedSubmissions_() {
   return log.filter(r => r[c.Result] === 'ACCEPTED' && r[c['File ID']]).map(r => ({
     receivedAt: r[c['Received At']], lecturer: r[c.Lecturer], courseCode: r[c['Course Code']],
     courseTitle: r[c['Course Title']], examDate: r[c['Exam Date']], startTime: r[c['Start Time']],
-    endTime: r[c['End Time']], originalName: r[c['Original File Name']], fileId: r[c['File ID']],
+    endTime: r[c['End Time']], students: r[c['Number of Students']] || '', originalName: r[c['Original File Name']], fileId: r[c['File ID']],
     current: !!current[r[c['File ID']]]
   })).reverse();
 }

@@ -461,11 +461,13 @@
     return result();
   }
 
-  // Exam date/time supplied on the upload form (the Word template has no time field).
-  // exam = { examDate: 'YYYY-MM-DD', startTime: 'HH:MM', endTime: 'HH:MM' }, today = 'YYYY-MM-DD'.
+  // Exam details supplied on the upload form (the Word template has no fields for them).
+  // exam = { examDate: 'YYYY-MM-DD', startTime: 'HH:MM', endTime: 'HH:MM', students: '120' },
+  // today = 'YYYY-MM-DD'.
+  const MAX_STUDENTS = 5000;
   function timingChecks(data, exam, today) {
     const out = [];
-    const add = (label, ok, detail) => out.push({ section: '7. Exam timing', label, ok: !!ok, detail });
+    const add = (label, ok, detail) => out.push({ section: '7. Exam details', label, ok: !!ok, detail });
     const date = exam.examDate || '', start = exam.startTime || '', end = exam.endTime || '';
     const okFmt = /^\d{4}-\d{2}-\d{2}$/.test(date) && /^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end);
     add('Examination date and times provided', okFmt, 'Enter the examination date, start time and end time.');
@@ -477,6 +479,10 @@
       if (subISO) add('Examination date is on or after the Date of Submission', date >= subISO,
         `The form's Date of Submission is ${data.submissionDate}, but the exam date is ${date}.`);
     }
+    const students = String(exam.students == null ? '' : exam.students).trim();
+    add('Number of students is a whole number', /^\d+$/.test(students) && +students >= 1 && +students <= MAX_STUDENTS,
+      students ? `"${students}" is not valid. Enter the number of students sitting the CAT (1 to ${MAX_STUDENTS}).`
+        : 'Enter the number of students sitting the CAT.');
     return out;
   }
 
