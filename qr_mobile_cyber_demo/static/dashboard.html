@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Local Mobile Telemetry Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body { padding: 22px; }
+    .dash { max-width: 1100px; margin: auto; }
+    .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 18px 0; }
+    .stat { background: #fff; padding: 16px; border-radius: 12px; box-shadow: 0 4px 16px #17203312; }
+    .stat strong { display: block; font-size: 1.8rem; }
+    .table-wrap { overflow-x: auto; background: #fff; border-radius: 12px; padding: 10px; }
+    table { border-collapse: collapse; width: 100%; min-width: 820px; font-size: .88rem; }
+    th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e6eaf1; vertical-align: top; }
+    th { background: #f5f7fb; position: sticky; top: 0; }
+    .pill { display: inline-block; border-radius: 99px; background: #e2f7ec; color: #14633b; padding: 3px 8px; }
+    .danger { background: #fff4e5; border-left: 4px solid #c77711; padding: 12px 16px; border-radius: 8px; }
+    .controls { display: flex; gap: 10px; margin: 12px 0; flex-wrap: wrap; }
+    .controls button { width: auto; padding: 10px 16px; }
+    .controls button.warn { background: #b42318; }
+    code { overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <div class="dash">
+    <div class="top">
+      <div>
+        <div class="eyebrow">LOCAL LAB CONSOLE</div>
+        <h1>Mobile Telemetry Dashboard</h1>
+      </div>
+      <span class="pill">Consent-based demo</span>
+    </div>
+    <p>This dashboard shows only the low-sensitivity telemetry submitted
+       <strong>after</strong> the participant consents. It cannot access the phone&rsquo;s
+       private content.</p>
+    <div class="danger">
+      <strong>Lab safety:</strong> use only on a trusted network. This classroom server
+      uses plain HTTP, so never run it on public Wi-Fi or send real personal data.
+    </div>
+    <div class="stats">
+      <div class="stat"><span>Total records</span><strong id="count">0</strong></div>
+      <div class="stat"><span>Unique sessions</span><strong id="sessions">0</strong></div>
+      <div class="stat"><span>Latest record (UTC)</span><strong id="latest">&mdash;</strong></div>
+    </div>
+    <div class="controls">
+      <button id="refresh">Refresh records</button>
+      <button id="export" class="ghost">Export JSON</button>
+      <button id="purge" class="warn">Erase all data</button>
+      <label class="small" style="display:flex;align-items:center;gap:6px;">
+        <input type="checkbox" id="autoRefresh" checked> Auto-refresh (5s)
+      </label>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Received (UTC)</th><th>Session</th><th>Event</th><th>Device/browser</th>
+            <th>Screen / viewport</th><th>Locale / network</th><th>Battery</th><th>LAN source</th>
+          </tr>
+        </thead>
+        <tbody id="rows"><tr><td colspan="8">Loading&hellip;</td></tr></tbody>
+      </table>
+    </div>
+    <p class="small muted">Records are stored in <code>telemetry.jsonl</code> in the project
+       folder. &ldquo;Erase all data&rdquo; (or <code>python server.py --purge</code>) deletes them
+       after the exercise.</p>
+  </div>
+  <script src="/dashboard.js"></script>
+</body>
+</html>

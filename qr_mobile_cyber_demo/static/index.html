@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <title>QR Mobile Security Lab</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="panel" id="consentPanel">
+    <div class="eyebrow">CYBERSECURITY PRACTICAL &middot; AUTHORIZED USE ONLY</div>
+    <h1>QR Mobile Security Lab</h1>
+    <p>This classroom demo records a small set of browser/device telemetry to the
+       instructor's computer on the same local network, then shows a
+       <strong>simulated</strong> lock screen to illustrate a QR-code (&ldquo;quishing&rdquo;)
+       plus scareware attack pattern.</p>
+
+    <div class="notice">
+      <strong>Before you continue, understand what this is</strong>
+      <ul>
+        <li>This is a <strong>simulated screen lock only</strong>. It does not lock Android,
+            disable physical buttons, or change any device setting.</li>
+        <li>Telemetry is limited to the browser/device details listed below.</li>
+        <li><strong>No</strong> contacts, messages, photos, files, passwords, GPS location,
+            or microphone/camera data are collected.</li>
+        <li>Nothing is installed; closing the tab ends everything.</li>
+        <li>Use only on a device you own or have explicit permission to test.</li>
+      </ul>
+    </div>
+
+    <details class="disclosure">
+      <summary>Exactly what is sent after you consent</summary>
+      <ul class="small">
+        <li>Browser user-agent string and reported platform</li>
+        <li>Language and time zone</li>
+        <li>Screen and viewport dimensions, pixel ratio</li>
+        <li>Online status and, <em>only if your browser supports it</em>, battery percentage</li>
+        <li>A random session ID, the event name, and timestamps</li>
+        <li>Your device's local-network (LAN) IP, as seen by the server</li>
+      </ul>
+    </details>
+
+    <label class="consent">
+      <input type="checkbox" id="agree">
+      <span>I understand this is a simulation and I consent to this demonstration on a
+            device I am authorized to use.</span>
+    </label>
+    <button id="startBtn" disabled>Consent and start simulation</button>
+    <p class="small muted">If you did not intend to start this, just close this tab &mdash;
+       nothing has been sent yet.</p>
+    <p id="status" role="status" aria-live="polite" class="small"></p>
+  </main>
+
+  <main id="lockScreen" class="lock-screen" hidden aria-live="polite">
+    <div class="lock-mark" aria-hidden="true">&#9679;</div>
+    <div class="eyebrow">SIMULATION ACTIVE</div>
+    <h1>Device session isolated</h1>
+    <p>This is a full-screen <strong>visual simulation</strong>, not an operating-system lock.
+       Your phone is not actually locked.</p>
+    <p class="small">Telemetry has been sent to the local lab dashboard.</p>
+    <div class="recovery">
+      <button id="exitBtn" class="ghost">End simulation</button>
+      <p class="small muted" id="recoveryHint">
+        You can always leave: tap &ldquo;End simulation&rdquo;, press <kbd>Esc</kbd>,
+        or use your browser&rsquo;s Back control.
+      </p>
+    </div>
+    <div class="bottom-hint">No setting on your phone was changed. This page cannot trap you.</div>
+  </main>
+
+  <main class="panel" id="debriefPanel" hidden>
+    <div class="eyebrow">WHAT JUST HAPPENED</div>
+    <h1>Debrief</h1>
+    <p>You scanned a QR code and, after one consent tap, a web page collected device
+       details and showed a convincing &ldquo;locked&rdquo; screen. A real attacker would skip
+       the consent, hide the exit, and dress the page up as your bank, employer, or a
+       fine to pay.</p>
+    <div class="notice">
+      <strong>Defensive takeaways</strong>
+      <ul>
+        <li>Preview a QR code&rsquo;s URL before opening it; treat unexpected QR codes like
+            unexpected links.</li>
+        <li>A web page can never truly lock your phone &mdash; the power button and
+            app switcher always work.</li>
+        <li>Browsers reveal more than people expect (user-agent, timezone, screen size).
+            That&rsquo;s normal fingerprinting, not a breach.</li>
+        <li>&ldquo;Pay now to unlock&rdquo; is scareware. Don&rsquo;t pay; close the tab.</li>
+      </ul>
+    </div>
+    <button id="restartBtn" class="ghost">Back to start</button>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

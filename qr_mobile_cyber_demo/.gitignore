@@ -1,0 +1,6 @@
+# Runtime artifacts — safe to delete; should not be committed.
+.demo_token
+telemetry.jsonl
+phone-qr.png
+*.pyc
+__pycache__/
