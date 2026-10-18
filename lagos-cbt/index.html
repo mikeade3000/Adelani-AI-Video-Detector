@@ -36,6 +36,7 @@ input,select,textarea{font-family:inherit;font-size:1rem}
 .topbar .spacer{flex:1}
 .topbar .who{font-size:.9rem;opacity:.95;text-align:right;line-height:1.25}
 .topbar .who b{display:block;font-size:.98rem}
+@media(max-width:560px){.topbar{gap:.5rem;padding:.6rem .7rem}.topbar .brand span:last-child{display:none}.topbar .who{font-size:.8rem}.topbar .btn.sm{padding:.35rem .5rem;font-size:.8rem}}
 .btn{border:1px solid transparent;border-radius:var(--radius-sm);padding:.62rem 1.05rem;font-weight:600;
   background:var(--primary);color:#fff;transition:background .15s,transform .05s}
 .btn:hover{background:var(--primary-600)} .btn:active{transform:translateY(1px)}
@@ -219,6 +220,11 @@ img{-webkit-user-drag:none;user-drag:none;pointer-events:none}
 <script src="cbt-shared.js"></script>
 <script src="cbt-bank-permsec.js"></script>
 <script src="cbt-bank-law-enforcement.js"></script>
+<script src="cbt-bank-prof-admin.js"></script>
+<script src="cbt-bank-prof-health.js"></script>
+<script src="cbt-bank-prof-works.js"></script>
+<script src="cbt-bank-prof-science.js"></script>
+<script src="cbt-bank-prof-finance.js"></script>
 <script>
 /* ============================================================
    CBT Platform — application logic
@@ -241,7 +247,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyHAUzfCvldJ7Jn4XbV8-B7
 const BACKEND = !!API_URL;
 const MIN_PASSWORD = 8;
 
-const CATEGORIES=["Quantitative","Qualitative","Logic","English and Grammar","Lagos State Civil Service Rules","Lagos State Financial Regulations","Current Affairs","ICT","Public Policy & Governance","Leadership & Strategic Management","Road Traffic Law & Management","Vehicle Inspection & Roadworthiness","Law Enforcement Practice"];
+const CATEGORIES=["Quantitative","Qualitative","Logic","English and Grammar","Lagos State Civil Service Rules","Lagos State Financial Regulations","Current Affairs","ICT","Public Policy & Governance","Leadership & Strategic Management","Road Traffic Law & Management","Vehicle Inspection & Roadworthiness","Law Enforcement Practice","Professional Knowledge"];
 const TYPES = [
   {id:"mcq",label:"Multiple choice"},
   {id:"truefalse",label:"True / False"},
@@ -254,7 +260,7 @@ const CAT_COLORS = {"Quantitative":"#0e4d6b","Qualitative":"#2a7d9b","Logic":"#c
   "Lagos State Financial Regulations":"#b2603a","Current Affairs":"#3a6ea5","ICT":"#5a3fa0",
   "Public Policy & Governance":"#2f6f5e","Leadership & Strategic Management":"#9a3f6b",
   "Road Traffic Law & Management":"#c0392b","Vehicle Inspection & Roadworthiness":"#6b5b2f",
-  "Law Enforcement Practice":"#34495e"};
+  "Law Enforcement Practice":"#34495e","Professional Knowledge":"#7a4b1e"};
 const catColor=c=>CAT_COLORS[c]||"#0e4d6b";
 /* Every scope a question can have: COMMON, the shared groups, then each cadre. */
 const ALL_SCOPES=()=>["COMMON",...SCOPE_GROUPS,...CADRES.map(c=>c.name)];
@@ -414,12 +420,16 @@ const DB={
       this.saveConfig({seeded:true,examLength:20,durationMins:30,
         aiProvider:"anthropic",aiModel:"claude-opus-5-5",aiKey:""});
     }
-    getSeedBanks().forEach(b=>{
-      const flag="seeded_"+b.key,c=this.config();
-      if(c[flag]||(b.legacyFlag&&c[b.legacyFlag]))return;
-      if(!this.questions().some(q=>q.scope===b.scope))this.addQuestions(b.data.map(q=>({id:uid("q"),...q})));
-      this.saveConfig({[flag]:true});
-    });
+    { /* merge new banks by wording (same rule as the server), in one write */
+      const c=this.config(),sigs=new Set(this.questions().map(q=>q.scope+"||"+q.stem)),add=[],flags={};
+      getSeedBanks().forEach(b=>{
+        if(c["seeded_"+b.key]||(b.legacyFlag&&c[b.legacyFlag]))return;
+        b.data.forEach(q=>{const k=q.scope+"||"+q.stem;if(!sigs.has(k)){sigs.add(k);add.push({id:uid("q"),...q});}});
+        flags["seeded_"+b.key]=true;
+      });
+      if(add.length)this.addQuestions(add);
+      if(Object.keys(flags).length)this.saveConfig(flags);
+    }
     if(!this.config().patchV2){
       const qs=this.questions();let changed=false;
       qs.forEach(q=>SEED_PATCHES_V2.forEach(p=>{if(q.stem===p.matchStem){Object.assign(q,p.set);changed=true;}}));
@@ -634,7 +644,7 @@ function candidatePractice(u){
   const canStart=remaining>0&&len>0;
   const c=el("div",{class:"card"},
     el("h2",{},"Start a practice session"),
-    el("p",{},`Each session presents ${len} question(s) drawn from your cadre's bank of ${pool.length}, balanced across the subject areas. You have ${Math.max(0,remaining)} attempt(s) left.`),
+    el("p",{},`Each session presents ${len} question(s) from a bank of ${pool.length}: about half from your cadre's professional bank and half from the general papers, spread across the subjects. You have ${Math.max(0,remaining)} attempt(s) left.`),
     el("div",{class:"grid cols2",style:"margin:1rem 0"},
       el("div",{class:"stat"},el("div",{class:"n"},len),el("div",{class:"l"},"Questions")),
       el("div",{class:"stat"},el("div",{class:"n"},(cfg.durationMins||30)+"m"),el("div",{class:"l"},"Time limit"))),
@@ -655,18 +665,27 @@ function pickBalanced(pool,len){
   while(out.length<len&&queues.some(qs=>qs.length))queues.forEach(qs=>{if(out.length<len&&qs.length)out.push(qs.shift());});
   return shuffle(out);
 }
+/* Each session is half cadre-specific questions (professional bank, cadre or group scope) and half
+   COMMON general-paper questions, each half balanced across its subjects. If one side runs short,
+   the other side fills the gap. */
+function pickSession(pool,len){
+  const own=pool.filter(q=>q.scope!=="COMMON"),common=pool.filter(q=>q.scope==="COMMON");
+  const nCom=Math.min(common.length,len-Math.min(own.length,Math.ceil(len/2)));
+  const nOwn=Math.min(own.length,len-nCom);
+  return shuffle([...pickBalanced(own,nOwn),...pickBalanced(common,nCom)]);
+}
 function startExam(u){
   const cfg=DB.config();
   const pool=userPool(u.cadre);
   const len=Math.min(cfg.examLength||20,pool.length);
-  const picked=pickBalanced(pool,len).map(q=>{
+  const picked=pickSession(pool,len).map(q=>{
     const m={id:q.id,category:q.category,type:q.type,stem:q.stem,explanation:q.explanation,difficulty:q.difficulty};
     if(q.type==="mcq"){m.options=q.options;m.answer=q.answer;m.order=shuffle(q.options.map((_,i)=>i));}   // display order only; answers stay as original indices
     else if(q.type==="truefalse"){m.answer=q.answer;}
     else if(q.type==="shortanswer"){m.accept=q.accept;}
     else if(q.type==="ordering"){m.items=q.items;let d=shuffle(q.items);
       for(let t=0;t<10&&JSON.stringify(d)===JSON.stringify(q.items);t++)d=shuffle(q.items);m.display=d;}   // never start in the correct order
-    else if(q.type==="matching"){m.pairs=q.pairs;m.rights=shuffle(q.pairs.map(p=>p.r));}
+    else if(q.type==="matching"){m.pairs=q.pairs;m.rights=shuffle([...new Set(q.pairs.map(p=>p.r))]);}   // each answer listed once even if two prompts share it
     return m;
   });
   EXAM={user:u,cadre:u.cadre,questions:picked,responses:{},touched:{},idx:0,
@@ -1479,7 +1498,7 @@ function existsUsername(u){const l=u.toLowerCase();
 
 /* ---------- init ---------- */
 if(typeof CADRES==="undefined"||typeof cbtGrade!=="function"){
-  document.body.innerHTML='<p style="padding:2rem;font-family:sans-serif">cbt-shared.js could not be loaded. Keep cbt-shared.js, cbt-bank-permsec.js and cbt-bank-law-enforcement.js in the same folder as index.html.</p>';
+  document.body.innerHTML='<p style="padding:2rem;font-family:sans-serif">The question-bank files could not be loaded. Keep all the cbt-*.js files in the same folder as index.html.</p>';
 }else if(BACKEND){boot();}
 else{DB.seed();boot();}
 

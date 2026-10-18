@@ -15,7 +15,7 @@ const ctx={
   }
 };
 vm.createContext(ctx);
-for(const f of ["cbt-shared.js","cbt-bank-permsec.js","cbt-bank-law-enforcement.js","Code.gs"])
+for(const f of process.env.CBT_SINGLE?["dist/Code.gs"]:["cbt-shared.js","cbt-bank-permsec.js","cbt-bank-law-enforcement.js","cbt-bank-prof-admin.js","cbt-bank-prof-health.js","cbt-bank-prof-works.js","cbt-bank-prof-science.js","cbt-bank-prof-finance.js","Code.gs"])
   vm.runInContext(fs.readFileSync(path.join(ROOT,f),"utf8"),ctx,{filename:f});
 
 function memStore(){
@@ -43,10 +43,11 @@ const H=(store,body)=>ctx.handleRequest(store,body);
 const s=memStore();
 ctx.ensureSeed(s);
 const qs=s.readAll("Questions");
-check(qs.length===538,`fresh seed has 538 questions (got ${qs.length})`);
+const EXPECTED=ctx.SEED_QUESTIONS.length+ctx.getSeedBanks().reduce((n,b)=>n+b.data.length,0);
+check(qs.length===EXPECTED,`fresh seed has ${EXPECTED} questions (got ${qs.length})`);
 check(qs.filter(q=>q.scope==="Permanent Secretary Cadre").length>=200,"≥200 PS questions");
 check(ctx.seedComplete_(s.getConfig()),"seed flags complete");
-ctx.ensureSeed(s);check(s.readAll("Questions").length===538,"second seed is a no-op");
+ctx.ensureSeed(s);check(s.readAll("Questions").length===EXPECTED,"second seed is a no-op");
 
 /* ---- forced password change ---- */
 let r=H(s,{action:"login",username:"superadmin",password:"wrong"});
@@ -142,6 +143,38 @@ check(oq.find(q=>q.id==="q2").options[2]==="www.gov.ng","patch fixes IPv4 option
 check(oq.filter(q=>q.scope===ctx.ICT_CADRE).length===1,"ICT bank not re-seeded on upgrade");
 check(oq.filter(q=>q.scope==="Permanent Secretary Cadre").length===257,"PS bank added on upgrade");
 check(oq.some(q=>q.scope==="GROUP: Law Enforcement (all enforcement cadres)"),"LE group added on upgrade");
+
+/* ---- fire cadre + professional bank scoping ---- */
+r=H(s,{action:"createUser",token:adm,rec:{username:"fire1",name:"F",cadre:"Fire & Rescue Service Cadre (LSFRS)",targetPost:"Station Officer I",cadreLocked:true,attemptsAllocated:1},password:"FirePass123"});
+check(r.ok,"fire candidate created with a valid fire post");
+b=H(s,{action:"bootstrap",token:H(s,{action:"login",username:"fire1",password:"FirePass123"}).token});
+check(b.questions.filter(q=>q.scope==="Fire & Rescue Service Cadre (LSFRS)").length>=20,"fire candidate sees ≥20 fire questions");
+check(b.questions.every(q=>q.scope==="COMMON"||q.scope==="Fire & Rescue Service Cadre (LSFRS)"),"fire candidate sees only COMMON + fire");
+r=H(s,{action:"createUser",token:adm,rec:{username:"nurse1",name:"N",cadre:"Nursing Officer Cadre",targetPost:"Nursing Officer II",cadreLocked:true,attemptsAllocated:1},password:"NursePass123"});
+b=H(s,{action:"bootstrap",token:H(s,{action:"login",username:"nurse1",password:"NursePass123"}).token});
+check(b.questions.filter(q=>q.scope==="Nursing Officer Cadre").length===20,"nurse sees 20 nursing questions");
+check(b.questions.length===s.readAll("Questions").filter(q=>q.scope==="COMMON").length+20,"nurse pool = COMMON + nursing");
+
+/* ---- upgrade path: database in the state of the live deployment (all previous banks seeded) ---- */
+const live=memStore();
+const prevKeys=["ict","permsec","le_general","traffic","vio","env","lnsc"];
+const flagsLive={superSeeded:true,baseSeeded:true,seeded:true,ictSeeded:true,patchV2:true};prevKeys.forEach(k=>flagsLive["seeded_"+k]=true);
+live.setConfig(flagsLive);
+const prevBanks=ctx.getSeedBanks().filter(b=>prevKeys.includes(b.key));
+live.appendMany("Questions",[...ctx.SEED_QUESTIONS,...prevBanks.flatMap(b=>b.data)].map((q,i)=>({...q,id:"old"+i})));
+const before=live.readAll("Questions").length;
+check(live.readAll("Questions").filter(q=>q.scope==="Environmental & Special Offences Enforcement Cadre").length===14,"live env starts at 14");
+ctx.ensureSeed(live);
+const lq=live.readAll("Questions");
+const cnt=sc=>lq.filter(q=>q.scope===sc).length;
+check(cnt("Environmental & Special Offences Enforcement Cadre")===20,"env topped up to 20 (got "+cnt("Environmental & Special Offences Enforcement Cadre")+")");
+check(cnt("Neighbourhood Safety Corps Cadre (LNSC)")===20,"LNSC topped up to 20");
+check(cnt("Fire & Rescue Service Cadre (LSFRS)")>=20,"fire bank added");
+check(ctx.CADRES.every(c=>cnt(c.name)>=20),"every cadre has ≥20 own questions after upgrade");
+check(lq.filter(q=>q.id.startsWith("old")).length===before,"no existing question removed");
+const sigSet=new Set(lq.map(q=>q.scope+"||"+q.stem));check(sigSet.size===lq.length,"no duplicate questions after upgrade");
+ctx.ensureSeed(live);check(live.readAll("Questions").length===lq.length,"upgrade seed is idempotent");
+check(ctx.seedComplete_(live.getConfig()),"all seed flags set after upgrade");
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail?1:0);

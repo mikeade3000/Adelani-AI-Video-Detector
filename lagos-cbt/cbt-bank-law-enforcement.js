@@ -211,3 +211,61 @@ var SEED_LNSC=(function(){
   b.mcq(L,"easy","Find the next number: 1, 4, 9, 16, 25, ___",["30","34","36","49"],2,"Square numbers: 6² = 36.");
   return out;
 })();
+
+/* ===================== FIRE & RESCUE SERVICE (LSFRS) ===================== */
+var SEED_FIRE=(function(){
+  var out=[],b=_cbtBankBuilder("Fire & Rescue Service Cadre (LSFRS)",out);
+  var P="Professional Knowledge",Q="Quantitative",LE="Law Enforcement Practice";
+  b.mcq(P,"easy","The three elements of the fire triangle are:",["Smoke, flame and ash","Heat, fuel and oxygen","Water, foam and powder","Wood, paper and petrol"],1,"Remove any one element and the fire goes out. The fire tetrahedron adds the chemical chain reaction.");
+  b.mat(P,"medium","Match each class of fire (European classification) to its fuel.",[["Class A","Ordinary solids such as wood, paper and cloth"],["Class B","Flammable liquids such as petrol and paints"],["Class C","Flammable gases such as LPG"],["Class F","Cooking oils and fats"]],"Class D covers combustible metals. Electrical fires are treated by isolating the supply and using suitable agents.");
+  b.mcq(P,"easy","A water extinguisher must NOT be used on:",["Burning paper","Burning wood","Live electrical equipment or burning oil","Burning cloth"],2,"Water conducts electricity and spreads burning liquids.");
+  b.mat(P,"medium","Match each extinguisher (BS EN 3 colour band) to its agent.",[["Red","Water"],["Cream","Foam"],["Blue","Dry powder"],["Black","Carbon dioxide (CO₂)"]],"Wet chemical extinguishers carry a yellow band and are used on Class F fires.");
+  b.ord(P,"easy","Arrange the PASS technique for using a portable extinguisher.",["Pull the pin","Aim at the base of the fire","Squeeze the handle","Sweep from side to side"],"Aiming at the base attacks the fuel, not the flames.");
+  b.mat(P,"medium","Match each method of heat transfer to its description.",[["Conduction","Heat travelling through a solid material"],["Convection","Heat carried by moving hot gases or liquids"],["Radiation","Heat travelling as electromagnetic waves"],["Direct burning","Flame contact igniting nearby materials"]],"Understanding heat transfer guides fire attack and protection of exposures.");
+  b.mcq(P,"hard","Flashover is best described as:",["A small fire in a waste bin","The near-simultaneous ignition of all combustible materials in a compartment when they reach ignition temperature","An explosion of a gas cylinder","Smoke leaving a window"],1,"Flashover is usually unsurvivable for anyone in the room.");
+  b.mcq(P,"hard","Backdraught occurs when:",["Water is applied to a fire","Air (oxygen) suddenly enters an oxygen-starved compartment containing hot, unburnt fuel gases","A fire spreads by radiation","Foam is applied to petrol"],1,"Signs include smoke pulsing at openings and blackened windows.");
+  b.mcq(P,"medium","Firefighters entering smoke-filled buildings wear self-contained breathing apparatus (SCBA) and are recorded by an entry control officer mainly to:",["Count equipment","Protect them from toxic gases and track who is inside and their air supply","Write a press release","Speed up the work"],1,"Entry control ensures no firefighter is left unaccounted for.");
+  b.mcq(P,"medium","For safe use, an extension ladder should be pitched at an angle of about:",["45°","60°","75° (the 1-in-4 rule)","90°"],2,"The foot is about one unit out for every four units of height.");
+  b.mcq(Q,"medium","A pressure of 1 bar can lift water to roughly what height?",["1 m","10 m","100 m","0.1 m"],1,"1 bar ≈ 10 m head of water (ignoring friction loss).");
+  b.mcq(Q,"medium","A fire tender carries 4,500 litres of water and a branch discharges 450 litres per minute. How long will the tank supply last?",["5 minutes","10 minutes","45 minutes","100 minutes"],1,"4,500 ÷ 450 = 10 minutes — hence the need to secure a hydrant or other supply quickly.");
+  b.mcq(Q,"easy","One litre of water has a mass of about:",["0.1 kg","1 kg","10 kg","100 kg"],1,"A 4,500-litre tender therefore carries about 4.5 tonnes of water.");
+  b.ord(P,"medium","Arrange the RACE response to a fire in a building.",["Rescue people in immediate danger","Alarm — raise the alarm and call 112/767","Confine — close doors to contain the fire","Extinguish or evacuate"],"Life safety comes first.");
+  b.mcq(P,"medium","On a hazardous-materials placard, the four-digit UN number identifies:",["The driver","The specific dangerous substance being carried","The vehicle's registration","The emergency phone number"],1,"Responders use it to look up the hazards and the correct response.");
+  b.mcq(P,"medium","At a multiple-casualty incident using START triage, casualties who can walk are tagged:",["Red (immediate)","Yellow (delayed)","Green (minor)","Black (deceased/expectant)"],2,"Walking wounded are directed to a collection point.");
+  b.mcq(P,"medium","Which Lagos agency coordinates disaster response, such as building collapses, together with the fire service?",["LASEMA","LASTMA","LIRS","LAWMA"],0,"The Lagos State Emergency Management Agency coordinates multi-agency response.");
+  b.mcq(P,"medium","Lagos State's agency responsible for promoting occupational and public safety standards, including safety in public buildings, is the:",["Lagos State Safety Commission","Lagos State Lotteries Board","LASRRA","LASWA"],0,"Fire safety inspections and safety standards complement fire-service operations.");
+  b.mcq(P,"medium","In fire investigation, a 'V-pattern' burn mark on a wall usually points towards the:",["Firefighters' entry point","Area of origin of the fire","Exit door","Water supply"],1,"Fire rises and spreads outwards, leaving a V shape above the origin.");
+  b.mcq(P,"easy","A person whose clothes catch fire should:",["Run for help","Stop, drop and roll","Fan the flames","Jump into a car"],1,"Running feeds the fire with oxygen.");
+  b.mcq(P,"medium","On arrival at a house with a strong smell of cooking gas (LPG) but no fire, crews should:",["Switch on lights to see better","Avoid ignition sources (no switches or naked flames), shut off the cylinder valve if safe, ventilate and evacuate","Light a match to find the leak","Close all windows"],1,"LPG is heavier than air and collects at low levels.");
+  b.mcq(P,"hard","Halon extinguishers have largely been phased out because halons:",["Are too cheap","Deplete the ozone layer","Do not work on any fire","Are too heavy"],1,"They are controlled under the Montreal Protocol.");
+  b.tf(P,"easy","Regular fire drills help occupants learn escape routes and assembly points.",true,"Drills reduce panic and evacuation time.");
+  b.tf(P,"medium","Fire doors may be wedged open to improve ventilation in offices.",false,"Fire doors must close to stop the spread of fire and smoke.");
+  b.tf(P,"medium","Smoke inhalation causes more fire deaths than burns.",true,"Toxic gases such as carbon monoxide incapacitate quickly.");
+  b.sa(P,"easy","Name the three sides of the fire triangle (e.g. 'heat fuel oxygen').",["heat fuel oxygen","heat, fuel, oxygen","fuel heat oxygen","oxygen heat fuel","heat fuel and oxygen"],"Fire needs all three to burn.");
+  b.mcq(LE,"medium","At a fire scene, crowd control by the fire service and police is important mainly to:",["Entertain onlookers","Keep people safe, protect access for appliances and prevent interference and looting","Collect fees","Film the incident"],1,"Cordons protect the public and emergency workers.");
+  return out;
+})();
+
+/* ===================== TOP-UPS (added to existing scopes) ===================== */
+var SEED_ENV_EXTRA=(function(){
+  var out=[],b=_cbtBankBuilder("Environmental & Special Offences Enforcement Cadre",out);
+  var LE="Law Enforcement Practice",Q="Quantitative";
+  b.mcq(LE,"easy","Before taking enforcement action against a member of the public, an officer should:",["Act without identifying themselves","Identify themselves, show official identification and state the offence","Wear civilian clothes to avoid recognition","Demand money"],1,"Identification builds legitimacy and protects against impersonators.");
+  b.mcq(Q,"medium","A 7-day abatement notice is served on Monday, 3 March. On which date does the notice period end?",["Monday, 10 March","Sunday, 9 March","Thursday, 6 March","Monday, 17 March"],0,"Counting 7 days from 3 March gives 10 March (check the exact counting rule in the relevant law).");
+  b.mcq(LE,"medium","Photographs taken as evidence of an environmental offence should show:",["Only the officer","The date, time and location, with the offence clearly visible","Unrelated people","Edited images"],1,"Authentic, well-documented evidence supports prosecution at the mobile court.");
+  b.mcq(LE,"medium","Shanties and illegal structures under bridges are cleared mainly because they:",["Look untidy only","Create safety, health and security risks and can damage public infrastructure","Pay no rent","Block the view"],1,"Clearance should follow due process and, where possible, welfare referrals.");
+  b.tf(LE,"medium","Officers may keep part of the goods seized from street traders as a reward.",false,"Seized goods are exhibits and must be recorded and handled according to law.");
+  b.mcq(LE,"medium","An offender arrested for an environmental offence is usually charged before the:",["Supreme Court","Mobile court or magistrates' court with jurisdiction","Code of Conduct Tribunal","Customary court only"],1,"Mobile courts hear environmental and traffic offences quickly.");
+  return out;
+})();
+var SEED_LNSC_EXTRA=(function(){
+  var out=[],b=_cbtBankBuilder("Neighbourhood Safety Corps Cadre (LNSC)",out);
+  var LE="Law Enforcement Practice";
+  b.ord(LE,"medium","Arrange the key details to obtain when receiving a distress call.",["Exact location","Nature of the emergency","Number of people involved or injured","Caller's name and call-back number","Dispatch help and give safety advice"],"Location first, so help can be sent even if the call drops.");
+  b.mcq(LE,"easy","Neighbourhood patrols are safest and most effective when officers:",["Patrol alone without communication","Patrol in pairs or teams with a means of communication","Patrol only in daylight once a week","Announce their exact route in advance"],1,"Teams with radios can call for support quickly.");
+  b.mcq(LE,"medium","A suspect apprehended by LNSC personnel should be:",["Detained in a private house overnight","Handed over promptly to the police with a written report","Released after a fine paid to the officer","Beaten as a deterrent"],1,"LNSC complements the police; custody and prosecution are police functions.");
+  b.mcq(LE,"medium","A resident reports domestic violence next door. The LNSC officer should:",["Ignore it as a family matter","Ensure immediate safety, then refer to the police and the Domestic and Sexual Violence Agency","Settle it with the abuser privately for money","Post it online"],1,"Domestic violence is a crime; survivors need protection and support.");
+  b.mcq(LE,"easy","Regular meetings with residents, CDAs and community leaders help the LNSC mainly to:",["Collect levies","Build trust and gather information on local safety concerns","Replace the police","Settle land disputes"],1,"Community trust drives intelligence-led prevention.");
+  b.tf(LE,"medium","Information received from residents about suspected crime should be treated as confidential and passed through the proper channel.",true,"Protecting sources encourages reporting.");
+  return out;
+})();

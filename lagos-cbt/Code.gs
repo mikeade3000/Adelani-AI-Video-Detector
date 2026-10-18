@@ -3,11 +3,10 @@
    Deploy as a Web App (Execute as: Me; Who has access: Anyone).
    Bind this script to a Google Sheet (Extensions > Apps Script).
 
-   The project needs FOUR script files:
-     Code.gs                      (this file)
-     cbt-shared.gs                (contents of cbt-shared.js)
-     cbt-bank-permsec.gs          (contents of cbt-bank-permsec.js)
-     cbt-bank-law-enforcement.gs  (contents of cbt-bank-law-enforcement.js)
+   Source layout: this file holds the backend logic; the cadres, grading and
+   question banks live in the shared cbt-*.js files. For deployment use the
+   single-file dist/Code.gs produced by tools/build-single.js, which appends
+   all of them to this file.
 
    The sheet tabs (Accounts, Users, Questions, Attempts, Sessions,
    Config) are created and seeded automatically on first request. New
@@ -134,14 +133,18 @@ function ensureSeed(store){
     store.setConfig({baseSeeded:true});
   }
   if(!cfg.seeded)store.setConfig({seeded:true,examLength:20,durationMins:30,aiProvider:"anthropic",aiModel:DEFAULT_AI_MODEL,aiKey:""});
-  var qs=null;
+  /* New banks are merged by wording: a question is added only if no question with the same scope and
+     stem exists yet, so re-running never duplicates and top-up banks can extend an existing scope.
+     All additions go in one write and all flags in one config update (keeps first load fast). */
+  var sigs=null,toAdd=[],flags={};
   getSeedBanks().forEach(function(b){
     if(bankDone_(cfg,b))return;
-    qs=qs||store.readAll("Questions");
-    var has=qs.some(function(q){return q.scope===b.scope;});
-    if(!has)appendMany_(store,"Questions",withIds_(b.data));
-    var flag={};flag["seeded_"+b.key]=true;store.setConfig(flag);
+    if(!sigs){sigs={};store.readAll("Questions").forEach(function(q){sigs[q.scope+"||"+q.stem]=1;});}
+    b.data.forEach(function(q){var k=q.scope+"||"+q.stem;if(!sigs[k]){sigs[k]=1;toAdd.push(q);}});
+    flags["seeded_"+b.key]=true;
   });
+  if(toAdd.length)appendMany_(store,"Questions",withIds_(toAdd));
+  if(Object.keys(flags).length)store.setConfig(flags);
   if(!cfg.patchV2){applyPatchesV2_(store);store.setConfig({patchV2:true});}
 }
 /* Fixes two seed questions that were wrong in databases created before this release. */

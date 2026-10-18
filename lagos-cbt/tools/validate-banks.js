@@ -5,7 +5,7 @@
 const fs=require("fs"),path=require("path"),vm=require("vm");
 const ROOT=path.join(__dirname,"..");
 const ctx={};vm.createContext(ctx);
-for(const f of ["cbt-shared.js","cbt-bank-permsec.js","cbt-bank-law-enforcement.js"])
+for(const f of ["cbt-shared.js","cbt-bank-permsec.js","cbt-bank-law-enforcement.js","cbt-bank-prof-admin.js","cbt-bank-prof-health.js","cbt-bank-prof-works.js","cbt-bank-prof-science.js","cbt-bank-prof-finance.js"])
   vm.runInContext(fs.readFileSync(path.join(ROOT,f),"utf8"),ctx,{filename:f});
 
 /* keep in sync with CATEGORIES in index.html */
@@ -25,6 +25,10 @@ ctx.getSeedBanks().forEach(b=>{
   if(!validScopes.has(b.scope))errors.push(`bank ${b.key}: unknown scope ${b.scope}`);
   b.data.forEach((q,i)=>{if(q.scope!==b.scope)errors.push(`bank ${b.key}#${i}: scope "${q.scope}" ≠ bank scope`);});
 });
+/* every cadre must have at least 20 questions of its own (not counting COMMON or group banks) */
+const own={};ctx.getSeedBanks().forEach(b=>b.data.forEach(q=>{own[q.scope]=(own[q.scope]||0)+1;}));
+ctx.CADRES.forEach(c=>{if((own[c.name]||0)<20)errors.push(`cadre "${c.name}" has only ${own[c.name]||0} own questions (need 20)`);});
+const keys=new Set();ctx.getSeedBanks().forEach(b=>{if(keys.has(b.key))errors.push("duplicate bank key "+b.key);keys.add(b.key);});
 Object.keys(ctx.CADRE_GROUPS).forEach(c=>{if(!cadreNames.has(c))errors.push(`CADRE_GROUPS key not a cadre: ${c}`);});
 
 all.forEach((q,i)=>{

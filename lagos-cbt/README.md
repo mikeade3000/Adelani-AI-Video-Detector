@@ -29,26 +29,29 @@ The `dist/` files are generated. Edit the sources, then run `node tools/build-si
 | `Code.gs` | Backend logic |
 | `cbt-shared.js` | Cadres, scope groups, grading, base + ICT banks |
 | `cbt-bank-permsec.js` | Permanent Secretary bank |
-| `cbt-bank-law-enforcement.js` | Law-enforcement banks |
+| `cbt-bank-law-enforcement.js` | Law-enforcement and fire banks |
+| `cbt-bank-prof-*.js` | Professional Knowledge banks (admin, health, works, science, finance families) |
 
 Checks: `node tools/validate-banks.js` and `node tools/test-backend.js`.
 
-## Question banks
+## Question banks (1,937 questions)
 
 | Scope | Questions | Seen by |
 |---|---:|---|
-| COMMON | 41 | everyone |
+| COMMON (general papers) | 41 | everyone |
+| Professional Knowledge: one bank per cadre | 20 per cadre (68 cadres) | that cadre only |
 | Information & Communication Technology (ICT) Cadre | 93 | ICT cadre |
 | **Permanent Secretary Cadre** | **257** | PS cadre (GL 17 Directors, Tutors-General) |
-| GROUP: Law Enforcement (all enforcement cadres) | 34 | every enforcement cadre below |
+| GROUP: Law Enforcement (all enforcement cadres) | 34 | the four enforcement cadres below |
 | Traffic Management Officer Cadre (LASTMA) | 56 | LASTMA |
 | Vehicle Inspection Officer Cadre (VIS) | 29 | VIS |
-| Environmental & Special Offences Enforcement Cadre | 14 | enforcement unit |
-| Neighbourhood Safety Corps Cadre (LNSC) | 14 | LNSC |
+| Environmental & Special Offences Enforcement Cadre | 20 | enforcement unit |
+| Neighbourhood Safety Corps Cadre (LNSC) | 20 | LNSC |
+| **Fire & Rescue Service Cadre (LSFRS)** | **27** | fire service |
 
-A Permanent Secretary candidate therefore practises from 298 questions (COMMON + PS). A LASTMA officer practises from 131 (COMMON + Law Enforcement group + Traffic).
+Every one of the 75 cadres now has at least 20 questions of its own. Each practice session is drawn about half from the candidate's own cadre bank and half from the COMMON general papers, spread across subjects within each half.
 
-The PS bank covers the same subjects as the general examination, at managerial level: quantitative (NPV, CAGR, variance, weighted averages), verbal reasoning, critical reasoning and logic, official English, Civil Service Rules and the Constitution, Financial Regulations and PFM, current affairs and ICT. It adds two new subjects: **Public Policy & Governance** and **Leadership & Strategic Management**, the latter including situational-judgement scenarios.
+Upgrading a live database is automatic: on the next request (or when you run `diagnostics`), the server adds any seed question whose scope and wording are not already present. It never deletes or duplicates questions.
 
 > **About "past questions".** Lagos does not publish its Permanent Secretary selection papers. Public reporting only confirms that eligible Directors sit written examinations followed by interviews. These questions are modelled on that format and on the governing documents (1999 Constitution, PSR, Financial Regulations, Lagos procurement law and the Code of Conduct). They are not copies of actual past papers. Penalty amounts in Lagos traffic law have been amended and reported inconsistently, so the traffic questions test principles and procedure rather than fine figures.
 

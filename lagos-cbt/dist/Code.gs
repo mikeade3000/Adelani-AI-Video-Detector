@@ -132,14 +132,18 @@ function ensureSeed(store){
     store.setConfig({baseSeeded:true});
   }
   if(!cfg.seeded)store.setConfig({seeded:true,examLength:20,durationMins:30,aiProvider:"anthropic",aiModel:DEFAULT_AI_MODEL,aiKey:""});
-  var qs=null;
+  /* New banks are merged by wording: a question is added only if no question with the same scope and
+     stem exists yet, so re-running never duplicates and top-up banks can extend an existing scope.
+     All additions go in one write and all flags in one config update (keeps first load fast). */
+  var sigs=null,toAdd=[],flags={};
   getSeedBanks().forEach(function(b){
     if(bankDone_(cfg,b))return;
-    qs=qs||store.readAll("Questions");
-    var has=qs.some(function(q){return q.scope===b.scope;});
-    if(!has)appendMany_(store,"Questions",withIds_(b.data));
-    var flag={};flag["seeded_"+b.key]=true;store.setConfig(flag);
+    if(!sigs){sigs={};store.readAll("Questions").forEach(function(q){sigs[q.scope+"||"+q.stem]=1;});}
+    b.data.forEach(function(q){var k=q.scope+"||"+q.stem;if(!sigs[k]){sigs[k]=1;toAdd.push(q);}});
+    flags["seeded_"+b.key]=true;
   });
+  if(toAdd.length)appendMany_(store,"Questions",withIds_(toAdd));
+  if(Object.keys(flags).length)store.setConfig(flags);
   if(!cfg.patchV2){applyPatchesV2_(store);store.setConfig({patchV2:true});}
 }
 /* Fixes two seed questions that were wrong in databases created before this release. */
@@ -480,6 +484,7 @@ var TRAFFIC_CADRE="Traffic Management Officer Cadre (LASTMA)";
 var VIO_CADRE="Vehicle Inspection Officer Cadre (VIS)";
 var ENV_CADRE="Environmental & Special Offences Enforcement Cadre";
 var LNSC_CADRE="Neighbourhood Safety Corps Cadre (LNSC)";
+var FIRE_CADRE="Fire & Rescue Service Cadre (LSFRS)";
 /* A GROUP scope is a question bank shared by several cadres. */
 var LE_GROUP="GROUP: Law Enforcement (all enforcement cadres)";
 var CADRE_GROUPS={};
@@ -537,6 +542,18 @@ function getSeedBanks(){
   if(typeof SEED_VIO!=="undefined")b.push({key:"vio",scope:VIO_CADRE,data:SEED_VIO});
   if(typeof SEED_ENV!=="undefined")b.push({key:"env",scope:ENV_CADRE,data:SEED_ENV});
   if(typeof SEED_LNSC!=="undefined")b.push({key:"lnsc",scope:LNSC_CADRE,data:SEED_LNSC});
+  if(typeof SEED_FIRE!=="undefined")b.push({key:"fire",scope:FIRE_CADRE,data:SEED_FIRE});
+  if(typeof SEED_ENV_EXTRA!=="undefined")b.push({key:"env_extra_v1",scope:ENV_CADRE,data:SEED_ENV_EXTRA});
+  if(typeof SEED_LNSC_EXTRA!=="undefined")b.push({key:"lnsc_extra_v1",scope:LNSC_CADRE,data:SEED_LNSC_EXTRA});
+  /* professional-knowledge banks: one bank (and one seed flag) per cadre */
+  [typeof SEED_PROF_ADMIN!=="undefined"?SEED_PROF_ADMIN:null,
+   typeof SEED_PROF_HEALTH!=="undefined"?SEED_PROF_HEALTH:null,
+   typeof SEED_PROF_WORKS!=="undefined"?SEED_PROF_WORKS:null,
+   typeof SEED_PROF_SCIENCE!=="undefined"?SEED_PROF_SCIENCE:null,
+   typeof SEED_PROF_FINANCE!=="undefined"?SEED_PROF_FINANCE:null].forEach(function(map){
+    if(!map)return;
+    for(var name in map)b.push({key:"prof_"+name.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""),scope:name,data:map[name]});
+  });
   return b;
 }
 
@@ -549,7 +566,8 @@ var CADRES = [{"name": "Administrative Officer Cadre", "levels": [{"gl": "08", "
 {"name": "Traffic Management Officer Cadre (LASTMA)", "levels": [{"gl": "05", "post": "Traffic Assistant"}, {"gl": "06", "post": "Senior Traffic Assistant"}, {"gl": "07", "post": "Assistant Traffic Officer"}, {"gl": "08", "post": "Traffic Officer II"}, {"gl": "09", "post": "Traffic Officer I"}, {"gl": "10", "post": "Senior Traffic Officer"}, {"gl": "12", "post": "Principal Traffic Officer"}, {"gl": "13", "post": "Assistant Chief Traffic Officer"}, {"gl": "14", "post": "Chief Traffic Officer / Deputy Controller (Traffic)"}, {"gl": "15", "post": "Controller (Traffic) / Assistant Director"}, {"gl": "16", "post": "Deputy Director (Traffic Operations)"}, {"gl": "17", "post": "Director (Traffic Operations)"}]},
 {"name": "Vehicle Inspection Officer Cadre (VIS)", "levels": [{"gl": "06", "post": "Assistant Vehicle Inspection Officer"}, {"gl": "07", "post": "Vehicle Inspection Officer III"}, {"gl": "08", "post": "Vehicle Inspection Officer II"}, {"gl": "09", "post": "Vehicle Inspection Officer I"}, {"gl": "10", "post": "Senior Vehicle Inspection Officer"}, {"gl": "12", "post": "Principal Vehicle Inspection Officer"}, {"gl": "13", "post": "Assistant Chief Vehicle Inspection Officer"}, {"gl": "14", "post": "Chief Vehicle Inspection Officer"}, {"gl": "15", "post": "Assistant Director (Vehicle Inspection Service)"}, {"gl": "16", "post": "Deputy Director (Vehicle Inspection Service)"}, {"gl": "17", "post": "Director (Vehicle Inspection Service)"}]},
 {"name": "Environmental & Special Offences Enforcement Cadre", "levels": [{"gl": "05", "post": "Enforcement Assistant"}, {"gl": "06", "post": "Senior Enforcement Assistant"}, {"gl": "07", "post": "Enforcement Officer II"}, {"gl": "08", "post": "Enforcement Officer I"}, {"gl": "09", "post": "Senior Enforcement Officer"}, {"gl": "10", "post": "Principal Enforcement Officer"}, {"gl": "12", "post": "Assistant Chief Enforcement Officer"}, {"gl": "13", "post": "Chief Enforcement Officer"}, {"gl": "14", "post": "Assistant Director (Enforcement)"}, {"gl": "15", "post": "Deputy Director (Enforcement)"}, {"gl": "16", "post": "Director (Enforcement)"}]},
-{"name": "Neighbourhood Safety Corps Cadre (LNSC)", "levels": [{"gl": "04", "post": "Corps Member"}, {"gl": "05", "post": "Senior Corps Member"}, {"gl": "06", "post": "Assistant Safety Officer"}, {"gl": "07", "post": "Safety Officer II"}, {"gl": "08", "post": "Safety Officer I"}, {"gl": "09", "post": "Senior Safety Officer"}, {"gl": "10", "post": "Principal Safety Officer"}, {"gl": "12", "post": "Assistant Chief Safety Officer"}, {"gl": "13", "post": "Chief Safety Officer"}, {"gl": "14", "post": "Assistant Director (Neighbourhood Safety)"}]}
+{"name": "Neighbourhood Safety Corps Cadre (LNSC)", "levels": [{"gl": "04", "post": "Corps Member"}, {"gl": "05", "post": "Senior Corps Member"}, {"gl": "06", "post": "Assistant Safety Officer"}, {"gl": "07", "post": "Safety Officer II"}, {"gl": "08", "post": "Safety Officer I"}, {"gl": "09", "post": "Senior Safety Officer"}, {"gl": "10", "post": "Principal Safety Officer"}, {"gl": "12", "post": "Assistant Chief Safety Officer"}, {"gl": "13", "post": "Chief Safety Officer"}, {"gl": "14", "post": "Assistant Director (Neighbourhood Safety)"}]},
+{"name": "Fire & Rescue Service Cadre (LSFRS)", "levels": [{"gl": "04", "post": "Fireman / Firewoman"}, {"gl": "05", "post": "Leading Firefighter"}, {"gl": "06", "post": "Sub-Officer"}, {"gl": "07", "post": "Station Officer II"}, {"gl": "08", "post": "Station Officer I"}, {"gl": "09", "post": "Assistant Divisional Officer"}, {"gl": "10", "post": "Divisional Officer"}, {"gl": "12", "post": "Senior Divisional Officer"}, {"gl": "13", "post": "Assistant Chief Fire Officer"}, {"gl": "14", "post": "Deputy Chief Fire Officer"}, {"gl": "15", "post": "Chief Fire Officer"}, {"gl": "16", "post": "Deputy Director (Fire and Rescue Services)"}, {"gl": "17", "post": "Director (Fire and Rescue Services)"}]}
 ];
 
 /* ============================================================
@@ -1372,5 +1390,1733 @@ var SEED_LNSC=(function(){
   b.mcq(LE,"medium","The 'broken windows' theory suggests that:",["Only serious crimes matter","Visible signs of disorder, if left unaddressed, encourage more serious crime","Windows cause crime","Police should ignore minor offences"],1,"Addressing minor disorder can help prevent more serious crime, although critics warn against heavy-handed enforcement.");
   b.mcq(L,"medium","Burglaries in an estate rose sharply after street lights failed. The most reasonable FIRST response is to:",["Assume the residents are responsible","Restore the lighting and increase patrols in the affected streets, then monitor whether burglaries fall","Ban all visitors","Do nothing"],1,"The response targets the likely cause, then assessment checks whether it worked (as in SARA).");
   b.mcq(L,"easy","Find the next number: 1, 4, 9, 16, 25, ___",["30","34","36","49"],2,"Square numbers: 6² = 36.");
+  return out;
+})();
+
+/* ===================== FIRE & RESCUE SERVICE (LSFRS) ===================== */
+var SEED_FIRE=(function(){
+  var out=[],b=_cbtBankBuilder("Fire & Rescue Service Cadre (LSFRS)",out);
+  var P="Professional Knowledge",Q="Quantitative",LE="Law Enforcement Practice";
+  b.mcq(P,"easy","The three elements of the fire triangle are:",["Smoke, flame and ash","Heat, fuel and oxygen","Water, foam and powder","Wood, paper and petrol"],1,"Remove any one element and the fire goes out. The fire tetrahedron adds the chemical chain reaction.");
+  b.mat(P,"medium","Match each class of fire (European classification) to its fuel.",[["Class A","Ordinary solids such as wood, paper and cloth"],["Class B","Flammable liquids such as petrol and paints"],["Class C","Flammable gases such as LPG"],["Class F","Cooking oils and fats"]],"Class D covers combustible metals. Electrical fires are treated by isolating the supply and using suitable agents.");
+  b.mcq(P,"easy","A water extinguisher must NOT be used on:",["Burning paper","Burning wood","Live electrical equipment or burning oil","Burning cloth"],2,"Water conducts electricity and spreads burning liquids.");
+  b.mat(P,"medium","Match each extinguisher (BS EN 3 colour band) to its agent.",[["Red","Water"],["Cream","Foam"],["Blue","Dry powder"],["Black","Carbon dioxide (CO₂)"]],"Wet chemical extinguishers carry a yellow band and are used on Class F fires.");
+  b.ord(P,"easy","Arrange the PASS technique for using a portable extinguisher.",["Pull the pin","Aim at the base of the fire","Squeeze the handle","Sweep from side to side"],"Aiming at the base attacks the fuel, not the flames.");
+  b.mat(P,"medium","Match each method of heat transfer to its description.",[["Conduction","Heat travelling through a solid material"],["Convection","Heat carried by moving hot gases or liquids"],["Radiation","Heat travelling as electromagnetic waves"],["Direct burning","Flame contact igniting nearby materials"]],"Understanding heat transfer guides fire attack and protection of exposures.");
+  b.mcq(P,"hard","Flashover is best described as:",["A small fire in a waste bin","The near-simultaneous ignition of all combustible materials in a compartment when they reach ignition temperature","An explosion of a gas cylinder","Smoke leaving a window"],1,"Flashover is usually unsurvivable for anyone in the room.");
+  b.mcq(P,"hard","Backdraught occurs when:",["Water is applied to a fire","Air (oxygen) suddenly enters an oxygen-starved compartment containing hot, unburnt fuel gases","A fire spreads by radiation","Foam is applied to petrol"],1,"Signs include smoke pulsing at openings and blackened windows.");
+  b.mcq(P,"medium","Firefighters entering smoke-filled buildings wear self-contained breathing apparatus (SCBA) and are recorded by an entry control officer mainly to:",["Count equipment","Protect them from toxic gases and track who is inside and their air supply","Write a press release","Speed up the work"],1,"Entry control ensures no firefighter is left unaccounted for.");
+  b.mcq(P,"medium","For safe use, an extension ladder should be pitched at an angle of about:",["45°","60°","75° (the 1-in-4 rule)","90°"],2,"The foot is about one unit out for every four units of height.");
+  b.mcq(Q,"medium","A pressure of 1 bar can lift water to roughly what height?",["1 m","10 m","100 m","0.1 m"],1,"1 bar ≈ 10 m head of water (ignoring friction loss).");
+  b.mcq(Q,"medium","A fire tender carries 4,500 litres of water and a branch discharges 450 litres per minute. How long will the tank supply last?",["5 minutes","10 minutes","45 minutes","100 minutes"],1,"4,500 ÷ 450 = 10 minutes — hence the need to secure a hydrant or other supply quickly.");
+  b.mcq(Q,"easy","One litre of water has a mass of about:",["0.1 kg","1 kg","10 kg","100 kg"],1,"A 4,500-litre tender therefore carries about 4.5 tonnes of water.");
+  b.ord(P,"medium","Arrange the RACE response to a fire in a building.",["Rescue people in immediate danger","Alarm — raise the alarm and call 112/767","Confine — close doors to contain the fire","Extinguish or evacuate"],"Life safety comes first.");
+  b.mcq(P,"medium","On a hazardous-materials placard, the four-digit UN number identifies:",["The driver","The specific dangerous substance being carried","The vehicle's registration","The emergency phone number"],1,"Responders use it to look up the hazards and the correct response.");
+  b.mcq(P,"medium","At a multiple-casualty incident using START triage, casualties who can walk are tagged:",["Red (immediate)","Yellow (delayed)","Green (minor)","Black (deceased/expectant)"],2,"Walking wounded are directed to a collection point.");
+  b.mcq(P,"medium","Which Lagos agency coordinates disaster response, such as building collapses, together with the fire service?",["LASEMA","LASTMA","LIRS","LAWMA"],0,"The Lagos State Emergency Management Agency coordinates multi-agency response.");
+  b.mcq(P,"medium","Lagos State's agency responsible for promoting occupational and public safety standards, including safety in public buildings, is the:",["Lagos State Safety Commission","Lagos State Lotteries Board","LASRRA","LASWA"],0,"Fire safety inspections and safety standards complement fire-service operations.");
+  b.mcq(P,"medium","In fire investigation, a 'V-pattern' burn mark on a wall usually points towards the:",["Firefighters' entry point","Area of origin of the fire","Exit door","Water supply"],1,"Fire rises and spreads outwards, leaving a V shape above the origin.");
+  b.mcq(P,"easy","A person whose clothes catch fire should:",["Run for help","Stop, drop and roll","Fan the flames","Jump into a car"],1,"Running feeds the fire with oxygen.");
+  b.mcq(P,"medium","On arrival at a house with a strong smell of cooking gas (LPG) but no fire, crews should:",["Switch on lights to see better","Avoid ignition sources (no switches or naked flames), shut off the cylinder valve if safe, ventilate and evacuate","Light a match to find the leak","Close all windows"],1,"LPG is heavier than air and collects at low levels.");
+  b.mcq(P,"hard","Halon extinguishers have largely been phased out because halons:",["Are too cheap","Deplete the ozone layer","Do not work on any fire","Are too heavy"],1,"They are controlled under the Montreal Protocol.");
+  b.tf(P,"easy","Regular fire drills help occupants learn escape routes and assembly points.",true,"Drills reduce panic and evacuation time.");
+  b.tf(P,"medium","Fire doors may be wedged open to improve ventilation in offices.",false,"Fire doors must close to stop the spread of fire and smoke.");
+  b.tf(P,"medium","Smoke inhalation causes more fire deaths than burns.",true,"Toxic gases such as carbon monoxide incapacitate quickly.");
+  b.sa(P,"easy","Name the three sides of the fire triangle (e.g. 'heat fuel oxygen').",["heat fuel oxygen","heat, fuel, oxygen","fuel heat oxygen","oxygen heat fuel","heat fuel and oxygen"],"Fire needs all three to burn.");
+  b.mcq(LE,"medium","At a fire scene, crowd control by the fire service and police is important mainly to:",["Entertain onlookers","Keep people safe, protect access for appliances and prevent interference and looting","Collect fees","Film the incident"],1,"Cordons protect the public and emergency workers.");
+  return out;
+})();
+
+/* ===================== TOP-UPS (added to existing scopes) ===================== */
+var SEED_ENV_EXTRA=(function(){
+  var out=[],b=_cbtBankBuilder("Environmental & Special Offences Enforcement Cadre",out);
+  var LE="Law Enforcement Practice",Q="Quantitative";
+  b.mcq(LE,"easy","Before taking enforcement action against a member of the public, an officer should:",["Act without identifying themselves","Identify themselves, show official identification and state the offence","Wear civilian clothes to avoid recognition","Demand money"],1,"Identification builds legitimacy and protects against impersonators.");
+  b.mcq(Q,"medium","A 7-day abatement notice is served on Monday, 3 March. On which date does the notice period end?",["Monday, 10 March","Sunday, 9 March","Thursday, 6 March","Monday, 17 March"],0,"Counting 7 days from 3 March gives 10 March (check the exact counting rule in the relevant law).");
+  b.mcq(LE,"medium","Photographs taken as evidence of an environmental offence should show:",["Only the officer","The date, time and location, with the offence clearly visible","Unrelated people","Edited images"],1,"Authentic, well-documented evidence supports prosecution at the mobile court.");
+  b.mcq(LE,"medium","Shanties and illegal structures under bridges are cleared mainly because they:",["Look untidy only","Create safety, health and security risks and can damage public infrastructure","Pay no rent","Block the view"],1,"Clearance should follow due process and, where possible, welfare referrals.");
+  b.tf(LE,"medium","Officers may keep part of the goods seized from street traders as a reward.",false,"Seized goods are exhibits and must be recorded and handled according to law.");
+  b.mcq(LE,"medium","An offender arrested for an environmental offence is usually charged before the:",["Supreme Court","Mobile court or magistrates' court with jurisdiction","Code of Conduct Tribunal","Customary court only"],1,"Mobile courts hear environmental and traffic offences quickly.");
+  return out;
+})();
+var SEED_LNSC_EXTRA=(function(){
+  var out=[],b=_cbtBankBuilder("Neighbourhood Safety Corps Cadre (LNSC)",out);
+  var LE="Law Enforcement Practice";
+  b.ord(LE,"medium","Arrange the key details to obtain when receiving a distress call.",["Exact location","Nature of the emergency","Number of people involved or injured","Caller's name and call-back number","Dispatch help and give safety advice"],"Location first, so help can be sent even if the call drops.");
+  b.mcq(LE,"easy","Neighbourhood patrols are safest and most effective when officers:",["Patrol alone without communication","Patrol in pairs or teams with a means of communication","Patrol only in daylight once a week","Announce their exact route in advance"],1,"Teams with radios can call for support quickly.");
+  b.mcq(LE,"medium","A suspect apprehended by LNSC personnel should be:",["Detained in a private house overnight","Handed over promptly to the police with a written report","Released after a fine paid to the officer","Beaten as a deterrent"],1,"LNSC complements the police; custody and prosecution are police functions.");
+  b.mcq(LE,"medium","A resident reports domestic violence next door. The LNSC officer should:",["Ignore it as a family matter","Ensure immediate safety, then refer to the police and the Domestic and Sexual Violence Agency","Settle it with the abuser privately for money","Post it online"],1,"Domestic violence is a crime; survivors need protection and support.");
+  b.mcq(LE,"easy","Regular meetings with residents, CDAs and community leaders help the LNSC mainly to:",["Collect levies","Build trust and gather information on local safety concerns","Replace the police","Settle land disputes"],1,"Community trust drives intelligence-led prevention.");
+  b.tf(LE,"medium","Information received from residents about suspected crime should be treated as confidential and passed through the proper channel.",true,"Protecting sources encourages reporting.");
+  return out;
+})();
+
+
+/* ==================== inlined from cbt-bank-prof-admin.js ==================== */
+/* ============================================================
+   PROFESSIONAL KNOWLEDGE — administrative, executive, clerical,
+   secretarial, stores, library, education, catering and support cadres.
+   20 questions per cadre. Shared file (browser + Apps Script).
+   ============================================================ */
+var SEED_PROF_ADMIN=(function(){
+  var out={},cur=null,C="Professional Knowledge",E="easy",M="medium",H="hard";
+  function cadre(n){cur=out[n]=[];}
+  function q(t,d,stem,x,ex){var o={scope:null,category:C,type:t,difficulty:d,stem:stem,explanation:ex};for(var k in x)o[k]=x[k];cur.push(o);}
+  function m(d,stem,o,a,ex){q("mcq",d,stem,{options:o,answer:a},ex);}
+  function t(d,stem,a,ex){q("truefalse",d,stem,{answer:a},ex);}
+  function s(d,stem,acc,ex){q("shortanswer",d,stem,{accept:acc},ex);}
+  function o(d,stem,items,ex){q("ordering",d,stem,{items:items},ex);}
+  function x(d,stem,pairs,ex){q("matching",d,stem,{pairs:pairs.map(function(p){return {l:p[0],r:p[1]};})},ex);}
+
+  /* ---------------- Administrative Officer ---------------- */
+  cadre("Administrative Officer Cadre");
+  m(M,"The document that lists all approved posts in a Ministry, with their grade levels and the number of each, is the:",["Nominal roll","Establishment (staff establishment list)","Payroll","Organogram"],1,"The establishment shows approved posts; the nominal roll lists the actual officers in post.");
+  m(M,"A list of all officers actually in post, showing name, rank, date of birth and date of first appointment, is the:",["Establishment","Nominal roll","Vote book","Gazette"],1,"The nominal roll supports staff audit, promotion and retirement planning.");
+  m(H,"Comparing the establishment with the nominal roll mainly helps the Admin & HR department to identify:",["Budget surpluses","Vacancies, over-staffing and possible ghost workers","Audit queries","Court cases"],1,"Gaps show vacancies; excess shows over-establishment; unmatched names on the payroll suggest ghost workers.");
+  m(M,"A Training Needs Analysis (TNA) is carried out to:",["Punish poor performers","Identify gaps between required and actual competencies before designing training","Calculate salaries","Approve leave"],1,"Training should address identified gaps, not be offered at random.");
+  o(H,"Arrange Kirkpatrick's four levels of training evaluation from first to last.",["Reaction","Learning","Behaviour","Results"],"Reaction (did trainees like it?) → Learning (what did they learn?) → Behaviour (do they apply it?) → Results (organisational impact).");
+  m(M,"In official files, the abbreviation 'B.U.' written on a minute means:",["Bring Up (return the file on a stated date)","Be Urgent","Basic Unit","Budget Update"],0,"'B.U. 14/3' asks the registry to bring the file back on that date.");
+  x(M,"Match each security classification to its meaning.",[["Top Secret","Disclosure would cause exceptionally grave damage"],["Secret","Disclosure would cause serious damage"],["Confidential","Disclosure would be prejudicial to the interest of government"],["Restricted","Limited to official use"]],"Classified documents are handled, stored and transmitted according to their grading.");
+  m(E,"The minimum number of members who must be present for a meeting to transact business validly is the:",["Agenda","Quorum","Majority","Caucus"],1,"Decisions taken without a quorum can be challenged.");
+  o(M,"Arrange the usual order of items on a formal meeting agenda.",["Opening and apologies","Adoption of minutes of the last meeting","Matters arising","New business","Any other business","Date of next meeting and close"],"This standard order makes meetings predictable and well minuted.");
+  m(M,"'Matters arising' on an agenda refers to:",["Brand-new issues","Follow-up on items recorded in the previous meeting's minutes","Complaints","Financial reports only"],1,"It tracks whether earlier decisions were implemented.");
+  m(H,"A job description primarily states:",["The officer's personal qualities","The duties, responsibilities and reporting lines of a post","Salary history","Disciplinary record"],1,"A person specification describes the ideal holder; a job description describes the job.");
+  m(M,"Manpower (workforce) planning in a Ministry is mainly concerned with:",["Purchasing vehicles","Forecasting staff requirements and matching them with supply over time","Writing press releases","Budget defence only"],1,"It covers recruitment, retirements, promotion and training needs.");
+  t(E,"A grievance procedure gives officers a formal channel to raise complaints about their work or treatment.",true,"Clear grievance procedures reduce conflict and petitions.");
+  t(M,"An organogram shows the structure of an organisation, including reporting relationships.",true,"It displays departments, units and lines of authority.");
+  t(M,"A staff audit (head count) is only useful for promotion exercises.",false,"Staff audits also verify the payroll, detect ghost workers and update the nominal roll.");
+  m(M,"A 'minute' written on a file is best described as:",["A 60-second meeting","A written note on a minute sheet recording advice, instruction or decision on the matter in the file","The agenda","A press statement"],1,"Minutes on files create an audit trail of how a matter was handled.");
+  m(H,"When an officer writes 'Pl. see' and passes a file to a superior, the officer is:",["Rejecting the file","Inviting the superior to read and take note or decide","Closing the file","Requesting leave"],1,"'Please see' draws attention to the matter for consideration.");
+  m(M,"The function of HR that ensures records of each officer (appointment, promotion, discipline) are complete is:",["Personnel records management","Procurement","Budgeting","Revenue"],0,"Officers' personal files are the basis of every establishment decision.");
+  s(M,"What single word describes the deliberate preparation of officers to take over key posts in future?",["succession","succession planning"],"Succession planning protects continuity when senior officers retire.");
+  m(M,"Exit interviews with departing staff are mainly used to:",["Recover salary","Understand why staff leave and improve retention","Discipline them","Approve pensions"],1,"Patterns in exit feedback reveal management or welfare problems.");
+
+  /* ---------------- Executive Officer (General Duties) ---------------- */
+  cadre("Executive Officer (General Duties) Cadre");
+  m(E,"The book in which all incoming letters are recorded on receipt is the:",["Dispatch book","Incoming mail register","Vote book","Visitors' book"],1,"It records date received, sender, subject and to whom the item was passed.");
+  m(E,"The book used to record outgoing letters and obtain signatures of recipients is the:",["Dispatch book","Cash book","Attendance register","Log book"],0,"A signed dispatch book proves delivery.");
+  m(M,"A register that shows where every file is at any time is the:",["File movement register","Stock ledger","Minute sheet","Nominal roll"],0,"Tracking file movement prevents files getting lost.");
+  x(M,"Match each filing method to how files are arranged.",[["Alphabetical","By name, A to Z"],["Numerical","By assigned number"],["Subject","By topic or function"],["Chronological","By date"]],"The choice depends on how records are most often retrieved.");
+  m(M,"On a minute sheet, 'N.F.A.' means:",["Note For Action","No Further Action","New File Attached","Not For Approval"],1,"The matter is concluded and the file can be put away.");
+  m(M,"'P.A.' written on a file means:",["Put Away","Personal Assistant","Please Approve","Pending Action"],0,"The file is returned to the registry shelves.");
+  m(M,"When a file becomes too thick, the registry should:",["Throw away old papers","Close it and open a new part (e.g. Vol. II) cross-referenced to the old one","Split it randomly","Give it to the officer to keep"],1,"Closed parts are kept with the new part referenced to them.");
+  m(H,"Records that are no longer needed for current business but must be kept for legal or historical reasons should be:",["Burnt","Transferred to semi-current storage or archives under a retention schedule","Sold as waste paper","Kept on officers' desks"],1,"A retention and disposal schedule decides what is kept, archived or destroyed, and when.");
+  m(M,"A cross-reference sheet in a file is used to:",["Record attendance","Point to related papers kept in another file","Record leave","List visitors"],1,"It avoids duplicate filing while keeping records linked.");
+  t(E,"Confidential documents may be left on an open desk when the officer goes for lunch.",false,"Classified documents must be locked away when unattended.");
+  t(M,"A file census is a periodic check that all registered files can be located.",true,"It exposes missing files and updates the file movement register.");
+  t(M,"Each letter sent out should carry a reference number linking it to the file on which the matter is handled.",true,"References let replies be filed in the right place.");
+  m(M,"The first thing a registry clerk should do on receiving incoming mail is to:",["Open private letters addressed to officers","Date-stamp and register the mail","Throw away envelopes immediately","Reply to it"],1,"Registration and date-stamping create the record of receipt.");
+  m(H,"An incoming letter marked 'Personal and Confidential' addressed to a Director should be:",["Opened by the registry","Delivered unopened to the addressee and recorded","Read by the messenger","Filed without delivery"],1,"Only the addressee (or an authorised person) opens such mail.");
+  o(M,"Arrange the steps for handling an incoming official letter.",["Receive and date-stamp","Register in the incoming mail register","Attach to the relevant file","Pass to the action officer","Reply and dispatch"],"This sequence ensures every letter is traceable from receipt to reply.");
+  m(M,"A 'temporary file' (T-file) is opened when:",["The main file cannot be found or is in use, and the papers are later merged into it","A file is closed","A visitor arrives","An officer retires"],0,"T-files must be merged into the substantive file as soon as possible.");
+  m(E,"Good customer service at a public front desk includes:",["Ignoring callers","Courtesy, clear information and prompt referral","Collecting tips","Shouting instructions"],1,"The front desk is often the public's first impression of a Ministry.");
+  m(M,"'F.Y.I.' on a minute means:",["File Your Instructions","For Your Information","Find Your Item","Final Year Index"],1,"No action is required beyond noting the content.");
+  s(E,"What is the name of the sheet attached to a file on which officers write their comments and instructions?",["minute sheet","minute paper","minutes sheet"],"The minute sheet records the flow of advice and decisions.");
+  m(M,"The best way to protect electronic records from loss is to:",["Keep one copy on a single PC","Back them up regularly to secure, separate storage","Print everything","Email them to personal accounts"],1,"Regular, secure backups protect against disk failure and ransomware.");
+
+  /* ---------------- Executive Officer (Accounts) ---------------- */
+  cadre("Executive Officer (Accounts) Cadre");
+  m(E,"The document that authorises a payment and shows the payee, amount and vote charged is the:",["Receipt","Payment voucher","Invoice","Bin card"],1,"No payment should be made without a properly certified payment voucher.");
+  m(M,"In double-entry bookkeeping, every transaction is recorded:",["Once","As a debit in one account and an equal credit in another","Only in the cash book","Only at year end"],1,"Equal debits and credits keep the books in balance.");
+  m(M,"The accounting equation is:",["Assets = Liabilities + Equity","Assets = Income − Expenses","Liabilities = Assets + Equity","Cash = Profit"],0,"In public-sector terms, assets = liabilities + net assets.");
+  m(M,"A trial balance is prepared to:",["Pay salaries","Check that total debits equal total credits in the ledger","Approve budgets","Record visitors"],1,"Agreement does not prove there are no errors (e.g. errors of omission), but disagreement proves there are some.");
+  m(H,"A bank reconciliation statement explains the difference between:",["Two bank accounts","The cash book balance and the bank statement balance","Budget and actual","Revenue and expenditure"],1,"Differences arise from unpresented cheques, uncredited lodgements, bank charges and errors.");
+  m(H,"A cheque issued and entered in the cash book but not yet paid by the bank is called:",["An uncredited lodgement","An unpresented cheque","A dishonoured cheque","A stale cheque"],1,"It reduces the cash book balance but not yet the bank balance.");
+  m(M,"Money received by government must be acknowledged by issuing:",["A payment voucher","An official receipt (e.g. Treasury Receipt)","An LPO","A memo"],1,"Official receipts are serially numbered and accountable documents.");
+  m(M,"Under the imprest system of petty cash, at the end of each period the petty cashier:",["Keeps the balance","Is reimbursed exactly the amount spent, restoring the fixed float","Pays the balance to staff","Closes the account"],1,"The float always returns to the agreed fixed amount.");
+  m(M,"A 'contra' entry in a cash book records:",["Bank charges","A transfer between the cash and bank columns","Salary payments","Revenue only"],1,"Cash paid into the bank (or withdrawn) is recorded on both sides.");
+  m(H,"An advance granted to an officer for an official journey must be:",["Kept as a gift","Retired with receipts and any unspent balance refunded","Repaid only at retirement","Written off"],1,"Unretired advances are recovered from salary and attract audit queries.");
+  t(E,"Payment vouchers should be checked, certified and approved by different officers.",true,"Segregation of duties is a basic internal control.");
+  t(M,"Cash received for revenue may be used directly to pay office expenses before it is banked.",false,"Revenue must be paid in intact; expenditure is made only from appropriated funds.");
+  t(M,"A ledger is a book containing individual accounts to which entries from books of original entry are posted.",true,"Cash book and journal entries are posted to ledger accounts.");
+  x(M,"Match each book or document to its purpose.",[["Cash book","Records receipts and payments of cash and bank"],["Journal","Records entries not in other books, e.g. corrections"],["Ledger","Holds individual accounts"],["Vote book","Controls spending against each vote"]],"Each record has a distinct role in public accounts.");
+  m(M,"Deductions commonly made from salaries include:",["PAYE tax, pension contribution and approved loans","Fuel and generator costs","Contractor fees","Electricity bills of the office"],0,"Statutory deductions must be remitted promptly to the right agencies.");
+  m(M,"Which error would NOT be revealed by a trial balance?",["A one-sided entry","A transaction completely omitted from the books","Adding a column wrongly","Posting a debit as a credit"],1,"Errors of omission keep debits and credits equal, so the trial balance still agrees.");
+  s(M,"A petty cash float is ₦50,000. Expenses of ₦36,500 were paid. How much is reimbursed to restore the imprest? (figures only)",["36500","₦36,500","36,500"],"Under the imprest system you reimburse the amount spent (₦36,500), restoring the ₦50,000 float. ₦13,500 is the cash still on hand.");
+  o(M,"Arrange the steps in processing a payment.",["Raise the payment voucher with supporting documents","Check and certify","Approve by the authorised officer","Pre-payment audit","Make payment and record it"],"Each step adds a control before money leaves the treasury.");
+  m(E,"A dishonoured cheque is one that:",["Has been paid","The bank has refused to pay, e.g. for insufficient funds","Is not yet presented","Is crossed"],1,"The amount must be reversed in the cash book.");
+  m(H,"Straight-line depreciation charges:",["A rising amount each year","The same amount each year over the asset's useful life","Nothing","Only in the first year"],1,"(Cost − residual value) ÷ useful life.");
+
+  /* ---------------- Executive Officer (Audit) ---------------- */
+  cadre("Executive Officer (Audit) Cadre");
+  m(M,"'Vouching' in auditing means:",["Approving payments","Checking entries in the records against supporting documents","Preparing budgets","Counting cash only"],1,"Vouching tests whether recorded transactions are genuine and supported.");
+  m(M,"'Verification' in auditing refers mainly to confirming:",["Staff attendance","The existence, ownership and value of assets","Budget approval","Revenue targets"],1,"For example, physically inspecting vehicles listed in the asset register.");
+  m(M,"An audit query is:",["A promotion letter","A written request to an officer to explain an irregularity found during audit","A budget call","A training form"],1,"Queries must be answered within the stated period with supporting evidence.");
+  m(H,"A pre-payment audit is carried out:",["After payment","Before payment, to confirm the voucher is valid, approved and correctly charged","At year end only","By the contractor"],1,"It prevents irregular payments rather than detecting them later.");
+  m(M,"An 'audit trail' is:",["A path in the garden","The documented sequence that allows a transaction to be traced from source to final records","A list of auditors","An audit fee"],1,"A clear audit trail is essential for accountability.");
+  m(H,"Testing a sample of transactions rather than all of them is justified because:",["It is always more accurate","Properly selected samples give reasonable assurance at acceptable cost","Auditors are lazy","The law forbids full testing"],1,"Sampling balances assurance against time and cost.");
+  m(M,"Segregation of duties as an internal control means:",["One officer handles a transaction from start to finish","Different officers authorise, record and handle assets for the same transaction","Officers rotate desks daily","Everyone approves everything"],1,"It reduces the risk of error and fraud.");
+  x(M,"Match each audit term to its meaning.",[["Materiality","Size or nature of an error that would influence decisions"],["Audit evidence","Information used to support audit findings"],["Working papers","Records of audit work done and conclusions"],["Management letter","Report of control weaknesses and recommendations"]],"These are core concepts of audit practice.");
+  m(M,"Which is a common red flag for fraud in payments?",["Payments to suppliers with complete documents","Repeated payments just below approval thresholds to the same supplier","Timely bank reconciliations","Rotation of duties"],1,"Splitting payments to avoid thresholds is a classic warning sign.");
+  m(M,"A stores audit typically includes:",["Interviewing contractors only","Physical count of stock and comparison with bin cards and stock ledger","Approving the budget","Recruiting staff"],1,"Differences must be investigated and explained.");
+  t(E,"Internal auditors should report directly to the Accounting Officer to protect their independence.",true,"Independence lets internal audit report without fear or favour.");
+  t(M,"A clean trial balance proves that the accounts are free from all errors.",false,"Errors of omission, commission and principle can still exist.");
+  t(M,"Audit working papers should be detailed enough for another auditor to understand the work done.",true,"Good working papers support conclusions and quality review.");
+  m(H,"Compliance tests check that controls operate; substantive tests check:",["Staff morale","The accuracy and validity of the figures themselves","Office layout","Weather"],1,"Both kinds of test are combined to form an audit opinion.");
+  m(M,"When an auditor finds that a payment voucher has no supporting invoice, the right step is to:",["Ignore it","Raise a query and request the missing documents","Pay the supplier again","Destroy the voucher"],1,"Unsupported payments are irregular until properly documented.");
+  o(M,"Arrange the stages of an audit assignment in order.",["Planning","Fieldwork / testing","Evaluation of findings","Reporting","Follow-up of recommendations"],"Follow-up ensures recommendations are actually implemented.");
+  m(M,"A surprise cash count is mainly intended to:",["Inform staff in advance","Confirm that cash on hand agrees with the records at an unannounced time","Pay salaries","Train cashiers"],1,"Surprise counts deter teeming and lading or borrowing from cash.");
+  s(M,"Name the fraud in which receipts from one customer are used to cover a shortage from an earlier customer (three words, e.g. '_____ and _____').",["teeming and lading","teeming & lading"],"Teeming and lading delays detection of misappropriated receipts.");
+  m(M,"Which body examines the Auditor-General's report on behalf of the State House of Assembly?",["Public Accounts Committee","Tenders Board","Civil Service Commission","Security Council"],0,"The PAC questions Accounting Officers on audit findings.");
+  m(H,"A 'qualified' audit opinion means:",["The accounts are perfect","The auditor has reservations about specific matters in the accounts","The auditor is qualified","The audit was cancelled"],1,"A qualified opinion highlights material issues while accepting the rest.");
+
+  /* ---------------- Executive Officer (Information) ---------------- */
+  cadre("Executive Officer (Information) Cadre");
+  m(M,"News writing usually follows the 'inverted pyramid', which means:",["The least important facts come first","The most important facts come first, followed by supporting details","The story ends with the main point","Only pictures are used"],1,"Readers and editors can cut from the bottom without losing the core news.");
+  m(E,"The opening paragraph of a news story that summarises the key facts is the:",["Byline","Lead (intro)","Caption","Masthead"],1,"A good lead answers who, what, when, where, why and how.");
+  m(M,"A press release marked 'Embargoed until 10:00, 14 May' means:",["It can never be published","It must not be published before that time","It is secret","It is cancelled"],1,"Embargoes let media prepare while respecting a release time.");
+  m(M,"Which body regulates broadcasting in Nigeria?",["Nigerian Press Council","National Broadcasting Commission (NBC)","NCC only","NITDA"],1,"The NBC licenses and regulates radio and television stations.");
+  m(M,"Publishing a false statement that damages a person's reputation is:",["Libel (defamation in permanent form)","Slander","Satire","Embargo"],0,"Libel is defamation in permanent form; slander is spoken.");
+  x(M,"Match each term to its meaning.",[["Byline","Name of the writer of a story"],["Caption","Text explaining a photograph"],["Dateline","Place and date at the start of a story"],["Headline","Title of a story"]],"Basic newsroom vocabulary.");
+  m(M,"Media monitoring in a Ministry's information unit means:",["Buying newspapers for staff","Tracking coverage of the Ministry in the media and reporting issues to management","Censoring journalists","Printing posters"],1,"It informs responses, corrections and strategy.");
+  m(H,"During a crisis, the government communicator should FIRST:",["Stay silent until everything is known","Issue a prompt, accurate holding statement and commit to updates","Blame the media","Delete social media accounts"],1,"Early, honest communication limits rumours.");
+  m(M,"Information given to a journalist 'off the record' means:",["It can be quoted with the source's name","It should not be published or attributed","It is false","It is for broadcast only"],1,"Terms should be agreed before the information is shared.");
+  m(E,"'News values' are criteria that make an event newsworthy. Which is one?",["Timeliness","Font size","Paper quality","Office location"],0,"Others include proximity, prominence, impact, conflict and human interest.");
+  t(E,"A press release should include contact details for further information.",true,"Journalists need someone to verify facts or request interviews.");
+  t(M,"Photographs used in official publications do not need captions.",false,"Captions identify people and context and prevent misinterpretation.");
+  t(M,"Public enlightenment campaigns aim to inform citizens about government programmes and change behaviour where needed.",true,"Examples include sanitation, health and traffic campaigns.");
+  o(M,"Arrange the steps in organising a press conference.",["Define the purpose and key messages","Invite the media and prepare the venue","Brief the spokesperson","Hold the conference and take questions","Distribute the press release and follow up"],"Preparation ensures a clear, controlled message.");
+  m(M,"A feature article differs from a straight news story mainly because it:",["Must be short","Explores a topic in depth with background, colour and human interest","Has no facts","Is always about sports"],1,"Features are less time-bound than hard news.");
+  m(M,"Which practice is MOST important when managing a Ministry's social media account?",["Posting unverified rumours quickly","Posting accurate, approved information and responding courteously","Arguing with critics","Sharing personal opinions"],1,"Official accounts speak for the government.");
+  s(E,"What is the name of the person who checks and corrects copy before publication?",["editor","sub-editor","subeditor","copy editor","copyeditor"],"Editors check accuracy, clarity, style and length.");
+  m(H,"Which body handles complaints about the conduct of print journalists in Nigeria?",["Nigerian Press Council","NBC","CAC","NUJ Election Committee"],0,"The Nigerian Press Council promotes professional standards in the print media.");
+  m(M,"The '5Ws and H' of news writing are:",["Who, What, When, Where, Why and How","Write, Wait, Watch, Warn, Win, Help","Who, Whom, Whose, Which, Why, Here","None"],0,"A complete story answers all six.");
+  m(M,"A 'rejoinder' is:",["A press release launching a project","A response correcting or clarifying a published report","A photograph","An advertisement"],1,"Rejoinders should be factual and temperate.");
+
+  /* ---------------- Clerical ---------------- */
+  cadre("Clerical Cadre");
+  m(E,"When filing alphabetically, which name comes first?",["Adebola","Adebayo","Adebowale","Adebiyi"],1,"Compare letter by letter: all start A-D-E-B, then 'a' (Adebayo) comes before 'i', 'o' — so Adebayo is first.");
+  m(E,"Under the 'nothing before something' rule, which is filed first?",["Bank Lagos","Banks Lagos","Bankole","They are equal"],0,"'Bank' (shorter, nothing after) files before 'Banks' and 'Bankole'.");
+  m(E,"The proper way to answer an official telephone call is to:",["Say 'Who is this?'","Greet the caller, give your office or name, and offer help","Remain silent","Put the caller on hold immediately"],1,"Courteous, identified answering is basic office etiquette.");
+  m(M,"When taking a telephone message for an absent officer, you should record:",["Only the caller's name","Caller's name, number, date, time, message and your name","Nothing","Only the time"],1,"Complete messages allow prompt follow-up.");
+  m(E,"Stationery for the office is usually obtained from the store by completing a:",["Payment voucher","Requisition form / store issue voucher","Leave form","Visitors' book"],1,"Requisitions create an accountable record of issues.");
+  m(M,"A visitor arrives without an appointment to see the Director. The clerk should:",["Send them straight in","Politely take details and check with the Director's office whether they can be seen","Ask them to leave rudely","Collect money"],1,"Courtesy combined with proper screening protects the officer's time.");
+  m(M,"A 'cross-reference' in a filing system is used when:",["A document relates to more than one file","A file is lost","A file is closed","Typing errors occur"],0,"It tells users where the related document is kept.");
+  t(E,"Official documents should be kept confidential and not discussed with unauthorised persons.",true,"Confidentiality is part of the Official Secrets obligations of public officers.");
+  t(E,"It is acceptable to remove papers from an official file to save space.",false,"Papers must never be removed; this breaks the record and audit trail.");
+  t(M,"The date stamp on incoming mail shows when the mail was received by the office.",true,"It establishes timelines for responses.");
+  m(E,"Which item is a piece of office equipment used to make copies of documents?",["Photocopier","Stapler only","Perforator","Franking machine"],0,"Photocopiers reproduce documents; franking machines print postage.");
+  m(M,"Before photocopying confidential documents, the clerk should:",["Make extra copies for friends","Obtain authorisation and control the number of copies","Leave originals in the machine","Copy and post them on the notice board"],1,"Uncontrolled copies are a common source of leaks.");
+  o(E,"Arrange these names in correct alphabetical filing order.",["Abiola","Adams","Adeyemi","Afolabi","Agbaje"],"A-B, A-D-A, A-D-E, A-F, A-G.");
+  x(E,"Match each office item to its use.",[["Perforator","Punches holes in paper for filing"],["Stapler","Fastens papers together"],["Date stamp","Marks the date of receipt"],["Shredder","Destroys documents securely"]],"Common office equipment.");
+  m(M,"Which date format is least likely to be misunderstood in official records?",["03/04/25","3 April 2025","3-4","04.03"],1,"Writing the month in words avoids day/month confusion.");
+  m(M,"A form returned with missing information should be:",["Filed anyway","Returned to the sender with the missing items clearly indicated","Thrown away","Completed by guessing"],1,"Accurate records require complete information from the source.");
+  s(E,"What is the name of the book in which visitors to an office sign in? (two words)",["visitors book","visitors' book","visitor's book","visitor book","visitors register"],"It records who entered, when and whom they saw.");
+  m(M,"The main reason for keeping a file movement register is to:",["Count staff","Know where each file is at any time","Record salaries","Track visitors"],1,"It prevents loss and delay of files.");
+  m(E,"Good punctuality and attendance by clerical staff mainly ensures:",["More overtime","Smooth office operations and service to the public","Fewer files","Less work for supervisors"],1,"Clerical staff keep the office running.");
+  m(M,"When you notice an error in a document you typed and it has already been signed, you should:",["Ignore it","Inform the officer and correct it properly through the right channel","Change it secretly","Destroy the document"],1,"Signed documents must not be altered without authority.");
+
+  /* ---------------- Assistant Secretarial Officer ---------------- */
+  cadre("Assistant Secretarial Officer Cadre");
+  x(E,"Match each salutation to the correct complimentary close (British usage).",[["Dear Sir","Yours faithfully"],["Dear Mrs Bello","Yours sincerely"],["Dear Madam","Yours faithfully"],["Dear Tunde","Best wishes / Yours sincerely"]],"Unnamed salutation → 'faithfully'; named → 'sincerely'.");
+  m(M,"In a 'fully blocked' letter layout:",["Paragraphs are indented","Every line starts at the left margin","The date is centred","The address is on the right"],1,"Fully blocked style is the most common modern business layout.");
+  m(M,"'Open punctuation' in a letter means:",["No punctuation at all in the body","No punctuation in the address, date, salutation and close, only in the body text","Many exclamation marks","Commas after every line"],1,"It is usually used with the fully blocked layout.");
+  m(E,"'Encl.' at the foot of a letter indicates that:",["The letter is confidential","Something is enclosed with the letter","A copy was sent","The writer is absent"],1,"It reminds the recipient to look for enclosures.");
+  m(M,"'Bcc' on an email means:",["Blind carbon copy — recipients are hidden from other recipients","Basic copy","Business contact card","Broadcast"],0,"Use Bcc to protect recipients' addresses.");
+  m(M,"A typist types 1,800 words in 30 minutes. What is the speed in words per minute?",["45 wpm","60 wpm","90 wpm","30 wpm"],1,"1,800 ÷ 30 = 60 wpm.");
+  m(M,"Mail merge is used to:",["Combine a standard letter with a list of names and addresses to produce personalised letters","Delete emails","Scan documents","Encrypt files"],0,"It saves time on bulk correspondence.");
+  m(E,"Which keyboard row is the 'home row' for touch typing?",["The row with Q W E R T Y","The row with A S D F G H J K L","The number row","The space bar row"],1,"Fingers rest on the home row keys (ASDF / JKL;).");
+  m(M,"The proofreading mark '¶' means:",["Delete","New paragraph","Insert space","Capitalise"],1,"¶ indicates a new paragraph should start.");
+  m(M,"A '#' sign in proofreading margins usually means:",["Insert a space","Delete","Italicise","Move left"],0,"Proofreaders use # to request a space.");
+  t(E,"An official letter should carry a reference, the date and the inside address of the recipient.",true,"These elements make letters traceable and properly addressed.");
+  t(M,"Pitman shorthand is a phonetic system that records sounds rather than spelling.",true,"Pitman uses strokes based on sounds.");
+  t(M,"'Yours faithfully' should be used when the recipient is addressed by name.",false,"Use 'Yours sincerely' when you address the person by name.");
+  o(M,"Arrange the parts of a formal letter from top to bottom (fully blocked style).",["Reference","Date","Inside address","Salutation","Subject heading","Body","Complimentary close","Signature and name"],"This is the standard sequence of a fully blocked letter.");
+  m(M,"Before printing a long official document, the assistant should first:",["Print several copies","Proofread and use spell-check, then print a draft for checking","Send it to the press","Change the font randomly"],1,"Proofreading avoids reprints and embarrassment.");
+  m(M,"Which Word feature keeps headings and page numbers consistent across a long report?",["Styles and headers/footers","Clip art","Word art","Text boxes only"],0,"Styles also let you generate a table of contents.");
+  s(E,"What does 'cc' stand for at the foot of a letter? (two words)",["carbon copy","courtesy copy","carbon copies"],"It lists other people receiving a copy.");
+  m(E,"Diary management for an officer involves:",["Writing personal stories","Recording and coordinating appointments and reminders","Paying bills","Cleaning"],1,"A well-kept diary prevents clashes and missed meetings.");
+  m(M,"When a document is marked 'Confidential', the typist should:",["Leave drafts on the desk","Protect drafts and copies, and delete or shred spoiled pages","Share it with colleagues","Post it on social media"],1,"Confidential handling covers drafts and spoiled copies too.");
+  m(M,"The keyboard shortcut Ctrl + B in most word processors:",["Prints","Applies bold formatting","Saves","Opens a file"],1,"Ctrl+I = italic; Ctrl+U = underline.");
+
+  /* ---------------- Secretarial Officer (Confidential Secretary) ---------------- */
+  cadre("Secretarial Officer Cadre (Confidential Secretary)");
+  m(M,"The confidential secretary's role as 'gatekeeper' to a senior officer means:",["Locking the office permanently","Screening calls, visitors and mail so the officer's time goes to priorities","Refusing all visitors","Answering for the officer on policy"],1,"Gatekeeping must be courteous, fair and in line with the officer's instructions.");
+  m(M,"Verbatim minutes record:",["Only decisions","Every word spoken","A summary","Only attendance"],1,"Verbatim records are used in courts and legislatures; most meetings use summary or action minutes.");
+  m(M,"'Action minutes' focus on:",["Who said what","Decisions taken, who will act and by when","The menu","Attendance only"],1,"They make follow-up easy.");
+  m(H,"A 'notice of meeting' should be sent:",["After the meeting","In advance, stating date, time, venue and agenda, within the period required by the rules","Only to the chairman","By word of mouth only"],1,"Adequate notice is required for valid meetings.");
+  m(M,"When arranging official travel for a principal, the secretary should prepare:",["Only the ticket","An itinerary showing travel details, accommodation, meetings and contacts","A press release","A budget call circular"],1,"A complete itinerary prevents confusion on the trip.");
+  m(M,"A caller insists on knowing the Permanent Secretary's private schedule. The secretary should:",["Give it","Politely decline and offer to pass a message","Hang up","Post it online"],1,"Principals' schedules are confidential for security reasons.");
+  m(M,"The best way to prioritise many tasks given by a principal is to:",["Do them in the order received","Clarify deadlines and importance, then plan using a to-do list or priority matrix","Do the easiest first always","Ignore some"],1,"Clarify, prioritise and communicate progress.");
+  x(M,"Match each meeting role to its responsibility.",[["Chairman","Conducts the meeting and keeps order"],["Secretary","Prepares notices, agenda and minutes"],["Member","Participates and votes"],["Observer","Attends without voting rights"]],"Clear roles make meetings efficient.");
+  t(E,"Drafts of confidential documents should be shredded when no longer needed.",true,"Spoiled drafts are a common source of leaks.");
+  t(M,"A secretary may alter a letter after the principal has signed it, if the change is small.",false,"Signed documents must not be altered without the signatory's knowledge and authority.");
+  t(M,"A pending tray system helps track documents awaiting action.",true,"In/out/pending trays organise the flow of work.");
+  o(M,"Arrange the secretary's tasks for a board meeting in order.",["Agree date and agenda with the chairman","Send notice and agenda papers","Prepare the venue and attendance list","Take minutes during the meeting","Circulate draft minutes for approval"],"Preparation, recording and follow-up.");
+  m(M,"Professional email etiquette includes:",["Using capital letters for emphasis throughout","A clear subject, polite greeting, concise message and signature","Sending large unnecessary attachments","Replying-all to everything"],1,"Capitals read as shouting.");
+  m(H,"When transcribing a principal's dictation, the secretary should:",["Change the meaning to improve it","Transcribe faithfully, correct obvious grammar and query anything unclear","Leave gaps without asking","Add personal comments"],1,"Fidelity with sensible correction and verification.");
+  m(M,"Which document summarises a long report for a busy executive?",["Appendix","Executive summary","Index","Bibliography"],1,"It states purpose, key findings and recommendations briefly.");
+  m(E,"Protocol at official functions includes:",["Ignoring seating plans","Correct seating, order of recognition and proper titles for dignitaries","Wearing casual clothes","Seating by arrival"],1,"Protocol avoids embarrassment and shows respect.");
+  s(M,"What is the term for the list of items to be discussed at a meeting?",["agenda","an agenda"],"Agenda papers are circulated in advance.");
+  m(M,"An appointment diary clash occurs. The secretary should:",["Cancel both","Inform the principal promptly and propose alternatives","Choose one without telling anyone","Ignore it"],1,"The principal decides priorities; the secretary offers options.");
+  m(M,"When the principal is away, urgent mail should be:",["Left unopened for weeks","Handled according to standing instructions, e.g. referred to the officer acting","Thrown away","Answered with the principal's signature forged"],1,"Standing instructions keep business moving lawfully.");
+  m(M,"Electronic files with sensitive content are best protected by:",["Saving them on a shared public drive","Password protection and access controls, with regular backups","Emailing them to personal accounts","Leaving the PC unlocked"],1,"Lock the screen whenever leaving the desk.");
+
+  /* ---------------- Storekeeper ---------------- */
+  cadre("Storekeeper Cadre");
+  m(E,"The card kept with each item in the store showing receipts, issues and balance is the:",["Bin card","Visitors' card","Payment voucher","Identity card"],0,"The bin card balance should always agree with the physical stock.");
+  m(E,"When goods are received into the store, the storekeeper prepares a:",["Store Receipt Voucher (SRV)","Leave form","Payment voucher","Memo"],0,"The SRV records quantity and condition of goods received.");
+  m(E,"Goods are issued from the store against a:",["Store Issue Voucher (SIV) / requisition","Verbal request","Text message","Newspaper advert"],0,"Issues must be supported by authorised documents.");
+  m(M,"FIFO in stores management means:",["First In, First Out — older stock is issued first","Fast In, Fast Out","Final Inventory, Final Order","First Item For Officers"],0,"FIFO prevents stock expiring or deteriorating.");
+  m(M,"Before signing for goods delivered by a supplier, the storekeeper should:",["Sign immediately","Check quantity, quality and specification against the LPO and delivery note","Ask for a gift","Store them unchecked"],1,"Defective or short deliveries must be noted before acceptance.");
+  m(M,"Stock-taking means:",["Ordering new stock","Physically counting stock and comparing it with records","Issuing stock","Selling stock"],1,"Differences must be investigated and reported.");
+  m(M,"Damaged or unserviceable store items should be:",["Thrown away by the storekeeper","Recorded and presented to a Board of Survey for decision on disposal","Taken home","Hidden"],1,"Only an authorised board can recommend write-off and disposal.");
+  m(M,"Petrol, chemicals and gas cylinders in a store should be kept:",["Next to the office kitchen","In a separate, ventilated, secure area away from sources of ignition","On top of paper stock","Inside offices"],1,"Hazardous materials need separate, safe storage.");
+  t(E,"The bin card balance should always agree with the actual quantity on the shelf.",true,"Any difference signals error or loss.");
+  t(E,"A storekeeper may lend items from the store to friends if they return them.",false,"Store items are public property and may only be issued against authorised documents.");
+  t(M,"Store keys should be controlled, and a register kept of who holds them.",true,"Key control is a basic security measure.");
+  o(E,"Arrange the steps for receiving goods into the store.",["Check the delivery note against the LPO","Inspect quantity and quality","Accept and sign the delivery note","Prepare the Store Receipt Voucher","Update the bin card and stock ledger"],"Records are updated only after goods are verified.");
+  x(E,"Match each store document to its use.",[["Bin card","Shows the running balance of one item at its location"],["Stock ledger","Accounting record of all store items"],["SRV","Records goods received"],["SIV","Records goods issued"]],"These documents provide an audit trail for stores.");
+  m(M,"Perishable items such as food in a store should be:",["Stored anywhere","Stored in suitable conditions and issued by FIFO, checking expiry dates","Kept until they expire","Mixed with chemicals"],1,"Rotation and correct conditions reduce waste.");
+  m(M,"The reorder level is the stock level at which:",["Stocktaking begins","A new order should be placed","Stock is thrown away","Stores close"],1,"Ordering at the reorder level avoids running out.");
+  m(M,"The best way to arrange a store for quick retrieval is to:",["Pile everything together","Group items logically, label shelves and keep fast-moving items near the issue point","Store by colour","Hide valuable items under others"],1,"Good layout saves time and reduces errors.");
+  s(E,"What is the name of the card kept on the shelf or bin showing each item's receipts, issues and balance? (two words)",["bin card","tally card"],"Also called a tally card in some stores.");
+  m(M,"An item's bin card shows 120 units but only 100 are on the shelf. The storekeeper should:",["Change the card to 100 quietly","Report the shortage to the supervisor for investigation","Buy 20 privately","Ignore it"],1,"Discrepancies must be reported, not concealed.");
+  m(E,"Fire safety in a store includes:",["Smoking in the store","Keeping extinguishers available and exits clear","Blocking exits with boxes","Storing petrol near heaters"],1,"Stores often hold large quantities of combustible material.");
+  m(M,"A store's opening stock is 200 units, receipts are 150 and issues 230. What is the closing stock?",["120","150","170","580"],0,"200 + 150 − 230 = 120.");
+
+  /* ---------------- Stores Officer ---------------- */
+  cadre("Stores Officer Cadre");
+  m(H,"The Economic Order Quantity (EOQ) formula is EOQ = √(2DS ÷ H). With annual demand D = 8,000 units, ordering cost S = ₦500 per order and holding cost H = ₦50 per unit per year, EOQ is:",["200 units","400 units","800 units","1,000 units"],1,"EOQ = √(2 × 8,000 × 500 ÷ 50) = √160,000 = 400 units.");
+  m(H,"Daily usage of an item is 40 units and the supplier's lead time is 10 days, with a safety stock of 100 units. The reorder level is:",["400 units","500 units","140 units","1,000 units"],1,"Reorder level = (usage × lead time) + safety stock = 400 + 100 = 500.");
+  m(M,"In ABC analysis, 'A' items are those that:",["Are the cheapest","Account for a large share of annual consumption value though few in number","Are obsolete","Are never used"],1,"A items deserve the tightest control.");
+  m(M,"Safety (buffer) stock is held to:",["Increase holding costs deliberately","Protect against unexpected demand or delays in supply","Sell to staff","Replace stocktaking"],1,"It reduces the risk of stock-outs.");
+  m(M,"Perpetual (continuous) stocktaking means:",["Counting all items once a year","Counting a few items regularly throughout the year so all are counted over a cycle","Never counting","Counting only expensive items"],1,"It spreads the workload and detects problems early.");
+  m(M,"Stock turnover ratio measures:",["Staff turnover","How many times stock is used and replaced in a period","Store size","Supplier rating"],1,"Higher turnover generally means less capital tied up in stock.");
+  m(M,"In a period of rising prices, FIFO valuation results in closing stock being valued at:",["The oldest prices","The most recent (higher) prices","Zero","Average prices only"],1,"Older, cheaper stock is issued first, so remaining stock carries recent prices.");
+  m(M,"Obsolete stock is best handled by:",["Keeping it indefinitely","Identifying it promptly and recommending disposal through a Board of Survey","Hiding it","Issuing it to anyone"],1,"Obsolete stock occupies space and ties up value.");
+  t(M,"Just-in-Time (JIT) aims to minimise stock holdings by receiving items close to when they are needed.",true,"JIT depends on reliable suppliers.");
+  t(M,"Holding costs include storage space, insurance, deterioration and capital tied up in stock.",true,"These costs rise as stock levels rise.");
+  t(H,"The EOQ is the order size at which ordering cost and holding cost are both zero.",false,"EOQ minimises the total of ordering and holding costs; at EOQ the two costs are equal.");
+  x(M,"Match each inventory term to its meaning.",[["Lead time","Time between placing an order and receiving it"],["Reorder level","Stock level that triggers a new order"],["Maximum level","Upper limit to avoid overstocking"],["Minimum level","Lower limit below which stock should not fall"]],"These control levels guide replenishment.");
+  o(M,"Arrange the stores replenishment cycle in order.",["Stock falls to the reorder level","Raise a purchase requisition","Procurement issues an order (LPO)","Goods are received and inspected","Stock records are updated"],"The cycle links stores control with procurement.");
+  m(M,"VED analysis classifies items as Vital, Essential and Desirable based on:",["Price","Criticality to operations","Colour","Supplier"],1,"It is common for spare parts and medical stores.");
+  m(H,"Which method of stock valuation is generally NOT accepted for financial reporting under IPSAS/IFRS?",["FIFO","Weighted average","LIFO","Specific identification"],2,"LIFO is not permitted under IAS 2 / IPSAS 12.");
+  m(M,"Stock losses due to theft are best prevented by:",["Leaving the store open","Access control, segregation of duties, regular counts and CCTV","Trusting everyone","Removing records"],1,"Combining physical and procedural controls is most effective.");
+  s(M,"Opening stock ₦2m, purchases ₦6m, closing stock ₦1m. What is the cost of stock consumed in ₦m? (number only)",["7"],"Consumption = opening + purchases − closing = 2 + 6 − 1 = 7.");
+  m(M,"A warehouse management system mainly helps by:",["Replacing all staff","Tracking stock locations, movements and levels in real time","Paying suppliers","Recruiting storekeepers"],1,"Accurate data supports decisions and audits.");
+  m(M,"The person who certifies that goods meet specifications on delivery should ideally be:",["The supplier","Independent of the person who ordered them, e.g. an inspection committee","The driver","Anyone available"],1,"Independent inspection reduces collusion risk.");
+  m(H,"If annual demand is 12,000 units and the EOQ is 600 units, how many orders are placed per year?",["10","20","30","60"],1,"12,000 ÷ 600 = 20 orders.");
+
+  /* ---------------- Library Officer ---------------- */
+  cadre("Library Officer Cadre");
+  x(M,"Match each Dewey Decimal main class to its subject.",[["000","Computer science, information & general works"],["300","Social sciences"],["500","Natural sciences & mathematics"],["900","History & geography"]],"The DDC divides knowledge into ten main classes.");
+  m(E,"In the Dewey Decimal Classification, class 600 covers:",["Religion","Technology (applied sciences)","Literature","Languages"],1,"600 = technology, including medicine and engineering.");
+  m(M,"The register in which every new book is recorded with a unique serial number on arrival is the:",["Accession register","Circulation register","Visitors' book","Shelf list only"],0,"Accession numbers identify each copy.");
+  m(M,"The 'call number' on a book's spine is used to:",["Identify the publisher","Locate the book on the shelves","Show the price","Show the borrower"],1,"It combines the class number and author mark.");
+  m(E,"ISBN stands for:",["International Standard Book Number","Internal Serial Book Note","Index of Standard Books in Nigeria","International Serial Binding Number"],0,"ISBNs uniquely identify book editions.");
+  m(M,"Since 2007 an ISBN has how many digits?",["8","10","13","16"],2,"ISBN-13 replaced ISBN-10.");
+  m(M,"Serials such as journals are identified by an:",["ISBN","ISSN","URL only","Accession date"],1,"ISSN (8 digits) identifies serial publications.");
+  m(E,"Circulation services in a library deal with:",["Cataloguing only","Lending and returning materials","Building maintenance","Book binding"],1,"Circulation desks manage loans, renewals and reservations.");
+  m(M,"Reference books such as dictionaries and encyclopaedias are usually:",["Lent for long periods","For use within the library only","Sold","Thrown away yearly"],1,"They must be available for everyone to consult.");
+  m(M,"'Weeding' a library collection means:",["Removing outdated, damaged or unused items according to policy","Cleaning the garden","Adding new books","Repairing shelves"],0,"Weeding keeps the collection relevant and usable.");
+  t(E,"An OPAC is an Online Public Access Catalogue that users search to find library materials.",true,"It replaced the card catalogue in most libraries.");
+  t(M,"Books on the shelf are arranged from left to right and top to bottom in call-number order.",true,"Consistent shelving makes items easy to find.");
+  t(E,"Library users should be charged no fines and allowed to keep books indefinitely.",false,"Loan periods and overdue procedures ensure fair access.");
+  o(E,"Arrange these Dewey numbers in correct shelf order.",["320.9","330.1","331","500.2","510"],"Compare class numbers digit by digit, treating decimals as decimals.");
+  m(M,"Which is the best way to repair a book with a loose page?",["Staple it","Use archival-quality tape or tipping-in with suitable adhesive","Glue with any adhesive","Remove the page"],1,"Proper materials avoid further damage.");
+  m(M,"An overdue notice is sent when:",["A book is new","A borrower has kept an item beyond its due date","A book is lost","The library closes"],1,"Reminders encourage prompt return.");
+  s(E,"What does the abbreviation 'DDC' stand for? (three words)",["dewey decimal classification"],"Melvil Dewey published it in 1876.");
+  m(M,"Shelf reading means:",["Reading books on the shelf","Checking that items are in correct order on the shelves","Lending books","Buying shelves"],1,"Misplaced books are effectively lost.");
+  m(M,"Which environment is best for preserving paper materials?",["Hot and humid","Cool, dry and away from direct sunlight","Wet basements","Near kitchens"],1,"Heat, humidity and light accelerate deterioration.");
+  m(E,"A library user cannot find a book on the shelf that the catalogue shows as available. The officer should:",["Say it is lost","Check nearby shelves, returns trolley and records, and offer a reservation","Ignore the user","Buy another copy immediately"],1,"Good service includes active help.");
+
+  /* ---------------- Librarian ---------------- */
+  cadre("Librarian Cadre");
+  m(M,"Ranganathan's first law of library science is:",["Books are for use","Every reader his or her book","Save the time of the reader","The library is a growing organism"],0,"The five laws: books are for use; every reader his book; every book its reader; save the time of the reader; the library is a growing organism.");
+  o(H,"Arrange Ranganathan's five laws in their original order.",["Books are for use","Every reader his or her book","Every book its reader","Save the time of the reader","The library is a growing organism"],"Published in 1931.");
+  m(M,"MARC is a standard for:",["Library building design","Machine-readable cataloguing records","Book binding","Staff appraisal"],1,"MARC lets catalogue records be exchanged between systems.");
+  m(H,"RDA (Resource Description and Access) is the successor to:",["DDC","AACR2","LCSH","ISBD only"],1,"RDA replaced the Anglo-American Cataloguing Rules, 2nd edition.");
+  m(M,"Library of Congress Classification uses:",["Only numbers","Letters for main classes combined with numbers","Colours","Author names only"],1,"E.g. Q for science, K for law.");
+  m(M,"LCSH stands for:",["Library Classification of Standard Headings","Library of Congress Subject Headings","Local Catalogue Search Help","Legal Code of Serial Holdings"],1,"It provides controlled subject vocabulary.");
+  m(M,"In Nigeria, the law requiring publishers to deposit copies of their publications is administered by the:",["National Library of Nigeria (legal deposit)","NUC","NERDC","NBC"],0,"Legal deposit builds the national bibliographic record.");
+  m(M,"An institutional repository is:",["A store room","A digital archive of an institution's intellectual output, often open access","A reading room","A cafeteria"],1,"It preserves and disseminates research and records.");
+  m(M,"A Boolean search 'education AND Lagos' returns records that contain:",["Either word","Both words","Neither word","Only 'education'"],1,"AND narrows; OR broadens; NOT excludes.");
+  m(M,"Collection development policy mainly guides:",["Staff leave","Selection, acquisition and weeding of library materials","Building repairs","Salary scales"],1,"It aligns the collection with users' needs and budget.");
+  m(H,"Bibliometrics is the:",["Binding of books","Quantitative analysis of publications and citations","Repair of manuscripts","Design of shelves"],1,"Used to assess research impact.");
+  t(M,"Koha is an example of an open-source integrated library management system.",true,"It handles cataloguing, circulation and OPAC.");
+  t(M,"Information literacy is the ability to find, evaluate and use information effectively and ethically.",true,"Librarians teach it to users.");
+  t(H,"Open access means that every publication can be reused without any licence conditions.",false,"Open access removes price barriers; reuse is governed by licences such as Creative Commons.");
+  x(M,"Match each tool to its purpose.",[["Thesaurus","Controlled vocabulary with related terms"],["Union catalogue","Combined catalogue of several libraries"],["Abstract","Summary of a document's content"],["Index","Guide to where topics appear"]],"Information retrieval tools.");
+  m(M,"Digitisation of rare documents mainly helps to:",["Destroy originals","Preserve originals by reducing handling and widening access","Increase fines","Replace cataloguing"],1,"Originals should still be preserved properly.");
+  m(M,"A library's reference interview is used to:",["Recruit staff","Clarify a user's real information need","Check fines","Discipline staff"],1,"Users' first questions are often broader or narrower than their real need.");
+  s(M,"What single word describes the removal of out-of-date or damaged items from a collection?",["weeding","deselection"],"Weeding keeps collections current and usable.");
+  m(H,"Which metadata standard is widely used for describing digital resources in repositories?",["Dublin Core","DDC","LCC","ISBN"],0,"Dublin Core has 15 core elements such as title, creator and date.");
+  m(M,"The main purpose of library performance statistics (loans, visits, enquiries) is to:",["Punish staff","Plan services and justify resources","Fill shelves","Replace budgets"],1,"Data supports management decisions.");
+
+  /* ---------------- Teacher / Headmaster ---------------- */
+  cadre("Teacher / Headmaster Cadre");
+  o(M,"Arrange the levels of Bloom's (revised) taxonomy from lowest to highest.",["Remember","Understand","Apply","Analyse","Evaluate","Create"],"Lessons should move learners beyond recall to higher-order thinking.");
+  m(E,"A scheme of work is:",["A daily lesson plan","A plan of topics to be taught over a term or year","A school timetable","A report card"],1,"Lesson plans break the scheme of work into individual lessons.");
+  m(M,"Which is a key component of a lesson plan?",["Behavioural (learning) objectives","Teacher's salary","School fees","Parents' names"],0,"Objectives state what pupils will be able to do by the end of the lesson.");
+  m(M,"Under the Universal Basic Education Act 2004, basic education in Nigeria covers:",["6 years of primary only","9 years: 6 years primary + 3 years junior secondary","12 years","3 years of nursery"],1,"UBE is free and compulsory for these 9 years.");
+  m(M,"The body that manages basic education in Lagos State is:",["WAEC","Lagos State Universal Basic Education Board (LASUBEB)","NUC","JAMB"],1,"Each state has a SUBEB; UBEC coordinates at federal level.");
+  m(M,"Continuous assessment means:",["One final examination only","Systematic assessment of learners throughout the term using tests, assignments and projects","Assessing teachers","Promoting all pupils automatically"],1,"It gives a fuller picture of learning.");
+  m(M,"Formative assessment is mainly used to:",["Rank pupils at the end of the year","Give feedback during learning to improve teaching and learning","Certify graduates","Punish pupils"],1,"Summative assessment judges learning at the end.");
+  m(M,"According to Piaget, children aged about 7–11 years are in the:",["Sensorimotor stage","Pre-operational stage","Concrete operational stage","Formal operational stage"],2,"They reason logically about concrete objects.");
+  m(E,"Instructional materials help teaching mainly by:",["Making lessons longer","Making abstract ideas concrete and engaging learners' senses","Replacing the teacher","Increasing fees"],1,"Charts, models and real objects aid understanding.");
+  x(E,"Match each school record to its purpose.",[["Attendance register","Daily record of pupils present"],["Admission register","Record of pupils enrolled"],["Log book","Record of important school events"],["Lesson notes","Teacher's plans for lessons"]],"Statutory records are inspected during supervision.");
+  t(E,"Inclusive education means making provision for learners with disabilities and special needs within regular schools where possible.",true,"Inclusive practice adapts teaching to diverse learners.");
+  t(M,"A headteacher's main role is purely administrative and has nothing to do with instruction.",false,"Headteachers are instructional leaders who supervise teaching and learning.");
+  t(M,"Classroom rules are more effective when explained clearly and applied consistently.",true,"Consistency builds a positive learning environment.");
+  m(M,"A pupil repeatedly disrupts lessons. The best FIRST step is to:",["Send the pupil home permanently","Talk with the pupil to find the cause, set clear expectations and involve parents if needed","Ignore it","Humiliate the pupil publicly"],1,"Understanding causes supports lasting behaviour change.");
+  m(M,"Child-centred learning emphasises:",["The teacher talking all lesson","Learners' active participation, interests and discovery","Memorisation only","Corporal punishment"],1,"Pupils learn by doing and discussing.");
+  m(H,"The national body that develops and reviews curricula for basic and secondary education in Nigeria is:",["NERDC","NUC","NABTEB","TRCN"],0,"The Nigerian Educational Research and Development Council.");
+  m(M,"The Teachers Registration Council of Nigeria (TRCN) mainly:",["Pays teachers' salaries","Registers and regulates the teaching profession","Builds schools","Sets WAEC exams"],1,"Registration is required to practise as a teacher.");
+  s(E,"What is the name of the register in which pupils' daily presence is recorded? (one word before 'register')",["attendance","attendance register"],"It is a statutory school record.");
+  m(M,"Which questioning technique encourages higher-order thinking?",["Yes/no questions only","Open-ended 'why' and 'how' questions","No questions","Reading from the textbook"],1,"Open questions require explanation and reasoning.");
+  m(M,"A School-Based Management Committee (SBMC) involves:",["Only teachers","Parents, community members and school staff in supporting school management","Only the Ministry","Students only"],1,"SBMCs strengthen community participation.");
+
+  /* ---------------- Assistant Education Officer ---------------- */
+  cadre("Assistant Education Officer Cadre");
+  m(M,"The main purpose of school inspection / quality assurance visits is to:",["Find faults to punish teachers","Assess and improve the quality of teaching, learning and school management","Collect fees","Build classrooms"],1,"Modern quality assurance is developmental, not only fault-finding.");
+  m(M,"Nigeria's National Policy on Education introduced the system popularly called:",["6-3-3-4","8-4-4","7-5-2-3","5-4-4"],0,"6 years primary, 3 JSS, 3 SSS, 4 tertiary (now with 9-year basic education).");
+  m(M,"The Annual School Census (ASC) collects data on:",["Teachers' religion","Enrolment, teachers, facilities and other school statistics for planning","Parents' income only","Exam questions"],1,"It feeds the Education Management Information System.");
+  m(M,"The Pupil–Teacher Ratio is calculated as:",["Teachers ÷ pupils","Pupils ÷ teachers","Classrooms ÷ pupils","Schools ÷ teachers"],1,"E.g. 1,200 pupils ÷ 30 teachers = 40:1.");
+  m(M,"A school has 1,350 pupils and 30 teachers. Its pupil–teacher ratio is:",["40:1","45:1","30:1","50:1"],1,"1,350 ÷ 30 = 45.");
+  m(M,"Curriculum implementation is mainly the responsibility of:",["Teachers in the classroom, supported by school leaders and supervisors","Publishers","Parents only","Examination bodies only"],0,"The curriculum comes alive through teaching.");
+  m(H,"A School Development Plan should be based on:",["The headteacher's personal wishes","A self-evaluation of the school's strengths and needs, with priorities, actions and resources","Last year's plan copied","Political promises"],1,"Evidence-based planning improves outcomes.");
+  t(E,"Teachers' lesson notes are among the records checked during school supervision.",true,"They show planning and coverage of the scheme of work.");
+  t(M,"The examination body that conducts the Basic Education Certificate Examination (BECE) at state level is the State Ministry/Examination Board.",true,"BECE marks the end of junior secondary school.");
+  t(M,"School supervision reports are confidential and should never be discussed with the school.",false,"Feedback to the school is essential for improvement.");
+  x(M,"Match each body to its role.",[["UBEC","Coordinates Universal Basic Education nationally"],["WAEC","Conducts the West African Senior School Certificate Examination"],["NECO","Conducts the national senior school certificate examination"],["TRCN","Registers and regulates teachers"]],"Key national education agencies.");
+  o(M,"Arrange the stages of a supervisory visit in order.",["Pre-visit planning and review of school data","Entry meeting with the head","Classroom observation and record checks","Feedback meeting","Written report and follow-up"],"A structured visit gives fair, useful feedback.");
+  m(M,"During a classroom observation, the supervisor should focus mainly on:",["The teacher's clothing","Teaching methods, learner engagement and achievement of objectives","The colour of the walls","The number of windows"],1,"Observation should improve learning.");
+  m(M,"An Education Management Information System (EMIS) is used to:",["Pay salaries","Collect, process and use education data for planning and decisions","Build schools","Select textbooks"],1,"Reliable data underpins planning.");
+  m(M,"Which indicator measures the share of pupils who complete a level of education?",["Gross enrolment rate","Completion rate","Repetition rate","Dropout rate"],1,"Completion rates show the system's efficiency.");
+  m(M,"Repetition and dropout rates are indicators of:",["Teacher salaries","Internal efficiency of the education system","School size","Parents' wealth"],1,"High rates waste resources and opportunities.");
+  s(M,"What does 'SBMC' stand for in basic education? (four words)",["school based management committee","school-based management committee","school based management committees"],"SBMCs involve communities in school governance.");
+  m(M,"Which is an appropriate response when a supervisor finds a teacher with weak lesson delivery?",["Public criticism","Constructive feedback, demonstration or coaching, and follow-up visits","Immediate dismissal","Ignoring it"],1,"Supervision should build capacity.");
+  m(M,"Inclusive education practices include:",["Excluding pupils with disabilities","Adapting teaching, materials and environment for diverse learners","Separate exams for boys only","Removing support staff"],1,"Inclusion requires reasonable adjustments.");
+  m(E,"Basic education in Nigeria is meant to be:",["Free and compulsory","Optional","Only for urban children","Only for boys"],0,"As provided by the UBE Act 2004.");
+
+  /* ---------------- Education Officer ---------------- */
+  cadre("Education Officer Cadre");
+  m(H,"The Gross Enrolment Rate (GER) can exceed 100% because:",["Of counting errors only","It counts all pupils enrolled at a level, including over-age and under-age pupils, against the official-age population","Schools are overcrowded","Private schools are excluded"],1,"The Net Enrolment Rate counts only official-age pupils.");
+  m(H,"There are 90,000 pupils in primary school, 80,000 of them of official primary age, and the official-age population is 100,000. The NER is:",["80%","90%","100%","88.9%"],0,"NER = 80,000 ÷ 100,000 = 80%. (GER = 90%.)");
+  m(M,"Lagos State public schools are organised into how many Education Districts?",["3","5","6","20"],2,"Each of the six Education Districts is headed by a Tutor-General / Permanent Secretary.");
+  m(M,"The UBEC matching grant requires states to:",["Pay nothing","Provide counterpart funds to access federal UBE funds","Close schools","Charge fees"],1,"States must contribute matching funds.");
+  m(M,"Educational planning mainly involves:",["Writing exams","Projecting needs (enrolment, teachers, classrooms) and allocating resources to meet policy goals","Teaching classes","Building libraries only"],1,"Planning links policy, data and budgets.");
+  m(M,"The cohort analysis method in education is used to:",["Pay teachers","Track a group of pupils through grades to measure progression, repetition and dropout","Design uniforms","Select textbooks"],1,"It reveals internal efficiency.");
+  m(M,"Which examination marks the end of senior secondary education in Nigeria?",["BECE","WASSCE / SSCE","Common Entrance","UTME only"],1,"WAEC and NECO conduct SSCE.");
+  m(M,"Quality assurance in education focuses on:",["Only inputs like buildings","Inputs, processes and learning outcomes against standards","Only examination results","Only staff numbers"],1,"A balanced view of quality.");
+  t(M,"Education is on the Concurrent Legislative List, so both federal and state governments can legislate on it.",true,"Responsibilities are shared across tiers.");
+  t(H,"A falling pupil–teacher ratio always means learning outcomes have improved.",false,"Ratios are inputs; outcomes depend on teacher quality, materials and more.");
+  t(M,"TVET stands for Technical and Vocational Education and Training.",true,"TVET builds employable skills.");
+  x(M,"Match each education indicator to what it shows.",[["Transition rate","Share of pupils moving to the next level"],["Survival rate","Share of a cohort reaching a given grade"],["Pupil–classroom ratio","Average class crowding"],["Gender parity index","Ratio of female to male enrolment"]],"Key planning indicators.");
+  o(M,"Arrange the stages of the curriculum development process.",["Needs analysis","Formulation of objectives","Selection and organisation of content","Implementation","Evaluation"],"A systematic approach (e.g. Tyler's model).");
+  m(M,"Education financing in a state is mainly drawn from:",["Only donor funds","State budget allocations, federal transfers (e.g. UBE funds) and other sources","Teachers' contributions","Exam fees only"],1,"Multiple sources fund education.");
+  m(H,"A Gender Parity Index (GPI) of 0.85 in enrolment indicates:",["Parity","Disparity in favour of boys","Disparity in favour of girls","No data"],1,"GPI below 1 means fewer girls than boys enrolled relative to parity.");
+  m(M,"Teacher professional development is best delivered through:",["One-off lectures only","Continuous, practical, school-based support linked to classroom needs","No training","Promotion exams only"],1,"Sustained, job-embedded training changes practice.");
+  s(M,"What does 'EMIS' stand for? (four words)",["education management information system","educational management information system"],"EMIS provides data for planning.");
+  m(M,"An education policy evaluation should primarily ask:",["How much publicity it received","Whether the policy achieved its intended outcomes and at what cost","Who drafted it","How many meetings were held"],1,"Evaluation is about results and value.");
+  m(H,"Public–private partnership in education might include:",["Government ignoring private schools","Government contracting private providers to manage schools or provide services under agreed standards","Abolishing public schools","Charging fees in basic education"],1,"PPPs require strong regulation and monitoring.");
+  m(M,"The National Policy on Education is produced by the:",["Federal Ministry of Education (with NERDC)","WAEC","JAMB","NUC only"],0,"It guides education at all levels.");
+
+  /* ---------------- Catering Officer ---------------- */
+  cadre("Catering Officer Cadre");
+  m(M,"The 'temperature danger zone' in which bacteria multiply fastest is approximately:",["−18°C to 0°C","5°C to 63°C","70°C to 100°C","0°C to 5°C only"],1,"Keep cold food below 5°C and hot food above 63°C.");
+  m(M,"HACCP stands for:",["Hazard Analysis and Critical Control Points","Health and Catering Control Plan","Hygiene And Cooking Care Policy","Hotel and Catering Certificate Programme"],0,"HACCP identifies and controls food-safety hazards at critical points.");
+  x(M,"Match each colour-coded chopping board to its use.",[["Red","Raw meat"],["Blue","Raw fish"],["Yellow","Cooked meat"],["Green","Salad and fruit"]],"Colour coding prevents cross-contamination.");
+  m(M,"Food cost percentage is calculated as:",["Selling price ÷ food cost","Food cost ÷ selling price × 100","Food cost − selling price","Labour cost ÷ sales"],1,"E.g. ₦600 food cost on a ₦2,000 meal = 30%.");
+  m(M,"A dish costs ₦900 in ingredients and the target food cost is 30%. The selling price should be:",["₦2,700","₦3,000","₦1,170","₦2,000"],1,"900 ÷ 0.30 = ₦3,000.");
+  m(M,"Portion control is important mainly because it:",["Reduces customer satisfaction","Controls costs and ensures consistency","Increases waste","Slows service"],1,"Standard portions keep costs and quality predictable.");
+  m(M,"Cross-contamination occurs when:",["Food is cooked thoroughly","Bacteria transfer from raw food or dirty surfaces to ready-to-eat food","Food is refrigerated","Food is covered"],1,"Separate equipment and handwashing prevent it.");
+  m(M,"The head of a professional kitchen brigade is the:",["Commis chef","Chef de partie","Chef de cuisine (executive chef)","Kitchen porter"],2,"The sous chef is second in command.");
+  m(M,"A balanced diet includes appropriate amounts of:",["Only carbohydrates","Carbohydrates, proteins, fats, vitamins, minerals and water","Only proteins","Only fruits"],1,"Menus for institutions should be nutritionally balanced.");
+  m(M,"Which agency regulates food and drugs in Nigeria?",["NAFDAC","NBC","NCC","SON only"],0,"NAFDAC registers and regulates processed food, drugs and cosmetics.");
+  t(E,"Food handlers with diarrhoea or vomiting should be excluded from handling food until cleared.",true,"They can spread food-borne illness.");
+  t(M,"Frozen meat may be safely thawed on the kitchen floor at room temperature overnight.",false,"Thaw in a refrigerator or under controlled conditions to avoid the danger zone.");
+  t(M,"Salmonella is a bacterium commonly associated with food poisoning from poultry and eggs.",true,"Thorough cooking and hygiene control it.");
+  o(M,"Arrange the steps in menu planning for an institution.",["Identify the customers and their nutritional needs","Consider budget and available equipment","Draft the menu with variety and balance","Cost the menu","Review, approve and publish"],"Planning balances nutrition, cost and practicality.");
+  m(M,"Stock rotation in a kitchen store follows:",["LIFO","FIFO","Random issue","Alphabetical order"],1,"First in, first out reduces spoilage.");
+  m(H,"A Critical Control Point in HACCP is:",["Any point in the kitchen","A step at which control can be applied to prevent, eliminate or reduce a hazard to an acceptable level","The manager's office","The serving counter only"],1,"E.g. cooking temperature for chicken.");
+  s(M,"What is the recommended maximum temperature (°C) for a refrigerator storing chilled food? (number only)",["5","5°c","5 degrees"],"Chilled food should be kept at 5°C or below (often 1–4°C).");
+  m(M,"Banquet service for 300 guests requires most of all:",["No planning","Detailed planning of menu, staffing, timing and equipment","Only one waiter","Cooking on the day without preparation"],1,"Large events depend on planning and coordination.");
+  m(M,"The most effective way for kitchen staff to prevent spreading germs is:",["Wearing jewellery","Frequent, thorough handwashing","Tasting food with fingers","Wiping hands on aprons"],1,"Handwashing is the single most important hygiene practice.");
+  m(E,"Leftover cooked rice should be:",["Left out overnight","Cooled quickly, refrigerated and used within a short time, then reheated thoroughly","Kept warm for days","Frozen and refrozen repeatedly"],1,"Rice can carry Bacillus cereus spores that grow if left warm.");
+
+  /* ---------------- Catering Assistant ---------------- */
+  cadre("Catering Assistant Cadre");
+  m(E,"The most important personal hygiene practice for food handlers is:",["Wearing perfume","Washing hands frequently and properly","Long nails","Wearing jewellery"],1,"Hands spread most food-borne germs.");
+  m(E,"Hands should be washed after:",["Using the toilet, handling raw meat and touching the face or hair","Only at the end of the day","Only when visibly dirty","Never"],0,"Wash before handling food and after any contamination risk.");
+  m(E,"A freezer should keep food at about:",["5°C","0°C","−18°C or colder","10°C"],2,"−18°C stops bacterial growth.");
+  m(M,"A pan of oil catches fire. The correct action is to:",["Pour water on it","Turn off the heat and smother it with a fire blanket or lid","Carry it outside","Fan it"],1,"Water on burning oil causes explosive flare-up.");
+  m(E,"When setting a table, the fork is usually placed:",["On the right","On the left of the plate","Above the glass","On the chair"],1,"Knives and spoons go on the right.");
+  m(M,"In formal table service, food is traditionally served from the:",["Right, cleared from the left","Left, cleared from the right","Front only","Back"],1,"Drinks are usually served from the right.");
+  m(E,"Wet floor signs should be used when:",["The floor is dry","A floor is being mopped or is wet","Guests arrive","Food is served"],1,"They prevent slips and falls.");
+  m(E,"Knives should be carried:",["Pointing at people","Pointing downwards, close to the side","In a pocket","Thrown to colleagues"],1,"Safe handling prevents injuries.");
+  x(E,"Match each cooking method to its type.",[["Boiling","Moist heat"],["Steaming","Moist heat"],["Roasting","Dry heat"],["Frying","Cooking in fat or oil"]],"Methods affect texture, flavour and nutrition.");
+  t(E,"Raw meat should be stored on the bottom shelf of the refrigerator, below ready-to-eat foods.",true,"This stops drips contaminating other food.");
+  t(E,"It is safe to use the same cloth to wipe raw meat surfaces and serving tables.",false,"This spreads bacteria; use separate cloths.");
+  t(M,"Some customers may have food allergies, such as to peanuts, so ingredient information should be available.",true,"Allergic reactions can be life-threatening.");
+  o(E,"Arrange the steps of proper handwashing.",["Wet hands with clean water","Apply soap","Rub all surfaces for at least 20 seconds","Rinse thoroughly","Dry with a clean towel or air dryer"],"Correct technique removes germs effectively.");
+  m(E,"Kitchen waste bins should be:",["Left open","Covered, emptied regularly and kept clean","Stored near food","Washed once a year"],1,"Open bins attract pests.");
+  m(M,"Hot food being held for service should be kept above:",["30°C","45°C","63°C","20°C"],2,"Above 63°C bacteria cannot multiply.");
+  m(E,"The best way to clean a kitchen surface is to:",["Wipe with a dry cloth","Remove debris, wash with detergent, rinse and sanitise","Use only water","Leave it"],1,"Cleaning and disinfecting are separate steps.");
+  s(E,"What colour chopping board is commonly used for raw meat? (one word)",["red"],"Colour-coded boards prevent cross-contamination.");
+  m(E,"Signs of pests in a kitchen include:",["Droppings and gnawed packaging","Clean shelves","Fresh smell","Tidy store"],0,"Report signs of pests immediately.");
+  m(E,"Food that has passed its 'use by' date should be:",["Served quickly","Discarded","Frozen","Given to staff"],1,"'Use by' dates relate to safety.");
+  m(M,"Hair should be covered in the kitchen because:",["It looks smart only","Loose hair can fall into food and carry bacteria","It is cold","It is a uniform rule without reason"],1,"Hair nets and caps protect food.");
+
+  /* ---------------- Driver ---------------- */
+  cadre("Driver Cadre");
+  m(E,"Before a journey, a driver should check:",["Fuel, oil, water/coolant, tyres, lights and brakes","Only the radio","Only the horn","Nothing"],0,"Daily pre-trip checks prevent breakdowns and crashes.");
+  m(E,"The red oil-can warning light on the dashboard indicates:",["Low fuel","Low engine oil pressure — stop safely and check","Open door","Seat belt"],1,"Driving on with low oil pressure can wreck the engine.");
+  m(M,"If the engine temperature gauge rises to red, the driver should:",["Open the radiator cap immediately","Stop safely, switch off and allow the engine to cool before checking coolant","Drive faster","Pour cold water on the engine"],1,"Opening a hot radiator can cause scalding.");
+  m(M,"Defensive driving means:",["Driving aggressively","Anticipating hazards and others' mistakes and driving to avoid collisions","Driving only at night","Never overtaking"],1,"Keep space, scan ahead and expect the unexpected.");
+  m(M,"The 'two-second rule' helps drivers to:",["Start the engine","Keep a safe following distance","Park","Signal"],1,"Double it in wet conditions.");
+  m(E,"An official vehicle log book is used to record:",["The driver's salary","Journeys, mileage, fuel and maintenance","Visitors","Leave"],1,"It supports accountability for vehicle use.");
+  m(M,"Tyre pressure should be checked when the tyres are:",["Hot after a long journey","Cold","Flat","Wet"],1,"Hot tyres give higher, misleading readings.");
+  m(M,"Driving while fatigued is dangerous because it:",["Improves alertness","Slows reaction times and can cause micro-sleeps","Saves fuel","Is legal"],1,"Take breaks on long journeys.");
+  m(E,"At a junction with a STOP sign, the driver must:",["Slow down only","Stop completely, then proceed when safe","Hoot and go","Speed up"],1,"STOP means a full stop.");
+  x(E,"Match each road sign shape to its meaning.",[["Triangle","Warning"],["Circle with red border","Prohibition"],["Blue circle","Mandatory instruction"],["Octagon","Stop"]],"Recognising shapes helps quick decisions.");
+  t(E,"Seat belts should be worn by the driver and all passengers.",true,"Seat belts greatly reduce injuries.");
+  t(E,"Using a hand-held phone while driving is safe if the call is short.",false,"Any phone use distracts the driver and is an offence.");
+  t(M,"Regular servicing according to the manufacturer's schedule extends a vehicle's life.",true,"Preventive maintenance is cheaper than repairs.");
+  o(M,"Arrange the steps a driver should take after a minor crash.",["Stop safely and switch on hazard lights","Check for injuries and call for help if needed","Place the warning triangle","Exchange details and take photos","Report to the transport officer / police as required"],"Safety first, then documentation and reporting.");
+  m(M,"Which vehicle documents should be carried?",["Vehicle licence, roadworthiness certificate, insurance and driver's licence","Only the car key","Only the log book","No documents"],0,"Officers may ask for them at checkpoints.");
+  m(M,"When the brakes feel spongy, the most likely cause is:",["Too much fuel","Air in the brake lines or low brake fluid","New tyres","Clean windscreen"],1,"Do not drive until the brakes are fixed.");
+  s(E,"What is the minimum legal tread depth for car tyres commonly used as a standard (in mm)? (number only)",["1.6","1.6mm"],"Below 1.6 mm grip falls sharply.");
+  m(M,"When driving in heavy rain, the driver should:",["Increase speed","Reduce speed, increase following distance and use headlights","Use hazard lights while moving fast","Brake sharply"],1,"Wet roads lengthen stopping distances.");
+  m(E,"A driver transporting a senior officer should:",["Drive recklessly to save time","Drive safely, be punctual, maintain the vehicle and keep confidential what is discussed","Discuss the officer's affairs with others","Use the car for private business"],1,"Discretion and safety are core duties of official drivers.");
+  m(M,"Driving under the influence of alcohol is dangerous mainly because alcohol:",["Improves judgement","Impairs judgement, coordination and reaction time","Has no effect","Keeps you awake"],1,"Never drink and drive.");
+
+  /* ---------------- Messenger ---------------- */
+  cadre("Messenger Cadre");
+  m(E,"When delivering official letters, the messenger should:",["Leave them anywhere","Obtain the recipient's signature in the dispatch book","Read them","Give them to anyone"],1,"Signatures prove delivery.");
+  m(E,"A sealed envelope marked 'Confidential' should be:",["Opened to check contents","Delivered unopened to the addressee or authorised person","Left at the gate","Given to a friend"],1,"Confidential mail must reach only the right person.");
+  m(E,"Files being carried between offices should be:",["Read on the way","Carried directly, not left unattended, and handed over properly","Left on the stairs","Taken home"],1,"Lost files cause serious problems.");
+  m(E,"Good punctuality for a messenger means:",["Arriving late daily","Arriving on time and delivering mail promptly","Leaving early","Delivering when convenient"],1,"Delays can hold up important decisions.");
+  m(E,"When a visitor asks for directions to an office, the messenger should:",["Ignore them","Politely direct or escort them","Ask for money","Send them away"],1,"Courtesy reflects well on the Ministry.");
+  m(M,"If the addressee is absent, a confidential letter should be:",["Given to any clerk","Returned to the dispatching office or handed to the officer authorised to receive it, and recorded","Slipped under the door","Kept in the messenger's bag overnight"],1,"Follow the office's procedure for absent addressees.");
+  m(E,"The book used to record letters sent out and the signatures of receivers is the:",["Dispatch book","Cash book","Visitors' book","Log book"],0,"It proves delivery.");
+  t(E,"A messenger may discuss the contents of official files with members of the public.",false,"Official information is confidential.");
+  t(E,"Messengers should report any lost or damaged mail immediately to their supervisor.",true,"Prompt reporting limits harm.");
+  t(E,"Wearing an identity card helps staff and visitors recognise official staff.",true,"It supports office security.");
+  o(E,"Arrange the steps for delivering a letter within the office.",["Collect the letter and dispatch book from the registry","Go directly to the addressee's office","Hand over the letter","Obtain the receiver's signature and date","Return the dispatch book to the registry"],"Each step keeps the delivery traceable.");
+  x(E,"Match each item to its use.",[["Dispatch book","Records delivery of letters"],["File cover","Holds and protects official papers"],["Envelope","Encloses letters for delivery"],["Identity card","Shows that you are a staff member"]],"Basic tools of the messenger's work.");
+  m(E,"A messenger finds an unattended file in the corridor. The right action is to:",["Leave it there","Take it to the registry or supervisor","Read it","Throw it away"],1,"Protect official records.");
+  m(E,"Which is good conduct for a messenger?",["Rudeness to visitors","Courtesy, honesty and reliability","Collecting tips for delivering letters","Gossiping about officers"],1,"Messengers represent the Ministry.");
+  m(M,"Before leaving the office at the end of the day, a messenger should ensure that:",["Undelivered mail is left on the floor","All mail is delivered or returned safely to the registry","Files are taken home","Doors are left open"],1,"No official papers should be left unsecured.");
+  m(E,"If a senior officer asks a messenger to deliver an urgent file, the messenger should:",["Take a break first","Deliver it promptly and confirm delivery","Wait until tomorrow","Ask someone else to do it without telling the officer"],1,"Urgent means priority.");
+  s(E,"What should a messenger obtain from the receiver when delivering an official letter?",["signature","a signature","receiver's signature","the signature"],"The signature is proof of delivery.");
+  m(E,"Photocopying documents for officers should be done:",["With extra copies for oneself","Only in the number requested, returning the originals","At home","Without returning originals"],1,"Uncontrolled copies may leak information.");
+  m(E,"Official vehicles or motorcycles used by messengers should be used:",["For private errands","Only for official duties","By friends","At weekends for business"],1,"Public property is for official use only.");
+  m(E,"Speaking to a superior officer, a messenger should be:",["Rude","Respectful and clear","Silent always","Loud"],1,"Respect is part of public-service conduct.");
+
+  /* ---------------- Watchman ---------------- */
+  cadre("Watchman Cadre");
+  m(E,"The book in which visitors' names, times of arrival and departure and persons visited are recorded is the:",["Visitors' register","Cash book","Bin card","Payment voucher"],0,"It supports access control and investigations.");
+  m(E,"An 'occurrence book' at a security post records:",["Salaries","All incidents and events during each shift","Recipes","Exam scores"],1,"Entries should be dated, timed and signed.");
+  m(E,"If you see a suspicious unattended bag in the premises, you should:",["Open it","Not touch it, keep people away and report immediately to the supervisor / police","Kick it","Take it home"],1,"Suspicious items may be dangerous.");
+  m(E,"On hearing the fire alarm, the watchman should:",["Ignore it","Help evacuate people to the assembly point and call the fire service (112/767)","Lock all exits","Go home"],1,"Life safety comes first.");
+  m(M,"Handover between shifts should include:",["Nothing","Keys, occurrence book entries and any outstanding issues, signed by both","Only greetings","Only the time"],1,"A proper handover maintains security continuity.");
+  m(E,"Security patrols should be done:",["At the same times every night","At irregular times and routes","Only once a week","Only when it rains"],1,"Predictable patrols can be exploited by criminals.");
+  m(E,"Keys to offices should be:",["Left in doors","Kept securely and issued only to authorised persons, with a key register","Given to visitors","Copied freely"],1,"Key control prevents unauthorised entry.");
+  m(M,"A vehicle leaving the premises with government property should be:",["Waved through","Checked for an authorised gate pass","Ignored","Delayed without reason"],1,"Gate passes prevent theft of property.");
+  t(E,"A watchman should sleep on duty only if nothing is happening.",false,"Sleeping on duty is serious misconduct.");
+  t(E,"Emergency numbers such as 112 and 767 should be displayed at the security post.",true,"Quick access saves time in emergencies.");
+  t(M,"Being observant and recording vehicle numbers and descriptions of suspicious persons helps investigations.",true,"Accurate details are valuable to police.");
+  o(E,"Arrange the steps for admitting a visitor.",["Greet the visitor politely","Ask for identification and purpose of visit","Confirm with the host office","Record details in the visitors' register","Issue a visitor's tag and direct the visitor"],"Access control steps.");
+  x(E,"Match each security item to its use.",[["Occurrence book","Records incidents during the shift"],["Visitors' register","Records people entering"],["Key register","Records issue and return of keys"],["Torch","Light for night patrols"]],"Tools of the security post.");
+  m(E,"If a fight breaks out at the gate, the watchman should:",["Join the fight","Stay calm, call for help or police, and avoid using excessive force","Lock himself away","Film it only"],1,"Personal safety and de-escalation matter.");
+  m(M,"Burglars are deterred most by:",["Darkness","Good lighting, regular patrols and secure locks","Open gates","No security staff"],1,"Visible security discourages crime.");
+  m(E,"Which conduct is expected of a watchman?",["Collecting money from visitors","Honesty, alertness and courtesy","Drinking alcohol on duty","Leaving the post unattended"],1,"Integrity is vital in security work.");
+  s(E,"What book at the security post records every incident during a shift? (two words)",["occurrence book","incident book","occurrence register"],"Entries create a permanent record.");
+  m(E,"Before closing at night, the watchman should check that:",["Windows and doors are open","Doors and windows are locked and lights and electrical appliances are off where required","Visitors are still inside","Gates are open"],1,"End-of-day checks protect the premises.");
+  m(M,"If an alarm sounds but no fire is seen, the watchman should:",["Assume it is false and ignore it","Treat it as real, follow the emergency procedure and report","Switch it off and sleep","Leave"],1,"Every alarm is treated as genuine until confirmed.");
+  m(E,"A CCTV camera at the gate helps by:",["Replacing all security staff","Recording activity for monitoring and evidence","Opening the gate","Counting money"],1,"It supports, not replaces, guards.");
+
+  /* ---------------- Cleaner ---------------- */
+  cadre("Cleaner Cadre");
+  m(E,"A detergent is mainly used to:",["Kill all germs","Remove dirt and grease","Polish metal only","Colour surfaces"],1,"Disinfectants kill germs; detergents clean.");
+  m(M,"Mixing bleach with ammonia-based cleaners is dangerous because it:",["Cleans better","Releases toxic gas","Smells nice","Saves money"],1,"Never mix cleaning chemicals.");
+  m(E,"Wet floor signs should be placed:",["After the floor dries","While mopping and until the floor is dry","Only in toilets","Never"],1,"They prevent slips.");
+  m(E,"When cleaning a room, the best order is:",["Bottom to top","Top to bottom, dry tasks before wet tasks","Random","Floor first, then shelves"],1,"Dust falls down; clean high areas first.");
+  m(E,"Gloves should be worn when:",["Cleaning toilets and handling chemicals or waste","Answering phones","Reading","Walking"],0,"Protective equipment prevents infection and burns.");
+  m(M,"In common colour coding, a red mop or cloth is used for:",["Kitchens","Toilets and sanitary areas","Offices","Glass"],1,"Separate colours stop germs spreading between areas.");
+  m(E,"Cleaning chemicals should be stored:",["In food containers","In labelled original containers, away from food and children","Open on shelves","Mixed together"],1,"Labels give safety and dilution information.");
+  m(M,"A product label says to dilute 1 part cleaner to 9 parts water. For 10 litres of solution you need:",["1 litre of cleaner","2 litres","0.5 litre","5 litres"],0,"1 + 9 = 10 parts; 10 litres ÷ 10 = 1 litre of cleaner.");
+  t(E,"Toilets should be cleaned and disinfected regularly throughout the day in busy offices.",true,"Frequent cleaning prevents disease spread.");
+  t(E,"The same cloth can be used to clean toilets and kitchen tables.",false,"This spreads germs.");
+  t(M,"Waste should be separated, e.g. recyclables from general waste, where facilities exist.",true,"Separation supports recycling and safer disposal.");
+  o(E,"Arrange the steps for cleaning a toilet.",["Put on gloves and place a wet-floor sign","Flush and apply toilet cleaner","Scrub the bowl and seat","Wipe surfaces and handles with disinfectant","Mop the floor and restock supplies"],"Systematic cleaning is thorough and safe.");
+  x(E,"Match each tool to its use.",[["Mop","Cleaning floors"],["Duster","Removing dust from surfaces"],["Squeegee","Cleaning glass and windows"],["Dustpan","Collecting swept dirt"]],"Using the right tool saves time.");
+  m(E,"If you spill a chemical on your skin, you should:",["Ignore it","Rinse with plenty of clean water and report it","Rub it in","Cover it with cloth"],1,"Rinse immediately; seek help if needed.");
+  m(E,"Sharp objects such as broken glass should be:",["Picked up with bare hands","Swept up carefully and placed in a safe container","Left on the floor","Put in a plastic bag loose"],1,"Protect yourself and waste handlers.");
+  m(E,"Good personal conduct for cleaners includes:",["Touching officers' documents","Not reading or moving official papers on desks","Taking items from offices","Leaving doors open"],1,"Respect confidentiality and property.");
+  s(E,"What sign should be placed on a floor that is being mopped? (two words before 'sign')",["wet floor","wet floor sign","caution wet floor"],"It warns people of slippery floors.");
+  m(E,"Dusting with a damp cloth is better than a dry cloth because it:",["Spreads dust","Traps dust instead of scattering it","Damages surfaces","Takes longer"],1,"Damp dusting reduces airborne dust.");
+  m(E,"Faulty electrical sockets noticed while cleaning should be:",["Fixed by the cleaner","Reported immediately and not used","Covered with water","Ignored"],1,"Only qualified staff should repair electrical faults.");
+  m(E,"Waste bins should be emptied:",["Once a month","Regularly, before they overflow","Never","Only when they smell"],1,"Overflowing bins attract pests.");
+
+  /* ---------------- Gardener ---------------- */
+  cadre("Gardener Cadre");
+  m(E,"The best times of day to water plants are:",["Midday","Early morning or late evening","Midnight only","Never"],1,"Less water is lost to evaporation.");
+  m(E,"Compost is made from:",["Plastic waste","Decomposed organic matter such as leaves and food scraps","Stones","Metal"],1,"Compost improves soil structure and fertility.");
+  m(M,"In fertiliser labels, NPK stands for:",["Nitrogen, Phosphorus, Potassium","Nickel, Potash, Kerosene","Natural Plant Kit","Nitrate, Peat, Kelp"],0,"These are the three main plant nutrients.");
+  m(M,"Nitrogen in fertiliser mainly promotes:",["Root growth","Leafy green growth","Flowering only","Seed hardness"],1,"Phosphorus helps roots; potassium aids flowering and fruiting.");
+  m(E,"Mulching around plants helps to:",["Kill plants","Retain soil moisture and suppress weeds","Attract pests only","Harden soil"],1,"Organic mulch also adds nutrients as it decays.");
+  m(E,"Pruning is done to:",["Kill shrubs","Remove dead or unwanted branches and shape plants","Water plants","Plant seeds"],1,"Pruning improves health and appearance.");
+  m(M,"Propagating a plant by planting a cut piece of stem is called:",["Grafting","Taking cuttings","Budding","Seeding"],1,"Cuttings root to form new plants.");
+  m(E,"The main rainy season in Lagos usually runs from about:",["November to February","April to October","December to March","January only"],1,"There is a short dry spell around August.");
+  m(M,"Sandy soil:",["Holds water very well","Drains quickly and holds few nutrients","Is sticky when wet","Is always the best soil"],1,"Adding organic matter improves sandy soil.");
+  m(M,"Clay soil:",["Drains very fast","Holds water and nutrients but can become waterlogged and compacted","Has no nutrients","Is the same as sand"],1,"Loam (a mix) is generally best for most plants.");
+  t(E,"When using herbicides or pesticides, gloves and protective clothing should be worn.",true,"These chemicals can harm health.");
+  t(E,"Garden tools should be cleaned and stored properly after use.",true,"This prevents rust and spread of plant disease.");
+  t(M,"Cutting grass very short is always best for a healthy lawn.",false,"Very short mowing stresses grass and encourages weeds.");
+  o(E,"Arrange the steps for planting a young shrub.",["Dig a hole wider than the root ball","Mix compost into the soil","Place the plant at the same depth it was growing","Backfill and firm the soil","Water thoroughly"],"Good planting gives roots a strong start.");
+  x(E,"Match each garden tool to its use.",[["Cutlass","Clearing grass and bush"],["Hoe","Weeding and loosening soil"],["Rake","Gathering leaves and levelling soil"],["Watering can","Watering plants"]],"Common tools of the gardener.");
+  m(E,"Weeds should be removed because they:",["Help plants grow","Compete with plants for water, light and nutrients","Are always poisonous","Look colourful"],1,"Regular weeding protects cultivated plants.");
+  m(E,"Plants make their food through:",["Respiration","Photosynthesis","Transpiration","Germination"],1,"Using sunlight, water and carbon dioxide.");
+  s(E,"What is the name for decomposed organic matter used to improve soil?",["compost","manure"],"Compost and manure both enrich soil.");
+  m(M,"Yellowing leaves on many plants can indicate:",["Too much sunlight only","Nutrient deficiency (e.g. nitrogen) or overwatering","Perfect health","Cold weather"],1,"Diagnose the cause before treating.");
+  m(E,"Flower beds near office buildings should be kept:",["Overgrown","Neat, weeded and free of stagnant water","Full of refuse","Unwatered"],1,"Stagnant water breeds mosquitoes.");
+
+  for(var n in out)out[n].forEach(function(z){z.scope=n;});
+  return out;
+})();
+
+
+/* ==================== inlined from cbt-bank-prof-health.js ==================== */
+/* ============================================================
+   PROFESSIONAL KNOWLEDGE — health cadres.
+   20 questions per cadre. Shared file (browser + Apps Script).
+   Clinical content reflects widely taught standards (WHO / national
+   guidelines); confirm against the current national protocols.
+   ============================================================ */
+var SEED_PROF_HEALTH=(function(){
+  var out={},cur=null,C="Professional Knowledge",E="easy",M="medium",H="hard";
+  function cadre(n){cur=out[n]=[];}
+  function q(t,d,stem,x,ex){var o={scope:null,category:C,type:t,difficulty:d,stem:stem,explanation:ex};for(var k in x)o[k]=x[k];cur.push(o);}
+  function m(d,stem,o,a,ex){q("mcq",d,stem,{options:o,answer:a},ex);}
+  function t(d,stem,a,ex){q("truefalse",d,stem,{answer:a},ex);}
+  function s(d,stem,acc,ex){q("shortanswer",d,stem,{accept:acc},ex);}
+  function o(d,stem,items,ex){q("ordering",d,stem,{items:items},ex);}
+  function x(d,stem,pairs,ex){q("matching",d,stem,{pairs:pairs.map(function(p){return {l:p[0],r:p[1]};})},ex);}
+
+  /* ---------------- Medical Officer ---------------- */
+  cadre("Medical Officer Cadre");
+  m(M,"The recommended first-line treatment for uncomplicated falciparum malaria in Nigeria is:",["Chloroquine","An artemisinin-based combination therapy (e.g. artemether-lumefantrine)","Quinine injection only","Sulfadoxine-pyrimethamine alone"],1,"ACTs are first line; chloroquine is no longer effective against P. falciparum.");
+  m(M,"The preferred initial treatment for severe malaria is:",["Oral ACT","Parenteral artesunate","Chloroquine syrup","Paracetamol only"],1,"IV/IM artesunate reduces mortality compared with quinine.");
+  m(E,"The recommended management of acute watery diarrhoea in children includes:",["Antibiotics for all cases","Low-osmolarity ORS plus zinc supplementation","Withholding fluids","Anti-diarrhoeal drugs"],1,"ORS corrects dehydration; zinc reduces duration and severity.");
+  m(M,"The Glasgow Coma Scale ranges from:",["0 to 10","1 to 5","3 to 15","5 to 20"],2,"3 is the lowest (deep coma); 15 is fully alert.");
+  m(M,"The natural reservoir of Lassa fever virus is the:",["Aedes mosquito","Multimammate rat (Mastomys natalensis)","Fruit bat","Domestic dog"],1,"Transmission is via contact with rodent excreta or infected body fluids.");
+  m(M,"The antiviral drug used in the treatment of Lassa fever is:",["Ribavirin","Acyclovir","Oseltamivir","Zidovudine"],0,"Ribavirin is most effective when started early.");
+  m(H,"The standard regimen for new drug-susceptible pulmonary tuberculosis lasts:",["2 months","6 months (2 months intensive, 4 months continuation)","12 months","3 weeks"],1,"2HRZE/4HR under directly observed treatment.");
+  m(E,"Body Mass Index is calculated as:",["Height ÷ weight","Weight (kg) ÷ height (m)²","Weight × height","Waist ÷ hip"],1,"A BMI of 18.5–24.9 is the normal range.");
+  m(M,"A patient weighs 81 kg and is 1.8 m tall. The BMI is:",["20","25","30","45"],1,"81 ÷ (1.8 × 1.8) = 81 ÷ 3.24 = 25.");
+  m(M,"Hypertension in adults is generally diagnosed at a blood pressure of:",["≥120/80 mmHg","≥140/90 mmHg on repeated measurements","≥100/60 mmHg","≥160/110 only"],1,"Repeated readings at or above 140/90 confirm hypertension (some guidelines use lower cut-offs).");
+  m(M,"The body that registers and regulates medical doctors in Nigeria is the:",["Nursing and Midwifery Council","Medical and Dental Council of Nigeria (MDCN)","Pharmacy Council","NAFDAC"],1,"Practising without MDCN registration is unlawful.");
+  m(M,"The Lagos State Health Management Agency (LASHMA) administers the State's health insurance scheme known as:",["Ilera Eko","Eko Care Plus","NHIS-Lagos","Lagos Cares"],0,"Ilera Eko is the Lagos State Health Scheme.");
+  x(M,"Match each disease to its vector.",[["Malaria","Female Anopheles mosquito"],["Yellow fever","Aedes mosquito"],["Onchocerciasis (river blindness)","Blackfly (Simulium)"],["Sleeping sickness","Tsetse fly"]],"Vector control is central to preventing these diseases.");
+  o(M,"Arrange the ABCDE approach to assessing an acutely ill patient.",["Airway","Breathing","Circulation","Disability (neurological status)","Exposure"],"Problems are treated as they are found, in this order.");
+  t(M,"Informed consent requires that the patient understands the nature, risks, benefits and alternatives of a procedure and agrees voluntarily.",true,"Consent obtained without understanding or under pressure is not valid.");
+  t(E,"Confidential patient information may be shared freely with the patient's employer.",false,"Disclosure needs consent or a legal basis.");
+  t(M,"Cholera typically presents with profuse 'rice-water' stools and rapid dehydration.",true,"Rapid rehydration is life-saving.");
+  m(M,"Suspected cases of epidemic-prone diseases (e.g. Lassa fever, cholera) must be reported through the disease surveillance system coordinated nationally by the:",["NCDC (Nigeria Centre for Disease Control and Prevention)","NAFDAC","NHIA","MDCN"],0,"Notification triggers outbreak investigation and response.");
+  s(M,"In the APGAR score, what does the 'P' stand for?",["pulse","pulse rate","heart rate"],"APGAR: Appearance, Pulse, Grimace, Activity, Respiration.");
+  m(H,"The National Health Insurance Authority Act 2022:",["Abolished health insurance","Replaced the NHIS with the NHIA and made health insurance mandatory for Nigerians","Applies only to the military","Covers only federal workers"],1,"States run their own schemes in coordination with the NHIA.");
+
+  /* ---------------- Nursing Officer ---------------- */
+  cadre("Nursing Officer Cadre");
+  o(M,"Arrange the steps of the nursing process in order.",["Assessment","Nursing diagnosis","Planning","Implementation","Evaluation"],"Often remembered as ADPIE.");
+  m(M,"Nurses and midwives in Nigeria are registered and regulated by the:",["MDCN","Nursing and Midwifery Council of Nigeria (NMCN)","Pharmacy Council","Health Records Board"],1,"NMCN sets standards and licenses practitioners.");
+  m(M,"Which is NOT one of the 'rights' of medication administration?",["Right patient","Right dose","Right route","Right price"],3,"The rights include right patient, drug, dose, route, time and documentation.");
+  m(M,"To prevent pressure ulcers in a bedridden patient, the patient should be repositioned at least every:",["2 hours","8 hours","12 hours","24 hours"],0,"Regular turning relieves pressure on bony prominences.");
+  m(M,"A patient with difficulty breathing is best nursed in the:",["Prone position","Fowler's (semi-sitting) position","Trendelenburg position","Lithotomy position"],1,"Upright positioning eases lung expansion.");
+  m(E,"The normal adult respiratory rate at rest is about:",["4–8 breaths per minute","12–20 breaths per minute","30–40 breaths per minute","50–60 breaths per minute"],1,"Rates outside this range need assessment.");
+  m(M,"A doctor orders 500 mg of a drug. The stock is 250 mg in 5 ml. What volume should be given?",["2.5 ml","5 ml","10 ml","20 ml"],2,"(500 ÷ 250) × 5 ml = 10 ml.");
+  m(H,"1,000 ml of IV fluid is to run over 8 hours using a giving set with a drop factor of 20 drops/ml. The drip rate is about:",["21 drops/min","42 drops/min","63 drops/min","125 drops/min"],1,"(1,000 × 20) ÷ (8 × 60) = 20,000 ÷ 480 ≈ 42 drops/min.");
+  m(E,"After giving an injection, a used needle should be:",["Recapped with two hands","Placed directly into a puncture-proof sharps container without recapping","Thrown into a general bin","Reused"],1,"Recapping causes needle-stick injuries.");
+  m(M,"An infection acquired by a patient while in hospital is called:",["Congenital","Nosocomial (healthcare-associated)","Zoonotic","Endemic"],1,"Hand hygiene is the main preventive measure.");
+  m(M,"The SBAR tool is used for:",["Measuring blood pressure","Structured handover communication: Situation, Background, Assessment, Recommendation","Calculating drug doses","Wound dressing"],1,"SBAR improves clarity and patient safety.");
+  x(M,"Match each patient position to its use.",[["Recovery position","Unconscious, breathing patient"],["Fowler's","Breathing difficulty"],["Supine","Lying flat on the back for examination"],["Lithotomy","Gynaecological examination or delivery"]],"Positioning supports comfort, safety and procedures.");
+  t(E,"In nursing practice, care that is not documented is regarded as not done.",true,"Records are legal evidence of care.");
+  t(M,"The WHO 'Five Moments for Hand Hygiene' include before touching a patient and after touching patient surroundings.",true,"Also before aseptic procedures, after body-fluid exposure and after touching a patient.");
+  t(M,"A nurse should administer a drug prepared by a colleague without checking it.",false,"Nurses administer only drugs they have checked themselves.");
+  m(M,"The deltoid muscle is suitable for intramuscular injections of:",["Large volumes (over 5 ml)","Small volumes, typically up to about 1 ml (e.g. vaccines)","All drugs","Only oily drugs"],1,"Larger volumes go into the ventrogluteal or vastus lateralis sites.");
+  m(E,"The normal adult body temperature is approximately:",["32–33°C","36.5–37.5°C","39–40°C","41–42°C"],1,"Above about 38°C is fever.");
+  s(M,"What does the letter 'E' stand for at the end of the nursing process (ADPIE)?",["evaluation"],"Evaluation checks whether goals were met.");
+  m(H,"Using Maslow's hierarchy to prioritise care, which need is attended to first?",["Self-esteem","Airway and breathing (physiological needs)","Social belonging","Self-actualisation"],1,"Physiological needs come before safety and psychosocial needs.");
+  m(M,"A patient refuses a prescribed medication. The nurse should:",["Hide it in food","Respect the refusal, explain the implications, document it and inform the doctor","Force the patient","Ignore the order"],1,"Competent adults have the right to refuse treatment.");
+
+  /* ---------------- Midwifery ---------------- */
+  cadre("Midwifery Cadre");
+  m(M,"Using Naegele's rule, a woman whose last menstrual period began on 10 January 2026 has an expected date of delivery of:",["3 October 2026","17 October 2026","10 October 2026","17 November 2026"],1,"Add 7 days and subtract 3 months (+1 year): 10 Jan → 17 Oct 2026.");
+  o(M,"Arrange the stages of labour in order.",["First stage: cervical dilatation to full (10 cm)","Second stage: birth of the baby","Third stage: delivery of the placenta and membranes","Fourth stage: first hour after delivery (observation)"],"The fourth stage is the period of greatest risk of postpartum haemorrhage.");
+  m(M,"The partograph is used to:",["Record antenatal visits","Monitor the progress of labour and maternal/fetal condition","Calculate EDD","Record immunisations"],1,"Crossing the alert line prompts action or referral.");
+  m(M,"Active management of the third stage of labour includes:",["Waiting for natural delivery of the placenta only","A uterotonic (e.g. oxytocin 10 IU IM), controlled cord traction and uterine massage","Pulling the cord immediately after birth","Bed rest only"],1,"It reduces postpartum haemorrhage.");
+  m(M,"Primary postpartum haemorrhage after vaginal birth is commonly defined as blood loss of at least:",["100 ml","250 ml","500 ml","2,000 ml"],2,"PPH is a leading cause of maternal death.");
+  m(M,"The drug of choice to prevent and treat eclamptic seizures is:",["Diazepam","Magnesium sulphate","Phenobarbitone","Paracetamol"],1,"Magnesium sulphate is superior to diazepam for eclampsia.");
+  m(E,"Exclusive breastfeeding is recommended for the first:",["6 weeks","3 months","6 months","12 months"],2,"No other food or water is needed in the first 6 months.");
+  m(M,"The WHO 2016 antenatal care model recommends a minimum of:",["4 contacts","8 contacts","2 contacts","12 contacts"],1,"Eight contacts improve outcomes compared with the old four-visit model.");
+  m(M,"Folic acid supplementation before and in early pregnancy mainly prevents:",["Malaria","Neural tube defects","Twins","Hypertension"],1,"E.g. spina bifida.");
+  m(M,"Intermittent preventive treatment of malaria in pregnancy (IPTp) uses:",["Chloroquine","Sulfadoxine-pyrimethamine","Artesunate injection","Quinine"],1,"Given from the second trimester at antenatal contacts.");
+  m(E,"Kangaroo mother care involves:",["Bottle feeding","Continuous skin-to-skin contact between mother and low-birth-weight baby","Keeping the baby in a cot","Carrying baby on the back"],1,"It keeps the baby warm and supports breastfeeding.");
+  m(M,"Chlorhexidine gel (7.1% chlorhexidine digluconate) applied to the umbilical cord stump is used to:",["Speed up cord separation only","Reduce neonatal cord infection and sepsis","Stop bleeding","Treat jaundice"],1,"Nigeria adopted chlorhexidine cord care.");
+  x(M,"Match each pregnancy danger sign to a possible cause.",[["Severe headache with blurred vision","Pre-eclampsia"],["Vaginal bleeding in late pregnancy","Placenta praevia or abruption"],["Fever with foul vaginal discharge after birth","Puerperal sepsis"],["Reduced fetal movements","Fetal distress"]],"Danger signs require urgent referral.");
+  t(E,"A normal full-term pregnancy lasts about 37 to 42 weeks.",true,"Birth before 37 weeks is preterm.");
+  t(M,"In the APGAR score, a score of 7–10 at 5 minutes is generally reassuring.",true,"Low scores call for resuscitation and monitoring.");
+  t(M,"Prevention of mother-to-child transmission (PMTCT) of HIV is no longer necessary when the mother takes antiretroviral therapy.",false,"ART is the core of PMTCT; testing, infant prophylaxis and feeding counselling continue.");
+  m(M,"Delayed cord clamping (about 1–3 minutes) in a healthy newborn mainly helps to:",["Increase infection","Improve the baby's iron stores","Speed up placenta delivery","Reduce breastfeeding"],1,"It transfers additional blood to the baby.");
+  s(M,"How many centimetres of cervical dilatation define full dilatation? (number only)",["10","10cm","10 cm"],"Full dilatation marks the end of the first stage of labour.");
+  m(H,"A woman is 3 hours into the active phase and her partograph plot crosses the alert line. The midwife should:",["Ignore it","Reassess and, depending on the setting, prepare for intervention or referral","Discharge her","Give food only"],1,"The alert line signals slow progress requiring action.");
+  m(M,"The main purpose of postnatal visits is to:",["Collect fees","Check mother and baby for complications, support breastfeeding and offer family planning","Register births only","Give vaccines to the mother only"],1,"Most maternal and newborn deaths occur soon after birth.");
+
+  /* ---------------- Community Health ---------------- */
+  cadre("Community Health Cadre");
+  m(M,"The Alma-Ata Declaration (1978) is famous for promoting:",["Hospital building","Primary Health Care as the key to 'Health for All'","Private health insurance","Specialist care only"],1,"PHC is essential care that is accessible, affordable and community-based.");
+  m(E,"At birth, a Nigerian baby should receive:",["Measles vaccine","BCG, OPV0 and Hepatitis B birth dose","Yellow fever vaccine","Meningitis vaccine"],1,"These are given at or soon after birth.");
+  m(M,"Vaccines in the cold chain should normally be stored at:",["−20°C to −10°C for all vaccines","+2°C to +8°C (most vaccines)","+15°C to +25°C","Room temperature"],1,"Some vaccines (e.g. OPV) may be kept frozen at higher levels of the chain.");
+  m(M,"The measles vaccine is given in Nigeria's routine schedule at:",["Birth","6 weeks","9 months (with a second dose later)","5 years"],2,"A second dose is given at 15 months in the updated schedule.");
+  m(M,"'Primary Health Care Under One Roof' (PHCUOR) means:",["One building for all hospitals","Integrating the management of all PHC services under one authority (e.g. a State PHC Board)","Closing PHC centres","Free drugs only"],1,"It reduces fragmentation of PHC services.");
+  m(M,"Incidence refers to:",["All existing cases at a point in time","New cases occurring in a population over a period","Deaths only","Recovered cases"],1,"Prevalence counts all existing cases.");
+  m(M,"Herd immunity occurs when:",["Only animals are vaccinated","Enough of the population is immune that spread is interrupted, protecting the unvaccinated","Everyone is infected","Vaccines are stopped"],1,"High coverage protects vulnerable people.");
+  m(M,"The Integrated Disease Surveillance and Response (IDSR) strategy aims to:",["Build hospitals","Detect, report and respond to priority diseases efficiently","Train doctors only","Replace immunisation"],1,"Community health workers report suspected cases.");
+  m(E,"Growth monitoring of under-fives uses a:",["Partograph","Growth chart (road-to-health card)","Bin card","Vote book"],1,"Faltering growth signals malnutrition or illness.");
+  m(E,"The most effective way to prevent malaria at household level is:",["Sleeping under insecticide-treated nets and removing breeding sites","Taking antibiotics","Drinking more water","Closing doors in the afternoon"],0,"ITNs reduce malaria transmission and deaths.");
+  x(E,"Match each vaccine to the disease it prevents.",[["BCG","Tuberculosis"],["OPV/IPV","Poliomyelitis"],["Pentavalent","Diphtheria, pertussis, tetanus, Hep B and Hib"],["MCV","Measles"]],"Know the routine immunisation schedule.");
+  o(M,"Arrange the steps of a community diagnosis.",["Entry into the community and meeting leaders","Data collection (survey, observation)","Analysis and identification of health problems","Prioritisation with the community","Planning and implementing interventions","Evaluation"],"Community participation runs through every step.");
+  t(E,"Boiling water for at least one minute at a rolling boil makes it safe from most disease-causing germs.",true,"Boiling is a simple household water treatment.");
+  t(M,"Ward Development Committees help communities participate in planning and monitoring PHC services.",true,"They link communities with health facilities.");
+  t(M,"Health education is most effective when it uses fear alone, without practical advice.",false,"Practical, culturally appropriate messages work better.");
+  m(M,"A community of 20,000 people records 600 live births in a year. The crude birth rate is:",["3 per 1,000","30 per 1,000","300 per 1,000","0.3 per 1,000"],1,"(600 ÷ 20,000) × 1,000 = 30 per 1,000.");
+  m(E,"Homemade salt-sugar solution, if ORS is unavailable, is traditionally made with 1 litre of clean water,:",["Half a level teaspoon of salt and six level teaspoons of sugar","Six teaspoons of salt and one of sugar","Only sugar","Only salt"],0,"Correct proportions matter; packaged ORS is preferred.");
+  s(E,"What does 'PHC' stand for? (three words)",["primary health care","primary healthcare"],"PHC is the first level of contact with the health system.");
+  m(M,"Lagos State primary health care services are managed by the:",["Lagos State Primary Health Care Board","LASUTH","LASEPA","NHIA"],0,"The Board coordinates PHC centres across LGAs/LCDAs.");
+  m(M,"Which is a primary prevention activity?",["Treating diabetes complications","Immunisation","Physiotherapy after stroke","Surgery for cancer"],1,"Primary prevention stops disease occurring; secondary detects early; tertiary limits disability.");
+
+  /* ---------------- Pharmacy ---------------- */
+  cadre("Pharmacy Cadre");
+  m(M,"Pharmacists and pharmacy premises in Nigeria are regulated by the:",["NAFDAC only","Pharmacy Council of Nigeria (PCN)","MDCN","NMCN"],1,"NAFDAC regulates products; PCN regulates practice and premises.");
+  x(M,"Match each prescription abbreviation to its meaning.",[["bd","Twice daily"],["tds","Three times daily"],["prn","When required"],["stat","Immediately"]],"Correct interpretation prevents dosing errors.");
+  m(M,"A prescription reads amoxicillin 500 mg tds for 5 days. The pharmacy has 250 mg capsules. How many capsules are needed?",["15","20","30","60"],2,"2 capsules × 3 times × 5 days = 30.");
+  m(M,"The antidote for paracetamol overdose is:",["Naloxone","N-acetylcysteine","Atropine","Vitamin K"],1,"It is most effective when given early.");
+  m(M,"The antidote for opioid overdose is:",["Flumazenil","Naloxone","Protamine","Glucagon"],1,"Naloxone reverses respiratory depression.");
+  m(M,"Drugs in a pharmacy store are best issued by:",["LIFO","FEFO — First Expiry, First Out","Random selection","Alphabetical order"],1,"FEFO minimises expiry losses.");
+  m(M,"Most vaccines and insulin (unopened) should be stored at:",["Room temperature","2–8°C in a refrigerator","Frozen at −20°C","Above 30°C"],1,"Freezing damages many vaccines and insulin.");
+  m(M,"NAFDAC's Mobile Authentication Service (MAS) allows consumers to:",["Order drugs online","Verify a product's authenticity by sending a scratch code by SMS","Get prescriptions","Report doctors"],1,"It helps fight counterfeit medicines.");
+  m(M,"Pharmacovigilance is concerned with:",["Drug advertising","Detecting, assessing and preventing adverse drug reactions","Drug pricing","Pharmacy building design"],1,"Health workers report ADRs to NAFDAC.");
+  m(H,"After about how many half-lives is a drug considered largely eliminated from the body?",["1","2","4 to 5","20"],2,"After 4–5 half-lives, about 94–97% has been eliminated (and steady state is reached on regular dosing).");
+  m(M,"First-line oral medicine for most adults with type 2 diabetes is usually:",["Insulin","Metformin","Glibenclamide only","Aspirin"],1,"Unless contraindicated (e.g. severe renal impairment).");
+  m(M,"Antimicrobial stewardship aims to:",["Increase antibiotic sales","Promote appropriate antibiotic use to slow resistance","Ban antibiotics","Replace vaccines"],1,"Right drug, dose, duration and only when needed.");
+  t(E,"A generic medicine contains the same active ingredient as the branded original.",true,"It must be bioequivalent to the original.");
+  t(M,"Controlled drugs such as morphine must be recorded in a controlled drugs register and stored securely.",true,"Strict records prevent diversion.");
+  t(M,"Expired drugs may be dispensed if they look fine.",false,"Expired drugs may be less effective or harmful.");
+  o(M,"Arrange the steps of dispensing a prescription.",["Receive and check the prescription for validity","Interpret and check dose and interactions","Select and prepare the medicine","Label correctly","Counsel the patient and hand over","Record the transaction"],"Each step catches errors before the patient takes the medicine.");
+  m(M,"The Drug Revolving Fund (DRF) system in public facilities is meant to:",["Give all drugs free","Sustain drug availability by recovering costs to restock","Close pharmacies","Fund salaries"],1,"Proceeds from sales restock the pharmacy.");
+  s(E,"What does the prescription abbreviation 'od' mean? (two words)",["once daily","once a day"],"'od' = once daily.");
+  m(M,"The WHO Essential Medicines List is:",["A list of banned drugs","A list of medicines that meet priority health needs and should be available at all times","A price list","A list of herbal drugs"],1,"Countries adapt it into national lists.");
+  m(H,"Bioavailability refers to:",["The drug's price","The proportion of an administered dose that reaches the systemic circulation unchanged","The drug's shelf life","The number of tablets"],1,"IV drugs have 100% bioavailability.");
+
+  /* ---------------- Medical Laboratory Science ---------------- */
+  cadre("Medical Laboratory Science Cadre");
+  m(M,"Medical laboratory scientists in Nigeria are regulated by the:",["MDCN","Medical Laboratory Science Council of Nigeria (MLSCN)","PCN","NMCN"],1,"MLSCN registers practitioners and accredits laboratories.");
+  m(E,"In Gram staining, Gram-positive bacteria appear:",["Pink/red","Purple/violet","Green","Yellow"],1,"Gram-negative bacteria stain pink/red with the counterstain.");
+  o(M,"Arrange the steps of the Gram stain in order.",["Crystal violet (primary stain)","Gram's iodine (mordant)","Alcohol/acetone (decolouriser)","Safranin (counterstain)"],"Decolourisation differentiates the two groups.");
+  m(M,"For malaria microscopy, the thick film is mainly used to:",["Identify the species","Detect parasites (higher sensitivity)","Count white cells","Measure haemoglobin"],1,"The thin film is used for species identification.");
+  x(M,"Match each blood collection tube to its main use.",[["EDTA (purple/lavender)","Full blood count"],["Sodium citrate (light blue)","Coagulation tests"],["Fluoride oxalate (grey)","Blood glucose"],["Plain (red)","Serum chemistry and serology"]],"Using the wrong tube invalidates results.");
+  m(M,"A normal fasting plasma glucose in adults is approximately:",["1.0–2.0 mmol/L","3.9–5.6 mmol/L","8.0–10.0 mmol/L","12–15 mmol/L"],1,"≥7.0 mmol/L on repeat testing suggests diabetes.");
+  m(M,"The 'universal red cell donor' blood group is:",["AB positive","O negative","A positive","B negative"],1,"AB positive is the universal recipient.");
+  m(M,"Standard autoclave sterilisation conditions are about:",["60°C for 5 minutes","121°C at about 15 psi for at least 15 minutes","100°C for 1 minute","200°C dry heat for 1 minute"],1,"Steam under pressure kills spores.");
+  m(M,"A Levey-Jennings chart is used in laboratory:",["Inventory","Quality control, plotting control results over time","Staff rostering","Billing"],1,"Westgard rules help interpret QC trends.");
+  m(M,"A person with haemoglobin genotype AS is:",["Sickle cell disease","A sickle cell carrier (trait)","Normal AA","Thalassaemia major"],1,"Two AS parents have a 1 in 4 chance per pregnancy of an SS child.");
+  m(M,"The Widal test for typhoid is limited mainly because:",["It is too expensive","It has poor specificity and sensitivity, especially in endemic areas","It takes weeks","It needs CT scans"],1,"Blood culture is the reference test.");
+  m(M,"When using a centrifuge, tubes must be:",["Placed randomly","Balanced opposite each other","Uncapped","Overfilled"],1,"Imbalance damages the centrifuge and risks aerosols.");
+  t(E,"Specimens should be labelled at the time of collection in the presence of the patient.",true,"This prevents mix-ups.");
+  t(M,"Mouth pipetting is acceptable when no pipette filler is available.",false,"Mouth pipetting is prohibited; it risks infection and poisoning.");
+  t(M,"The 100× oil-immersion objective is used to examine stained blood films and bacteria.",true,"Immersion oil improves resolution.");
+  m(M,"Biosafety cabinets are used mainly to:",["Store reagents","Protect the worker, sample and environment from infectious aerosols","Cool samples","Dry slides"],1,"Class II cabinets are common in clinical labs.");
+  s(M,"What colour do Gram-negative bacteria stain? (one word)",["pink","red"],"They take up the safranin counterstain.");
+  m(H,"A haemolysed blood sample would falsely raise which result?",["Sodium","Potassium","Glucose","Albumin"],1,"Red cells contain high potassium, released on haemolysis.");
+  m(M,"The erythrocyte sedimentation rate (ESR) is:",["A specific test for one disease","A non-specific marker of inflammation","A blood group test","A glucose test"],1,"It rises in many inflammatory conditions.");
+  m(M,"Before reporting an abnormal critical result (e.g. very low haemoglobin), the scientist should:",["Wait for routine rounds","Verify it and communicate it promptly to the clinician, documenting the call","Delete it","Change it to normal"],1,"Critical values need urgent action.");
+
+  /* ---------------- Radiography ---------------- */
+  cadre("Radiography Cadre");
+  m(M,"Radiographers in Nigeria are registered by the:",["MDCN","Radiographers Registration Board of Nigeria (RRBN)","NMCN","MLSCN"],1,"RRBN regulates radiography practice.");
+  m(E,"X-rays were discovered by:",["Marie Curie","Wilhelm Röntgen (1895)","Isaac Newton","Louis Pasteur"],1,"Röntgen received the first Nobel Prize in Physics in 1901.");
+  m(M,"The ALARA principle in radiation protection means:",["As Long As Reasonably Allowed","As Low As Reasonably Achievable","Always Limit All Radiation Absolutely","Avoid Lead At Risky Areas"],1,"Keep doses as low as reasonably achievable.");
+  m(H,"According to the inverse square law, if the distance from a radiation source is doubled, the intensity becomes:",["Half","One quarter","Double","Unchanged"],1,"Intensity ∝ 1/distance²; doubling distance gives 1/4.");
+  m(M,"The SI unit of effective dose is the:",["Gray","Sievert","Becquerel","Roentgen"],1,"The gray is the unit of absorbed dose.");
+  m(M,"Radiation workers wear a TLD badge to:",["Identify themselves","Monitor their personal radiation dose","Shield the body","Measure temperature"],1,"Thermoluminescent dosimeters record cumulative dose.");
+  m(M,"Which imaging modality does NOT use ionising radiation?",["CT","Plain X-ray","MRI","Fluoroscopy"],2,"MRI uses magnetic fields and radio waves; ultrasound uses sound.");
+  m(M,"A standard chest X-ray is usually taken:",["AP lying down","PA erect, on full inspiration","Lateral only","On expiration"],1,"PA reduces heart magnification; inspiration expands the lungs.");
+  m(M,"In CT, water has a Hounsfield value of:",["−1000","0","+1000","+100"],1,"Air is about −1000; dense bone around +1000.");
+  m(M,"Before an abdominal or pelvic X-ray on a woman of reproductive age, the radiographer should:",["Ignore pregnancy","Ask about possible pregnancy/LMP according to the department's protocol","Use maximum dose","Skip the request form"],1,"Protects a possible fetus from unnecessary exposure.");
+  m(M,"Increasing kVp mainly affects:",["The quantity of X-rays only","The penetrating power (energy) of the beam and image contrast","The patient's name","Film size"],1,"mAs mainly controls the quantity of radiation.");
+  m(M,"The regulator responsible for radiation safety and licensing of radiation sources in Nigeria is the:",["NNRA (Nigerian Nuclear Regulatory Authority)","NAFDAC","NCC","SON"],0,"Diagnostic X-ray facilities must comply with NNRA requirements.");
+  x(M,"Match each contrast agent or method to its typical use.",[["Barium sulphate","Gastrointestinal studies"],["Iodinated contrast","CT and angiography"],["Gadolinium","MRI"],["Microbubbles","Contrast-enhanced ultrasound"]],"Each modality uses different contrast agents.");
+  t(E,"Lead aprons reduce the radiation dose to staff and patients from scattered radiation.",true,"Shielding is a basic protection measure.");
+  t(M,"A patient with certain pacemakers or ferromagnetic implants may be unsafe for MRI.",true,"Screening for implants is mandatory before MRI.");
+  t(M,"Ultrasound exposes the fetus to ionising radiation.",false,"Ultrasound uses sound waves, not ionising radiation.");
+  o(M,"Arrange the steps of a routine X-ray examination in order.",["Verify the request and identify the patient","Explain the procedure and remove metal objects","Position the patient and collimate the beam","Apply shielding and make the exposure","Check image quality and record exposure factors"],"Correct ID, justification, collimation and shielding keep exams safe and diagnostic.");
+  s(M,"What does 'CT' stand for? (two words)",["computed tomography","computerised tomography","computerized tomography"],"CT produces cross-sectional images using X-rays.");
+  m(M,"Before giving iodinated contrast, the radiographer should check for:",["Hair colour","History of contrast allergy and kidney function","Blood group","Shoe size"],1,"Contrast reactions and nephropathy are key risks.");
+  m(H,"Collimating the X-ray beam to the area of interest:",["Increases patient dose","Reduces patient dose and scatter, improving image quality","Has no effect","Only saves film"],1,"Tight collimation is a key dose-reduction measure.");
+
+  /* ---------------- Physiotherapy ---------------- */
+  cadre("Physiotherapy Cadre");
+  m(M,"Physiotherapists in Nigeria are registered by the:",["MDCN","Medical Rehabilitation Therapists (Registration) Board of Nigeria","NMCN","PCN"],1,"The Board registers physiotherapists, occupational therapists and others.");
+  m(E,"RICE, used for acute soft-tissue injuries, stands for:",["Run, Ice, Cool, Exercise","Rest, Ice, Compression, Elevation","Rub, Inject, Cover, Elevate","Rest, Inspect, Cast, Exercise"],1,"Newer guidance (e.g. PEACE & LOVE) adds education and gradual loading.");
+  m(M,"A goniometer is used to measure:",["Muscle strength","Joint range of motion (angles)","Blood pressure","Heart rate"],1,"It records joint angles in degrees.");
+  m(M,"On the Oxford (MRC) muscle strength scale, grade 3 means:",["No contraction","Flicker of contraction","Full range of movement against gravity but not against resistance","Normal power"],2,"Grades run from 0 (none) to 5 (normal).");
+  m(M,"Isometric exercise involves:",["Muscle contraction without joint movement","Rapid movement","Stretching only","Walking"],0,"Isotonic exercise involves movement through range.");
+  m(M,"Passive range-of-motion exercises are performed:",["By the patient alone","By the therapist moving the limb without the patient's muscle effort","With weights","In water only"],1,"Used when patients cannot move actively.");
+  m(M,"TENS is mainly used for:",["Muscle building","Pain relief","Bone healing","Wound cleaning"],1,"Transcutaneous electrical nerve stimulation modulates pain signals.");
+  m(M,"Postural drainage and chest percussion are used to:",["Strengthen legs","Help clear secretions from the lungs","Reduce blood pressure","Treat fractures"],1,"Common in cystic fibrosis, bronchiectasis and post-operative care.");
+  m(M,"Heat therapy should be avoided over areas with:",["Normal sensation","Impaired sensation or active malignancy","Healthy skin","Mild stiffness"],1,"Patients may not feel burns; heat may affect tumour tissue.");
+  m(M,"After a stroke, early rehabilitation aims to:",["Keep the patient in bed","Maximise functional recovery, prevent complications and promote independence","Avoid movement of the affected side","Only give drugs"],1,"Early, task-oriented therapy improves outcomes.");
+  m(M,"A patient told to be 'non-weight-bearing' on the left leg after fracture should:",["Walk normally","Use crutches without putting any weight through the left leg","Put half weight","Run"],1,"Weight-bearing status protects healing structures.");
+  m(E,"Safe lifting technique includes:",["Bending the back with straight legs","Bending the knees, keeping the back straight and the load close","Twisting while lifting","Lifting quickly with jerks"],1,"Good ergonomics prevents back injury.");
+  x(M,"Match each condition to a typical physiotherapy goal.",[["Frozen shoulder","Restore shoulder range of motion"],["Cerebral palsy","Improve posture, mobility and function"],["Low back pain","Reduce pain and restore activity"],["Total knee replacement","Regain knee movement and walking"]],"Goals are tailored to each condition.");
+  t(E,"Exercise prescription should consider the patient's condition, goals and tolerance.",true,"Individualised programmes are safer and more effective.");
+  t(M,"Hydrotherapy uses the properties of water, such as buoyancy, to aid exercise.",true,"Buoyancy reduces load on joints.");
+  t(M,"Pain during every exercise is always a sign of progress and should be ignored.",false,"Pain must be monitored; sharp or worsening pain needs reassessment.");
+  o(M,"Arrange the parts of a SOAP clinical note.",["Subjective","Objective","Assessment","Plan"],"SOAP structures assessment records.");
+  s(E,"What instrument measures joint angles in degrees?",["goniometer","a goniometer"],"Goniometry tracks progress in range of motion.");
+  m(H,"An ankle sprain is most commonly caused by:",["Eversion injury","Inversion (rolling the foot inwards)","Hyperextension of the knee","Hip flexion"],1,"Inversion injuries usually damage the lateral ligaments.");
+  m(M,"Ergonomic advice for office workers includes:",["Screens at eye level, feet supported and regular breaks","Sitting for 8 hours without moving","Looking down at the laptop all day","No chair back"],0,"Good workstation set-up prevents musculoskeletal problems.");
+
+  /* ---------------- Dental ---------------- */
+  cadre("Dental Cadre");
+  m(E,"A complete adult permanent dentition has:",["20 teeth","28 teeth","32 teeth","36 teeth"],2,"Including the four third molars (wisdom teeth).");
+  m(E,"The primary (milk) dentition has:",["20 teeth","24 teeth","28 teeth","32 teeth"],0,"Primary teeth are shed and replaced from about age 6.");
+  m(M,"Dental caries is caused mainly by:",["Viruses","Bacteria (e.g. Streptococcus mutans) fermenting dietary sugars into acid","Cold drinks","Brushing too often"],1,"Acid dissolves tooth enamel.");
+  m(M,"Fluoride helps prevent caries mainly by:",["Whitening teeth","Strengthening enamel and promoting remineralisation","Killing all bacteria","Removing tartar"],1,"Fluoride toothpaste is the most effective public-health measure.");
+  m(E,"Plaque left on teeth commonly leads first to:",["Gingivitis (gum inflammation)","Broken jaw","Tooth whitening","Loss of taste"],0,"Untreated gingivitis may progress to periodontitis.");
+  m(E,"The usual recommendation for tooth brushing is:",["Once a week","Twice daily for about two minutes with fluoride toothpaste","After every meal for ten minutes","Only before visiting the dentist"],1,"Spit, don't rinse, to keep the fluoride effect.");
+  m(M,"In the FDI two-digit notation, tooth 11 is the:",["Lower left first molar","Upper right central incisor","Upper left canine","Lower right second premolar"],1,"First digit = quadrant (1 = upper right); second = tooth position from the midline.");
+  m(M,"Fissure sealants are applied to:",["Front teeth only","The pits and fissures of molars to prevent caries","Gums","Dentures"],1,"They seal grooves where food and bacteria lodge.");
+  m(M,"Scaling removes:",["Enamel","Calculus (tartar) and plaque deposits from teeth","Fillings","Gums"],1,"It is followed by polishing.");
+  m(M,"Noma (cancrum oris), seen in parts of Nigeria, is strongly associated with:",["Excess sugar","Malnutrition, poor oral hygiene and debilitating illness in young children","Orthodontic braces","Fluoride"],1,"It is a rapidly destructive gangrenous disease; early treatment saves lives.");
+  m(M,"Dental therapists in Nigeria are registered by the:",["Dental Therapists Registration Board of Nigeria","PCN","NMCN","MLSCN"],0,"Dentists themselves are registered by the MDCN.");
+  m(M,"Dental instruments that penetrate tissue should be:",["Wiped with a cloth","Cleaned and sterilised (e.g. autoclaved) after each patient","Reused without cleaning","Soaked in water"],1,"Proper sterilisation prevents cross-infection.");
+  o(M,"Arrange the permanent teeth in one quadrant from the midline outwards.",["Central incisor","Lateral incisor","Canine","First premolar","Second premolar","First molar","Second molar","Third molar"],"There are 8 teeth per quadrant in the permanent dentition.");
+  x(M,"Match each instrument to its use.",[["Mouth mirror","Indirect vision and retraction"],["Dental probe/explorer","Detecting caries and calculus"],["Scaler","Removing calculus"],["Excavator","Removing soft carious dentine"]],"Basic dental examination instruments.");
+  t(E,"Frequent sugary snacks between meals increase the risk of tooth decay.",true,"Frequency of sugar intake matters more than amount.");
+  t(M,"The first permanent molars usually erupt at about six years of age.",true,"They erupt behind the primary molars and are often mistaken for milk teeth.");
+  t(M,"Bleeding gums when brushing are normal and should be ignored.",false,"Bleeding is a sign of gingivitis and needs better oral hygiene or treatment.");
+  s(E,"How many teeth are in a complete adult permanent dentition? (number only)",["32"],"Including third molars.");
+  m(M,"School oral health programmes mainly aim to:",["Sell toothpaste","Educate children on oral hygiene and diet, and screen for dental problems","Extract all teeth","Replace dental clinics"],1,"Prevention starts early.");
+  m(H,"A child with a swollen face and fever from a dental abscess should be:",["Sent home without treatment","Referred urgently for drainage/antibiotics as appropriate, since facial infections can spread","Given only mouthwash","Told to wait a month"],1,"Spreading dental infection can be life-threatening.");
+
+  /* ---------------- Health Records ---------------- */
+  cadre("Health Records Cadre");
+  m(M,"The international system used to code diseases and causes of death is the:",["DDC","ICD (International Classification of Diseases)","ISBN","LCC"],1,"Published by WHO; ICD-11 is the latest revision.");
+  m(M,"The Master Patient Index (MPI) is used to:",["Store drugs","Identify patients and locate their records using unique identifiers","Bill patients","Record staff"],1,"It prevents duplicate records.");
+  m(M,"In the unit numbering system, a patient:",["Gets a new number at each visit","Keeps one number for all visits and admissions","Has no number","Shares a number with family"],1,"All records are kept together under one number.");
+  m(M,"Terminal digit filing arranges records by:",["The first digits of the number","The last digits of the number","The patient's name","The date of birth"],1,"It spreads records evenly across shelves.");
+  m(H,"A 50-bed ward recorded 1,200 inpatient days in a 30-day month. The bed occupancy rate is:",["60%","75%","80%","90%"],2,"1,200 ÷ (50 × 30) × 100 = 1,200 ÷ 1,500 × 100 = 80%.");
+  m(M,"Average length of stay is calculated as:",["Discharges ÷ beds","Total inpatient days (of discharged patients) ÷ number of discharges","Beds ÷ days","Admissions × days"],1,"It is a key hospital efficiency indicator.");
+  m(M,"The software widely used for routine health data reporting in Nigeria's NHMIS is:",["DHIS2","Koha","Excel only","Oracle HR"],0,"DHIS2 is the District Health Information System, version 2.");
+  m(M,"A medical record can be released to a third party, e.g. an insurer, only:",["On request by anyone","With the patient's written consent or a legal requirement","If paid for","After a week"],1,"Confidentiality protects patients.");
+  m(M,"An 'outguide' or tracer card in a filing system shows:",["The patient's diagnosis","Where a removed record has gone and when","The doctor's name only","The bill"],1,"It helps track records out of the file room.");
+  m(M,"Health records officers in Nigeria are registered by the:",["Health Records Officers Registration Board of Nigeria","MDCN","NMCN","PCN"],0,"The Board regulates the profession.");
+  m(M,"On a death certificate, the 'underlying cause of death' is:",["The final event, e.g. cardiac arrest","The disease or injury that started the chain of events leading to death","The place of death","The doctor's opinion of blame"],1,"It is the cause used for mortality statistics.");
+  m(E,"Electronic medical records improve care mainly by:",["Making records harder to find","Providing legible, accessible and shareable patient information","Removing confidentiality","Increasing paper use"],1,"Access controls still protect privacy.");
+  x(M,"Match each health statistic to its definition.",[["Crude death rate","Deaths per 1,000 population per year"],["Infant mortality rate","Deaths under 1 year per 1,000 live births"],["Bed occupancy rate","Percentage of available beds in use"],["Average length of stay","Mean number of days patients stay"]],"Standard hospital and vital statistics.");
+  t(E,"Health records are legal documents and must not be altered without proper procedure.",true,"Corrections are made by dated, signed amendments.");
+  t(M,"Duplicate patient records can lead to incomplete information and clinical risk.",true,"MPI management prevents duplicates.");
+  t(M,"Clinical coding is optional and has no effect on health statistics.",false,"Accurate coding drives statistics, planning and reimbursement.");
+  o(M,"Arrange the steps of registering a new outpatient.",["Check the MPI to confirm the patient is not already registered","Collect demographic details","Assign a unique hospital number","Create the patient folder","Direct the patient to the clinic"],"Checking first prevents duplicate records.");
+  s(M,"What does 'ICD' stand for? (four words)",["international classification of diseases"],"Maintained by WHO.");
+  m(M,"Records retention schedules decide:",["Staff salaries","How long different types of records are kept before archiving or destruction","Bed allocation","Drug prices"],1,"Retention follows legal and clinical needs.");
+  m(M,"The best way to destroy confidential paper health records at the end of their retention period is:",["Throwing them in public bins","Secure shredding or incineration under supervision, with a record of destruction","Selling as waste paper","Leaving them outside"],1,"Destruction must protect confidentiality.");
+
+  /* ---------------- Environmental Health ---------------- */
+  cadre("Environmental Health Cadre");
+  m(M,"Environmental health officers in Nigeria are registered by the:",["EHORECON (Environmental Health Officers Registration Council of Nigeria)","MDCN","NMCN","SON"],0,"EHORECON regulates the profession.");
+  m(M,"The presence of coliform bacteria (especially E. coli) in drinking water indicates:",["Water is safe","Faecal contamination","Too much chlorine","High mineral content"],1,"E. coli is the standard indicator of faecal pollution.");
+  m(M,"After chlorination, a free residual chlorine level of about ___ is commonly targeted at the point of delivery.",["0.2–0.5 mg/L","5–10 mg/L","0 mg/L","50 mg/L"],0,"A residual protects against recontamination in the distribution system.");
+  o(M,"Arrange the waste management hierarchy from most to least preferred.",["Reduce","Reuse","Recycle","Recover (e.g. energy)","Dispose"],"Disposal is the last resort.");
+  m(M,"Sharps from health facilities should be placed in:",["Plastic bags","Puncture-resistant, labelled sharps containers","Open bins","Drains"],1,"This protects waste handlers from injury and infection.");
+  m(M,"A Ventilated Improved Pit (VIP) latrine reduces flies and odour mainly through:",["A vent pipe with fly screen that draws air and traps flies","Chemicals","Flushing water","A metal roof"],0,"Darkness inside and the screened vent control flies.");
+  m(M,"Rodent control is a key preventive measure against:",["Lassa fever","Measles","Diabetes","Hypertension"],0,"Mastomys rats carry the Lassa virus.");
+  m(M,"An abatement notice is served to:",["Reward a good premises","Require a person to stop or remedy a nuisance within a stated period","Approve a building plan","Close a market permanently without reason"],1,"Failure to comply can lead to prosecution.");
+  m(M,"Mosquito breeding is best reduced by:",["Leaving water in old tyres","Eliminating stagnant water in containers, drains and tyres","Burning refuse","Planting more grass only"],1,"Source reduction is a core vector-control measure.");
+  m(M,"During food premises inspection, the EHO checks:",["Only the signboard","Food storage temperatures, hygiene of handlers and premises, pest control and water supply","Owner's political party","Staff salaries"],1,"Inspection prevents food-borne disease.");
+  m(M,"Overcrowding in housing increases the spread of:",["Airborne diseases such as tuberculosis","Diabetes","Sickle cell disease","Short-sightedness"],0,"Ventilation and space reduce airborne transmission.");
+  m(M,"Port health services are responsible for:",["Collecting customs duties","Preventing the international spread of disease at points of entry","Running ports","Issuing passports"],1,"Under the International Health Regulations (2005).");
+  x(M,"Match each Lagos agency to its environmental role.",[["LASEPA","Environmental protection and pollution control"],["LAWMA","Waste collection and disposal"],["LASWA","Waterways regulation"],["LASBCA","Building control"]],"EHOs coordinate with these agencies.");
+  t(E,"Hand washing with soap at critical times reduces diarrhoeal diseases.",true,"It is one of the most cost-effective health interventions.");
+  t(M,"Open burning of refuse is an environmentally sound method of waste disposal.",false,"It releases harmful smoke and toxic pollutants.");
+  t(M,"Noise levels are measured in decibels (dB).",true,"Prolonged exposure above about 85 dB can damage hearing.");
+  s(E,"What does 'EHO' stand for? (three words)",["environmental health officer"],"EHOs enforce public health laws.");
+  m(H,"During a cholera outbreak, the priority environmental health actions are:",["Closing schools only","Ensuring safe water (chlorination), sanitation, food hygiene and health education","Spraying insecticides only","Vaccinating dogs"],1,"Cholera spreads through contaminated water and food.");
+  m(M,"Medical waste should be segregated at the point of generation mainly to:",["Increase costs","Ensure safe handling and appropriate treatment of hazardous waste","Make bins colourful","Reduce staff"],1,"Mixing hazardous waste with general waste endangers people.");
+  m(M,"The safe distance between a pit latrine and a well is commonly recommended to be at least:",["3 metres","30 metres","300 metres","1 metre"],1,"About 30 m (more in porous soils) reduces groundwater contamination.");
+
+  for(var n in out)out[n].forEach(function(z){z.scope=n;});
+  return out;
+})();
+
+
+/* ==================== inlined from cbt-bank-prof-works.js ==================== */
+/* ============================================================
+   PROFESSIONAL KNOWLEDGE — engineering, built environment, land
+   and technical officer cadres. 20 questions per cadre.
+   Shared file (browser + Apps Script).
+   ============================================================ */
+var SEED_PROF_WORKS=(function(){
+  var out={},cur=null,C="Professional Knowledge",E="easy",M="medium",H="hard";
+  function cadre(n){cur=out[n]=[];}
+  function q(t,d,stem,x,ex){var o={scope:null,category:C,type:t,difficulty:d,stem:stem,explanation:ex};for(var k in x)o[k]=x[k];cur.push(o);}
+  function m(d,stem,o,a,ex){q("mcq",d,stem,{options:o,answer:a},ex);}
+  function t(d,stem,a,ex){q("truefalse",d,stem,{answer:a},ex);}
+  function s(d,stem,acc,ex){q("shortanswer",d,stem,{accept:acc},ex);}
+  function o(d,stem,items,ex){q("ordering",d,stem,{items:items},ex);}
+  function x(d,stem,pairs,ex){q("matching",d,stem,{pairs:pairs.map(function(p){return {l:p[0],r:p[1]};})},ex);}
+
+  /* ---------------- Civil Engineering ---------------- */
+  cadre("Civil Engineering Cadre");
+  m(M,"Engineering practitioners in Nigeria are registered and regulated by:",["NSE only","COREN (Council for the Regulation of Engineering in Nigeria)","ARCON","SON"],1,"The Nigerian Society of Engineers is the professional body; COREN is the statutory regulator.");
+  m(M,"Concrete cube compressive strength is normally specified and tested at:",["3 days","7 days","28 days","90 days"],2,"7-day results give an early indication; 28 days is the design age.");
+  m(M,"The slump test measures the:",["Compressive strength of hardened concrete","Workability (consistency) of fresh concrete","Moisture content of sand","Strength of steel"],1,"It checks that fresh concrete is suitable for placing.");
+  m(M,"Increasing the water–cement ratio of a concrete mix generally:",["Increases strength","Reduces strength and durability","Has no effect","Makes it set faster"],1,"Excess water leaves voids as it evaporates.");
+  m(M,"The California Bearing Ratio (CBR) test is used to assess the:",["Strength of subgrade and pavement materials","Workability of concrete","Tensile strength of steel","Flow in pipes"],0,"CBR values guide pavement thickness design.");
+  m(M,"The Proctor compaction test determines a soil's:",["Colour","Maximum dry density and optimum moisture content","Permeability only","Shear strength only"],1,"Field compaction is checked against these values.");
+  o(M,"Arrange the layers of a flexible road pavement from the bottom up.",["Subgrade","Sub-base","Base course","Binder course","Wearing course"],"Loads spread through successively stronger layers.");
+  m(E,"The camber on a road surface is provided to:",["Increase speed","Drain rainwater off the carriageway","Reduce cost","Mark lanes"],1,"Poor drainage is a leading cause of road failure in Lagos.");
+  m(M,"Water flows through a channel of cross-sectional area 0.5 m² at 2 m/s. The discharge Q = A × V is:",["0.25 m³/s","1.0 m³/s","2.5 m³/s","4.0 m³/s"],1,"Q = 0.5 × 2 = 1.0 m³/s.");
+  m(M,"A road rises 2 m over a horizontal distance of 100 m. Its gradient is:",["0.2%","2%","20%","50%"],1,"2 ÷ 100 × 100 = 2%.");
+  m(H,"The Rational Method for estimating peak storm runoff uses Q = CIA, where C is the:",["Catchment area","Runoff coefficient","Intensity of rainfall","Channel slope"],1,"C depends on surface type, e.g. high for roofs and paved areas.");
+  m(M,"Concrete curing is mainly done to:",["Make concrete dry faster","Keep concrete moist so cement hydrates fully and gains strength","Colour the concrete","Reduce weight"],1,"Inadequate curing causes cracking and low strength.");
+  m(M,"A nominal concrete mix of 1:2:4 refers to the proportions of:",["Water : cement : sand","Cement : sand : coarse aggregate","Sand : cement : water","Steel : cement : sand"],1,"Designed mixes are preferred for structural work.");
+  x(M,"Match each test to what it measures.",[["Slump test","Workability of fresh concrete"],["Cube test","Compressive strength of concrete"],["CBR test","Bearing strength of soils"],["Sieve analysis","Particle size distribution"]],"Material testing underpins quality control.");
+  t(E,"Rigid pavements are typically made of concrete slabs, while flexible pavements use bituminous layers.",true,"They distribute loads differently.");
+  t(M,"Culverts are structures that carry water under roads or embankments.",true,"Undersized culverts cause flooding.");
+  t(M,"Compaction of earthworks is unnecessary if the soil looks dry.",false,"Proper compaction controls settlement and strength regardless of appearance.");
+  m(M,"Lagos State has a dedicated laboratory for testing construction materials to curb building collapse, known as the:",["Lagos State Materials Testing Laboratory","LASBCA Gallery","Lagos Concrete Centre","Ikeja Soil Bank"],0,"Materials testing is a key part of building-control enforcement.");
+  s(M,"What test measures the workability of fresh concrete? (one word before 'test')",["slump","slump test"],"The slump test is quick and done on site.");
+  m(H,"A factor of safety of 2 on a component means:",["It is designed to fail at the working load","It can carry twice the expected working load before failure","It has two supports","It is 2% stronger"],1,"Factors of safety cover uncertainties in loads and materials.");
+
+  /* ---------------- Mechanical Engineering ---------------- */
+  cadre("Mechanical Engineering Cadre");
+  o(M,"Arrange the strokes of a four-stroke engine cycle in order.",["Intake (induction)","Compression","Power (expansion)","Exhaust"],"Each cycle takes two crankshaft revolutions.");
+  m(M,"The first law of thermodynamics states that:",["Heat flows from cold to hot","Energy cannot be created or destroyed, only converted","Entropy always decreases","Absolute zero can be reached"],1,"It is the law of conservation of energy.");
+  m(M,"A diesel engine ignites its fuel by:",["A spark plug","Heat from compressing air (compression ignition)","An open flame","Electric heating of the fuel tank"],1,"Petrol engines use spark ignition.");
+  m(M,"A force of 10 kN acts on a bar with a cross-sectional area of 500 mm². The stress is:",["2 N/mm²","20 N/mm² (20 MPa)","200 N/mm²","5,000 N/mm²"],1,"Stress = 10,000 N ÷ 500 mm² = 20 N/mm².");
+  m(M,"Young's modulus is the ratio of:",["Force to area","Stress to strain within the elastic range","Strain to stress","Load to deflection only"],1,"It measures a material's stiffness.");
+  m(M,"A driving gear with 20 teeth meshes with a driven gear of 60 teeth. If the driver turns at 900 rpm, the driven gear turns at:",["300 rpm","600 rpm","2,700 rpm","900 rpm"],0,"Speed ratio = 60 ÷ 20 = 3, so 900 ÷ 3 = 300 rpm.");
+  m(E,"One horsepower is approximately:",["100 W","746 W","1,000 W","10 kW"],1,"Engine and pump ratings often use horsepower.");
+  o(M,"Arrange the main components of a vapour-compression refrigeration cycle in the order the refrigerant flows.",["Compressor","Condenser","Expansion valve","Evaporator"],"Heat is absorbed in the evaporator and rejected in the condenser.");
+  m(M,"Cavitation in a centrifugal pump is caused by:",["Too much lubrication","Local pressure falling below the vapour pressure of the liquid, forming vapour bubbles that collapse","Overcooling","Excessive discharge pressure"],1,"It erodes impellers; adequate NPSH prevents it.");
+  m(M,"The main function of lubrication in machinery is to:",["Increase friction","Reduce friction and wear, and carry away heat","Add weight","Change colour"],1,"Correct lubricant and intervals extend equipment life.");
+  m(M,"A boiler safety valve is designed to:",["Increase pressure","Release steam automatically if pressure exceeds a set limit","Feed water","Measure temperature"],1,"It prevents boiler explosions; it must be tested regularly.");
+  m(M,"Mean Time Between Failures (MTBF) is a measure of:",["Cost","Reliability of repairable equipment","Fuel efficiency","Weight"],1,"Higher MTBF means fewer breakdowns.");
+  x(M,"Match each welding process to its description.",[["MIG","Continuous wire electrode with shielding gas"],["TIG","Non-consumable tungsten electrode"],["Manual metal arc (stick)","Flux-coated consumable electrode"],["Oxy-acetylene","Gas flame for welding and cutting"]],"Process choice depends on material and application.");
+  t(E,"Preventive maintenance is carried out on a schedule to reduce the likelihood of breakdowns.",true,"It is usually cheaper than emergency repairs.");
+  t(M,"Machine efficiency can be greater than 100% with good design.",false,"Some energy is always lost; efficiency is always below 100%.");
+  t(M,"Torque multiplied by angular speed gives mechanical power.",true,"Power P = torque T × angular speed ω (in rad/s).");
+  m(M,"A machine takes 5 kW input and delivers 4 kW useful output. Its efficiency is:",["125%","80%","20%","40%"],1,"4 ÷ 5 × 100 = 80%.");
+  s(E,"What is the SI unit of power?",["watt","watts","w"],"1 W = 1 joule per second.");
+  m(M,"Lifts (elevators) in public buildings should be:",["Maintained only when they break","Inspected and maintained regularly by competent persons, with records kept","Used without inspection","Maintained by any staff member"],1,"Lift failures can cause serious injury.");
+  m(H,"Before working on a machine, lockout/tagout (LOTO) ensures that:",["The machine runs faster","Energy sources are isolated and locked so the machine cannot start unexpectedly","Tools are tagged with prices","The machine is painted"],1,"LOTO prevents serious injuries during maintenance.");
+
+  /* ---------------- Electrical Engineering ---------------- */
+  cadre("Electrical Engineering Cadre");
+  m(E,"Ohm's law states that:",["V = I × R","P = I ÷ R","R = V × I","I = V × R"],0,"Voltage = current × resistance.");
+  m(M,"A 230 V supply drives a current of 5 A through a heater. Its power is:",["46 W","235 W","1,150 W","2,300 W"],2,"P = V × I = 230 × 5 = 1,150 W.");
+  m(M,"A 2 kW air conditioner runs for 5 hours. The energy consumed is:",["2.5 kWh","7 kWh","10 kWh","20 kWh"],2,"2 kW × 5 h = 10 kWh.");
+  m(M,"The standard single-phase supply voltage and frequency in Nigeria is:",["110 V, 60 Hz","230 V, 50 Hz","400 V, 60 Hz","120 V, 50 Hz"],1,"Three-phase line voltage is about 400–415 V.");
+  m(M,"Two 6 Ω resistors connected in parallel have a combined resistance of:",["12 Ω","6 Ω","3 Ω","36 Ω"],2,"1/R = 1/6 + 1/6 = 1/3, so R = 3 Ω.");
+  m(M,"The main purpose of earthing an electrical installation is to:",["Save energy","Provide a safe path for fault current so protective devices operate and shock risk is reduced","Increase voltage","Reduce cable size"],1,"Good earthing is fundamental to electrical safety.");
+  m(M,"An RCD (residual current device) mainly protects against:",["Overloads only","Electric shock from earth leakage currents","Lightning","Low voltage"],1,"It trips when current leaks to earth, e.g. through a person.");
+  x(M,"Match each cable core colour (IEC harmonised) to its function.",[["Brown","Line (live)"],["Blue","Neutral"],["Green/yellow","Protective earth"],["Grey or black (three-phase)","Other line conductors"]],"Correct identification prevents dangerous errors.");
+  m(M,"A transformer works on the principle of:",["Static electricity","Electromagnetic (mutual) induction","Chemical reaction","Thermal expansion"],1,"It works only with alternating current.");
+  m(M,"Power factor correction capacitors are installed mainly to:",["Increase lighting","Reduce reactive power and improve power factor, lowering losses and demand charges","Stop lightning","Generate DC"],1,"Inductive loads like motors lower power factor.");
+  m(H,"The Electricity Act 2023 is significant for states such as Lagos because it:",["Abolished electricity regulation","Allows states to make laws and regulate electricity markets within their territory","Banned private generation","Nationalised DisCos"],1,"States can now establish their own electricity markets and regulators.");
+  m(M,"The federal agency responsible for inspecting and certifying electrical installations and enforcing technical standards is:",["NEMSA (Nigerian Electricity Management Services Agency)","NAFDAC","NCC","NNRA"],0,"NEMSA certifies electrical installations and materials.");
+  m(M,"In a solar PV system, the inverter:",["Stores energy","Converts DC from panels/batteries to AC for appliances","Generates sunlight","Measures temperature"],1,"Charge controllers regulate battery charging.");
+  m(M,"An insulation resistance tester ('megger') is used to:",["Measure current","Check the insulation quality of cables and equipment","Measure light","Test fuses only"],1,"Low insulation resistance indicates deterioration or faults.");
+  o(M,"Arrange the steps of safe isolation before working on a circuit.",["Identify the circuit","Switch off and isolate the supply","Lock off and tag the isolator","Prove the tester works on a known live source","Test the circuit is dead","Re-prove the tester"],"'Prove–test–prove' confirms the circuit is truly dead.");
+  t(E,"Switches should be connected in the line (live) conductor, not the neutral.",true,"Otherwise the appliance stays live when switched off.");
+  t(M,"A fuse or MCB protects mainly against overcurrent from overloads and short circuits.",true,"RCDs protect against earth leakage.");
+  t(M,"Transformers work equally well on direct current.",false,"Steady DC produces no changing flux, so no voltage is induced.");
+  s(M,"What does 'kWh' stand for? (two words)",["kilowatt hour","kilowatt-hour","kilowatt hours"],"The kWh is the unit used for electricity billing.");
+  m(H,"A 3-phase motor draws 10 A at 400 V (line) with a power factor of 0.8. Its input power is about:",["3.2 kW","5.5 kW","6.9 kW","4.0 kW"],1,"P = √3 × V × I × pf = 1.732 × 400 × 10 × 0.8 ≈ 5,542 W ≈ 5.5 kW.");
+
+  /* ---------------- Structural Engineering ---------------- */
+  cadre("Structural Engineering Cadre");
+  m(M,"The self-weight of a structure and permanent fixtures is called:",["Live (imposed) load","Dead (permanent) load","Wind load","Dynamic load"],1,"Live loads come from occupancy and movable items.");
+  m(H,"A simply supported beam of span 6 m carries a uniformly distributed load of 10 kN/m. The maximum bending moment (wL²/8) is:",["30 kNm","45 kNm","60 kNm","90 kNm"],1,"10 × 6² ÷ 8 = 360 ÷ 8 = 45 kNm.");
+  m(H,"A simply supported beam of span 4 m carries a point load of 20 kN at midspan. The maximum bending moment (PL/4) is:",["10 kNm","20 kNm","40 kNm","80 kNm"],1,"20 × 4 ÷ 4 = 20 kNm.");
+  m(M,"In a simply supported reinforced concrete beam under gravity load, the main tension reinforcement is placed:",["At the top","At the bottom","At mid-depth","Only at the supports"],1,"Sagging puts the bottom fibres in tension.");
+  m(E,"Concrete is:",["Strong in tension, weak in compression","Strong in compression, weak in tension","Equally strong in both","Weak in both"],1,"Steel reinforcement carries the tension.");
+  m(M,"Concrete cover to reinforcement is provided mainly for:",["Appearance","Corrosion protection, fire resistance and bond","Reducing weight","Speed of construction"],1,"Inadequate cover causes rusting and spalling.");
+  x(M,"Match each foundation type to its typical use.",[["Strip foundation","Load-bearing walls"],["Pad foundation","Individual columns"],["Raft foundation","Weak soils or heavy loads over the whole plan area"],["Pile foundation","Transferring loads to deep firm strata"]],"Foundation choice depends on soil and loads.");
+  m(M,"Because much of Lagos has soft, marshy soils, multi-storey buildings often require:",["No foundations","Deep foundations such as piles after proper soil investigation","Shallow pads always","Timber foundations"],1,"Geotechnical investigation determines the right foundation.");
+  m(M,"The rebound (Schmidt) hammer test is a:",["Destructive test on steel","Non-destructive test estimating concrete surface hardness/strength","Soil test","Water test"],1,"Results are indicative and should be correlated with cores.");
+  m(M,"A common cause of building collapse in Lagos is:",["Using approved designs","Substandard materials, poor supervision and unauthorised additional floors","Too many inspections","Excessive reinforcement"],1,"Enforcement of building regulations targets these causes.");
+  m(M,"The moment of a 15 kN force acting at 2 m from a pivot is:",["7.5 kNm","13 kNm","17 kNm","30 kNm"],3,"Moment = force × perpendicular distance = 15 × 2 = 30 kNm.");
+  m(M,"Slender columns are prone to failure by:",["Crushing only","Buckling","Shear only","Corrosion only"],1,"Slenderness reduces load capacity.");
+  o(M,"Arrange the stages of delivering a building structure in order.",["Site and soil investigation","Structural analysis and design","Design checking and approval","Construction","Supervision and testing","Certification of completion"],"Each stage reduces the risk of failure.");
+  t(E,"Imposed loads on office floors are generally higher than on residential floors.",true,"Codes specify higher imposed loads for offices and assembly areas.");
+  t(M,"A structural integrity test may be ordered for an existing building showing distress before it is reoccupied.",true,"Tests guide decisions on repair or demolition.");
+  t(M,"Adding extra floors to an existing building is safe without structural assessment if the columns look strong.",false,"Additional floors require structural assessment and approval.");
+  s(M,"What is the name of the load from people, furniture and movable items? (two words, e.g. '____ load')",["live load","imposed load","live","imposed"],"Also called imposed load.");
+  m(H,"Ultrasonic pulse velocity testing of concrete mainly indicates:",["Colour","Uniformity and the presence of voids or cracks","Water content only","Steel grade"],1,"Low velocities suggest poor-quality or cracked concrete.");
+  m(M,"Deflection limits in design are set mainly to:",["Increase cost","Prevent excessive movement that damages finishes or affects use","Make beams heavier","Satisfy architects only"],1,"Serviceability limits complement strength checks.");
+  m(M,"Common structural design codes used in Nigeria include:",["BS 8110 / Eurocodes","US Highway Code","Medical codes","Tax codes"],0,"Nigeria also has the National Building Code.");
+
+  /* ---------------- Architecture ---------------- */
+  cadre("Architecture Cadre");
+  m(M,"Architects in Nigeria are registered and regulated by:",["COREN","ARCON (Architects Registration Council of Nigeria)","TOPREC","QSRBN"],1,"The Nigerian Institute of Architects is the professional body.");
+  o(M,"Arrange the typical stages of the architectural design process.",["Client brief","Concept / sketch design","Design development","Working (construction) drawings","Tender documents","Construction and contract administration"],"Each stage builds on the approved previous stage.");
+  m(E,"On a drawing at a scale of 1:100, 1 cm represents:",["1 cm","10 cm","1 m","10 m"],2,"1 cm × 100 = 100 cm = 1 m.");
+  m(M,"A wall 12 m long is drawn at 1:50. Its length on the drawing is:",["12 cm","24 cm","60 cm","2.4 cm"],1,"12,000 mm ÷ 50 = 240 mm = 24 cm.");
+  x(E,"Match each drawing type to what it shows.",[["Plan","Horizontal layout seen from above"],["Elevation","External face of a building"],["Section","A vertical cut through the building"],["Site plan","Building position on the plot and its surroundings"]],"These drawings together describe a building.");
+  m(M,"For passive cooling in Lagos's hot-humid climate, buildings are best oriented with:",["Long facades facing east and west","Long facades facing north and south, with shading and cross-ventilation","No windows","Flat black roofs"],1,"This reduces low-angle east/west sun and harnesses breezes.");
+  m(M,"Planning permits for development in Lagos State are issued by:",["LASPPPA (Lagos State Physical Planning Permit Authority)","LAWMA","LASTMA","LASRRA"],0,"LASBCA then controls construction and building safety.");
+  m(M,"In Lagos, a building must not be occupied until it has been issued a:",["C of O","Certificate of Completion and Fitness for Habitation","Tax receipt","Building plan only"],1,"Issued after inspection of the completed building.");
+  m(M,"A wheelchair ramp is commonly designed with a maximum gradient of about:",["1:4","1:12","1:2","1:1"],1,"Gentle gradients make buildings accessible.");
+  m(M,"Vitruvius described good architecture as having:",["Speed, cost and size","Firmness (firmitas), commodity/usefulness (utilitas) and delight (venustas)","Height, colour and light","Steel, glass and concrete"],1,"A classic definition still taught today.");
+  m(M,"BIM stands for:",["Building Information Modelling","Basic Interior Measurement","Building Inspection Manual","Brick Installation Method"],0,"BIM creates a shared digital model of a building.");
+  m(M,"The modernist dictum 'form follows function' is associated with:",["Louis Sullivan","Frank Lloyd Wright only","Vitruvius","Michelangelo"],0,"Sullivan coined the phrase in 1896.");
+  m(M,"Setbacks in building regulations mainly ensure:",["Larger buildings","Light, ventilation, privacy, access and fire safety between buildings and roads","Lower costs","Taller fences"],1,"Encroachment on setbacks is a common contravention.");
+  t(E,"Fire escape routes should be clearly marked and kept free of obstruction.",true,"Escape routes save lives in emergencies.");
+  t(M,"Cross-ventilation requires openings on opposite or adjacent walls to let air flow through a space.",true,"It is a key passive cooling strategy.");
+  t(M,"An architect may start construction once the client approves the design, without a planning permit.",false,"A planning permit is legally required before construction.");
+  s(E,"What does BIM stand for? (three words)",["building information modelling","building information modeling"],"BIM supports coordination and clash detection.");
+  m(H,"A building with deep overhangs, light-coloured roofing and high ceilings is primarily designed to:",["Increase heating","Reduce heat gain and improve thermal comfort","Look traditional only","Reduce daylight entirely"],1,"Common bioclimatic strategies for the tropics.");
+  m(M,"Working drawings differ from sketch designs mainly because they:",["Are artistic impressions","Give detailed dimensions, specifications and construction details for building","Are for marketing","Are hand-drawn"],1,"Contractors build from working drawings.");
+  m(M,"A design brief is:",["The final drawing","A statement of the client's requirements, budget and constraints","A planning permit","A tender"],1,"Good briefs prevent costly redesign.");
+
+  /* ---------------- Town Planning ---------------- */
+  cadre("Town Planning Cadre");
+  m(M,"Town planners in Nigeria are registered by:",["COREN","TOPREC (Town Planners Registration Council of Nigeria)","ESVARBON","SURCON"],1,"The Nigerian Institute of Town Planners is the professional body.");
+  m(M,"Under the Land Use Act 1978, land in each state (urban areas) is vested in the:",["Traditional rulers","Governor, in trust for the people","Federal Government","Local communities"],1,"The Governor grants statutory rights of occupancy.");
+  m(M,"The document evidencing a statutory right of occupancy is the:",["Survey plan","Certificate of Occupancy (C of O)","Building plan","Tax clearance"],1,"Consent is needed to assign or mortgage it.");
+  m(M,"A plot of 1,000 m² has a building with a total floor area of 2,500 m². The floor area ratio (plot ratio) is:",["0.4","1.5","2.5","25"],2,"FAR = total floor area ÷ plot area = 2,500 ÷ 1,000 = 2.5.");
+  m(M,"A building footprint of 600 m² on a 1,000 m² plot gives a plot coverage of:",["6%","40%","60%","166%"],2,"600 ÷ 1,000 × 100 = 60%.");
+  m(M,"Zoning in urban planning mainly aims to:",["Raise taxes","Separate or regulate land uses to reduce conflict and guide orderly development","Increase traffic","Ban development"],1,"E.g. separating heavy industry from housing.");
+  m(M,"The 'Garden City' concept was proposed by:",["Le Corbusier","Ebenezer Howard","Clarence Perry","Patrick Geddes"],1,"Howard's 1898 idea combined town and country.");
+  m(M,"The 'Neighbourhood Unit' concept, with a primary school at its centre, was developed by:",["Clarence Perry","Ebenezer Howard","Robert Moses","Jane Jacobs"],0,"Perry proposed it in the 1920s.");
+  m(M,"The main Lagos law governing physical planning and development control is the:",["Land Use Act only","Lagos State Urban and Regional Planning and Development Law (as amended)","Tenancy Law","Environmental Sanitation Law"],1,"It establishes the planning agencies and permit system.");
+  m(M,"A 'Model City Plan' or master plan sets out:",["Building colours","Long-term land-use allocation, infrastructure and development guidelines for an area","Tax rates","Street names only"],1,"Lagos has model city plans for several districts.");
+  m(M,"GIS in planning is used to:",["Write laws","Capture, analyse and map spatial data for decisions","Collect rent","Build roads"],1,"GIS overlays land use, infrastructure and population data.");
+  m(M,"An Environmental Impact Assessment (EIA) is required to:",["Approve all small houses","Identify and mitigate the environmental effects of major projects before approval","Collect taxes","Name streets"],1,"Under the EIA Act, certain projects require assessment.");
+  x(M,"Match each planning term to its meaning.",[["Setback","Minimum distance between a building and the plot boundary or road"],["Right of way","Land reserved for roads and utilities"],["Density","Number of people or dwellings per unit area"],["Contravention","Development in breach of planning regulations"]],"Core development-control vocabulary.");
+  o(M,"Arrange the stages of the planning process.",["Survey and data collection","Analysis","Formulation of plan proposals","Plan approval","Implementation","Monitoring and review"],"Plans are reviewed as conditions change.");
+  t(E,"Urban renewal involves redeveloping deteriorated areas to improve living conditions.",true,"Approaches range from upgrading to redevelopment.");
+  t(M,"Building on drainage channels and setbacks contributes to flooding in Lagos.",true,"Enforcement against such contraventions is a planning priority.");
+  t(M,"A planning permit is not required for adding new floors to an existing building.",false,"Material alterations require permits.");
+  s(M,"What is the ratio of a building's total floor area to its plot area called? (accept 'floor area ratio' or 'plot ratio')",["floor area ratio","plot ratio","far"],"It controls development intensity.");
+  m(H,"Slum upgrading, as opposed to clearance, typically:",["Evicts residents","Improves infrastructure and services in place while securing residents' tenure","Ignores the community","Builds luxury estates"],1,"It reduces displacement and preserves livelihoods.");
+  m(M,"A contravention notice in development control is served to:",["Approve a plan","Inform a developer of a breach and require them to stop or regularise within a period","Collect rent","Reward compliance"],1,"Further notices and enforcement follow non-compliance.");
+
+  /* ---------------- Quantity Surveying ---------------- */
+  cadre("Quantity Surveying Cadre");
+  m(M,"Quantity surveyors in Nigeria are registered by:",["QSRBN (Quantity Surveyors Registration Board of Nigeria)","COREN","ARCON","ESVARBON"],0,"The NIQS is the professional body.");
+  m(M,"A Bill of Quantities is:",["A drawing","A document itemising quantities and descriptions of work, priced by tenderers","A building permit","A soil report"],1,"It gives a common basis for competitive tendering.");
+  x(M,"Match each work item to its usual unit of measurement.",[["Concrete in foundations","m³"],["Blockwork walls","m²"],["Steel reinforcement","kg or tonnes"],["Skirting","linear metres (m)"]],"Standard methods of measurement specify units.");
+  m(M,"A Provisional Sum in a BOQ is:",["A fixed price for known work","An allowance for work that cannot be fully defined at tender stage","The contractor's profit","Retention money"],1,"It is adjusted when the work is defined.");
+  m(M,"A Prime Cost (PC) sum is:",["The total project cost","An allowance for work or materials from a nominated supplier or subcontractor","A penalty","Overheads"],1,"The contractor adds profit and attendance.");
+  m(M,"Retention money is:",["The contractor's profit","A percentage withheld from interim payments as security for defects","Tax","Advance payment"],1,"Half is often released at practical completion and half after the defects period.");
+  m(M,"An interim valuation of ₦20m has 5% retention. The amount retained is:",["₦100,000","₦1,000,000","₦2,000,000","₦500,000"],1,"5% of ₦20m = ₦1m.");
+  m(M,"A wall 10 m long and 3 m high has a door opening of 2 m². The net area of blockwork is:",["30 m²","28 m²","32 m²","26 m²"],1,"10 × 3 = 30 m²; minus 2 m² = 28 m².");
+  m(M,"'Preliminaries' in a BOQ cover:",["Foundations only","General items such as site set-up, insurances, supervision and temporary works","Finishes","Electrical works"],1,"They are costs not tied to specific work items.");
+  m(M,"Liquidated damages are:",["Extra payment for early completion","A pre-agreed amount payable by the contractor for each period of delay","Damage to materials","Insurance claims"],1,"They must be a genuine pre-estimate of loss.");
+  m(M,"A variation in a construction contract is:",["Fraud","A change to the scope or specification of the works instructed under the contract","A price increase claim","Retention"],1,"Variations are valued using contract rates where applicable.");
+  m(M,"When evaluating tenders, the quantity surveyor checks priced BOQs for:",["Fonts","Arithmetic errors and unbalanced or unrealistic rates","Logo colours","Number of pages"],1,"Errors are handled under the tender rules.");
+  m(H,"Life-cycle costing considers:",["Only construction cost","All costs over a building's life: construction, operation, maintenance and disposal","Only furniture","Only design fees"],1,"Cheaper initial choices may cost more over time.");
+  o(M,"Arrange the QS's cost-management stages in order.",["Preliminary estimate","Cost plan","Bill of quantities and tender","Interim valuations during construction","Final account"],"Cost control runs from inception to completion.");
+  t(E,"An elemental cost plan breaks down the estimated cost by building elements such as substructure, frame and roof.",true,"It supports cost control during design.");
+  t(M,"The final account is prepared before construction starts.",false,"The final account is agreed at the end of the contract.");
+  t(M,"A fluctuation clause allows contract sums to be adjusted for specified changes in costs such as materials or labour.",true,"It shares inflation risk between parties.");
+  s(M,"What document itemises quantities of work for contractors to price? (three words)",["bill of quantities","boq","bills of quantities"],"Abbreviated BOQ.");
+  m(M,"A contingency sum in an estimate is:",["Profit","An allowance for unforeseen costs","Retention","VAT"],1,"It manages risk.");
+  m(H,"The total of interim certificates is ₦80m gross with 5% retention, and ₦60m has already been paid. The amount due on the next certificate is:",["₦16m","₦20m","₦17m","₦4m"],0,"Net of retention = 80 × 0.95 = ₦76m; less ₦60m paid = ₦16m.");
+
+  /* ---------------- Land Surveying ---------------- */
+  cadre("Land Surveying Cadre");
+  m(M,"Surveyors in Nigeria are registered by:",["SURCON (Surveyors Council of Nigeria)","COREN","TOPREC","ESVARBON"],0,"Only registered surveyors may sign survey plans.");
+  m(M,"Survey plans in Lagos State must be lodged and approved by the:",["Office of the Surveyor-General of Lagos State","LASTMA","LASBCA","LAWMA"],0,"Approval guards against encroachment and fraudulent plans.");
+  m(E,"A whole-circle bearing is measured:",["Anticlockwise from East","Clockwise from North, from 0° to 360°","From South only","In metres"],1,"Bearings describe directions of survey lines.");
+  m(M,"The back bearing of a line with a forward bearing of 060° is:",["120°","240°","300°","060°"],1,"Back bearing = forward bearing ± 180° = 240°.");
+  m(M,"In levelling, a backsight of 1.500 m and a foresight of 2.300 m indicate a:",["Rise of 0.800 m","Fall of 0.800 m","Rise of 3.800 m","No change"],1,"BS − FS = 1.5 − 2.3 = −0.8 m: a fall.");
+  m(M,"A benchmark in surveying is:",["A seat","A fixed point of known height (reduced level)","A plot boundary","A road sign"],1,"Levels are referenced to benchmarks.");
+  m(M,"A theodolite is mainly used to measure:",["Distance only","Horizontal and vertical angles","Temperature","Soil strength"],1,"A total station combines angle and electronic distance measurement.");
+  m(E,"Contour lines that are close together on a map indicate:",["Flat ground","Steep slopes","Water","Roads"],1,"Widely spaced contours show gentle slopes.");
+  m(M,"A rectangular plot measuring 30 m by 60 m has an area of:",["180 m²","1,800 m² (0.18 ha)","18,000 m²","900 m²"],1,"1 hectare = 10,000 m².");
+  m(M,"The geodetic datum traditionally used for Nigerian mapping is the:",["WGS 84 only","Minna datum","Lagos datum","Kano datum"],1,"Coordinates are increasingly referenced to WGS84 via GNSS.");
+  m(M,"GNSS (e.g. GPS) surveying determines positions using:",["Magnets","Signals from satellites","Sound waves","Levels"],1,"High-accuracy surveys use differential/RTK techniques.");
+  m(M,"Survey beacons (pillars) on a parcel boundary should:",["Be moved freely","Remain undisturbed; their removal is an offence","Be painted only","Be replaced by fences"],1,"Beacons define the legal boundary.");
+  x(M,"Match each type of survey to its purpose.",[["Cadastral survey","Defining property boundaries"],["Topographic survey","Mapping ground features and relief"],["Hydrographic survey","Mapping water bodies and depths"],["Engineering survey","Setting out and controlling construction"]],"Different surveys serve different purposes.");
+  o(M,"Arrange the main stages of a cadastral survey.",["Research existing records and plans","Reconnaissance of the site","Field measurement and beaconing","Computation and plotting","Plan preparation and signing","Lodgement for approval"],"Approval completes the process.");
+  t(E,"Traverse closure checks show whether measured angles and distances form a consistent loop.",true,"Misclosures beyond tolerance require re-measurement.");
+  t(M,"A survey plan signed by an unregistered person is valid if accurate.",false,"Only registered surveyors may certify survey plans.");
+  t(M,"Reduced levels show heights relative to a datum.",true,"They are computed from staff readings and benchmarks.");
+  s(M,"A line has a forward bearing of 135°. What is its back bearing in degrees? (number only)",["315"],"135 + 180 = 315°.");
+  m(H,"In levelling by the rise-and-fall method, the arithmetic check is:",["ΣBS − ΣFS = ΣRise − ΣFall = last RL − first RL","ΣBS = ΣFS","ΣRise = ΣFall always","None"],0,"All three differences must agree.");
+  m(M,"On a map at 1:2,000, a distance of 5 cm represents:",["10 m","100 m","1,000 m","50 m"],1,"5 cm × 2,000 = 10,000 cm = 100 m.");
+
+  /* ---------------- Estate Management ---------------- */
+  cadre("Estate Management Cadre");
+  m(M,"Estate surveyors and valuers in Nigeria are registered by:",["ESVARBON","SURCON","TOPREC","COREN"],0,"The Estate Surveyors and Valuers Registration Board of Nigeria.");
+  x(M,"Match each valuation method to its typical use.",[["Comparative method","Properties with good market evidence, e.g. houses"],["Investment method","Income-producing properties"],["Residual method","Development land"],["Cost (contractor's) method","Special properties rarely sold, e.g. schools"]],"The method depends on the property type and evidence.");
+  m(H,"A property produces a net rent of ₦2m a year. Using a yield of 10%, the capital value (YP in perpetuity = 100 ÷ yield) is:",["₦2m","₦10m","₦20m","₦200m"],2,"YP = 100 ÷ 10 = 10; value = 2m × 10 = ₦20m.");
+  m(M,"Under the Land Use Act, assignment or mortgage of a statutory right of occupancy requires the:",["Neighbour's approval","Governor's consent","Police permit","Bank's approval only"],1,"Section 22; transactions without consent are void.");
+  m(M,"A statutory right of occupancy is commonly granted for a term of up to:",["10 years","25 years","99 years","Forever"],2,"Usually 99 years, renewable.");
+  m(M,"Under the Lagos State Tenancy Law 2011, a yearly tenant is entitled to a notice to quit of:",["One week","One month","Three months","Six months"],3,"Monthly tenants get one month; yearly tenants six months, unless agreed otherwise.");
+  m(M,"Under the Lagos Tenancy Law, it is unlawful for a landlord to demand from a new yearly tenant rent in advance of more than:",["One month","Six months","One year","Five years"],2,"This curbs the practice of demanding two or three years' rent.");
+  m(M,"'Highest and best use' in valuation means:",["The most expensive building","The reasonably probable, legal use that produces the highest value","The current use only","The oldest use"],1,"Valuers assess what use maximises value.");
+  m(M,"Property management mainly involves:",["Only collecting rent","Letting, rent collection, maintenance, tenant relations and record keeping on the owner's behalf","Building new estates only","Valuation only"],1,"Good management preserves value and income.");
+  m(M,"A service charge in a multi-tenanted building covers:",["Rent","Costs of common services such as security, cleaning and maintenance of shared areas","Taxes only","Owner's profit"],1,"It should be transparent and accounted for.");
+  m(M,"Compensation for land compulsorily acquired under the Land Use Act is generally payable for:",["The land itself at market value","Unexhausted improvements (buildings, crops) rather than the bare land","Nothing","Future profits"],1,"Section 29 of the Act.");
+  m(M,"Facility management focuses on:",["Selling properties","Operating and maintaining buildings and services to support occupiers efficiently","Designing buildings","Survey plans"],1,"It covers maintenance, energy, safety and services.");
+  o(M,"Arrange the steps of a valuation assignment.",["Receive and agree instructions","Inspect the property","Gather market evidence","Analyse and apply valuation methods","Prepare and deliver the valuation report"],"A structured process supports defensible values.");
+  t(E,"A lease gives the tenant exclusive possession of property for a defined term in return for rent.",true,"The landlord retains the reversion.");
+  t(M,"A valuer may value a property in which they have an undisclosed financial interest.",false,"Conflicts of interest must be disclosed or the instruction declined.");
+  t(M,"Depreciation reduces the value of buildings over time due to physical deterioration and obsolescence.",true,"Land itself does not usually depreciate.");
+  s(M,"Net rent is ₦3m a year and the yield is 12%. What is the Years' Purchase in perpetuity? (number, 2 decimal places, e.g. 8.33)",["8.33","8.3","8.333"],"YP = 100 ÷ 12 ≈ 8.33.");
+  m(M,"Ground rent is paid by the holder of a statutory right of occupancy to:",["The developer","The State Government","The tenant","The bank"],1,"It is a condition of the right of occupancy.");
+  m(H,"In the residual method, the residual value of development land is:",["Gross development value plus costs","Gross development value minus development costs and developer's profit","Rent multiplied by YP only","Building cost only"],1,"What remains is the value of the land.");
+  m(M,"A dilapidations schedule lists:",["Rent arrears","Repairs a tenant must carry out under the lease, usually at its end","New tenants","Valuation figures"],1,"Used to settle repairing obligations.");
+
+  /* ---------------- Technical Officer (Civil) ---------------- */
+  cadre("Technical Officer (Civil) Cadre");
+  m(E,"The '3-4-5' method is used on site to:",["Mix concrete","Set out a right angle","Test soil","Measure rainfall"],1,"A triangle with sides 3, 4 and 5 units has a right angle.");
+  m(E,"A common mortar mix for sandcrete blockwork is about:",["1:1","1:6 (cement : sand)","1:20","3:1"],1,"Richer mixes are used where higher strength is required.");
+  m(M,"A damp-proof course (DPC) in a wall prevents:",["Fire","Moisture rising from the ground into the wall","Termites only","Cracks"],1,"It is laid above ground level.");
+  m(E,"Standard sandcrete blocks for external load-bearing walls in Nigeria are commonly:",["100 mm (4\")","150 mm (6\")","225 mm (9\")","50 mm (2\")"],2,"150 mm blocks are common for internal partitions.");
+  m(M,"Freshly placed concrete slabs should be cured for at least about:",["1 hour","7 days","1 year","Not at all"],1,"Longer curing improves strength and durability.");
+  m(M,"A lintel is placed:",["Under the foundation","Over a door or window opening to carry the wall above","On the roof","Inside a column"],1,"Lintels transfer loads around openings.");
+  m(E,"A site diary records:",["Workers' personal lives","Daily site activities, weather, labour, materials, instructions and incidents","Only visitors","Only payments"],1,"It is valuable evidence in disputes.");
+  m(M,"Before concrete is poured, the technical officer should check:",["Only the weather","Formwork, reinforcement (size, spacing, cover) and cleanliness","The contractor's car","Paint colour"],1,"Pre-pour inspection prevents defects.");
+  m(M,"On a drawing at 1:100, a room measures 4 cm by 3 cm. Its actual size is:",["4 m × 3 m","40 m × 30 m","0.4 m × 0.3 m","400 m × 300 m"],0,"Each cm represents 1 m.");
+  m(E,"A spirit level is used to check that surfaces are:",["Strong","Level or plumb","Wet","Painted"],1,"Accurate levels prevent defects.");
+  m(M,"Formwork for a suspended slab should not be removed until:",["The next morning regardless","The concrete has gained enough strength, as specified or approved","It is painted","The contractor wishes"],1,"Early striking can cause collapse.");
+  x(E,"Match each material to its use.",[["Cement","Binder in concrete and mortar"],["Sharp sand","Fine aggregate"],["Granite chippings","Coarse aggregate"],["Reinforcement bars","Carry tension in concrete"]],"Know the basic construction materials.");
+  t(E,"Workers on site should wear PPE such as helmets and safety boots.",true,"PPE reduces injuries.");
+  t(M,"Adding extra water to stiff concrete on site to make it easier to place is good practice.",false,"Extra water reduces strength.");
+  t(M,"Concrete should be placed and compacted (e.g. vibrated) to remove trapped air.",true,"Voids weaken concrete.");
+  o(E,"Arrange the basic stages of building a house.",["Setting out","Excavation and foundation","Blockwork (superstructure)","Roofing","Finishes"],"Each stage depends on the previous one.");
+  s(E,"What right-angle method uses a triangle with sides of 3, 4 and 5 units? (accept '3-4-5')",["3-4-5","345","3 4 5","three four five"],"Based on Pythagoras' theorem.");
+  m(M,"A batch of blocks fails a strength test. The technical officer should:",["Accept them","Reject them and report to the engineer","Use them for upper floors","Hide the result"],1,"Substandard materials contribute to building collapse.");
+  m(M,"The volume of concrete in a slab 5 m × 4 m × 0.15 m is:",["3 m³","20 m³","0.3 m³","30 m³"],0,"5 × 4 × 0.15 = 3 m³.");
+  m(E,"A water level (transparent hose filled with water) is used to:",["Mix mortar","Transfer levels between points","Cut blocks","Cure concrete"],1,"Water finds its own level at both ends.");
+
+  /* ---------------- Technical Officer (Mechanical) ---------------- */
+  cadre("Technical Officer (Mechanical) Cadre");
+  m(M,"A metric outside micrometer typically reads to:",["1 mm","0.1 mm","0.01 mm","1 cm"],2,"Vernier calipers usually read to 0.02 or 0.05 mm.");
+  m(E,"Engine oil in a generator should be changed:",["Never","According to the manufacturer's service interval (running hours)","Only when the engine stops","Every ten years"],1,"Old oil loses its lubricating properties.");
+  m(M,"Acetylene cylinders should be stored and used:",["Lying down","Upright, secured and away from heat","Near oxygen without separation","In closed cupboards with no ventilation"],1,"Lying acetylene cylinders can release acetone dangerously.");
+  m(E,"A clogged air filter on an engine causes:",["Better performance","Reduced power, higher fuel use and black smoke","Lower temperature","Nothing"],1,"Engines need clean air for combustion.");
+  m(M,"A V-belt that is too loose will:",["Run cooler","Slip, causing loss of power and wear","Increase speed","Never wear"],1,"Correct belt tension is checked during maintenance.");
+  m(M,"A split-unit air conditioner blowing warm air may have:",["Too much electricity","Low refrigerant, a dirty condenser or a faulty compressor","Too much cooling","Clean filters"],1,"Diagnose before topping up refrigerant.");
+  m(E,"Grease is applied to bearings to:",["Make them noisy","Reduce friction and protect against wear and corrosion","Increase weight","Clean them"],1,"Over-greasing can also cause overheating.");
+  m(M,"Before servicing a machine, the technician must:",["Work on it running","Isolate and lock off the power source","Ask a passer-by","Remove guards while it runs"],1,"Lockout/tagout prevents accidental start-up.");
+  m(M,"A lathe is mainly used for:",["Welding","Turning cylindrical parts by rotating the workpiece against a cutting tool","Painting","Bending sheet metal"],1,"Common operations include facing, turning and threading.");
+  m(M,"A torque wrench is used to:",["Cut bolts","Tighten fasteners to a specified torque","Measure length","Drill holes"],1,"Correct torque prevents loosening or failure.");
+  m(M,"Cavitation noise in a water pump often means:",["Normal operation","Inadequate suction (e.g. blocked suction line or low water level)","Too much oil","New impeller"],1,"Check suction conditions to prevent impeller damage.");
+  x(E,"Match each tool to its use.",[["Vernier caliper","Precise internal and external measurement"],["Feeler gauge","Measuring small gaps"],["Spanner","Turning nuts and bolts"],["Hacksaw","Cutting metal"]],"Workshop tools and their uses.");
+  t(E,"A maintenance log for each machine helps track servicing and breakdown history.",true,"Records support planned maintenance.");
+  t(E,"It is safe to wear loose clothing near rotating machinery.",false,"Loose clothing can be caught and cause serious injury.");
+  t(M,"Coolant in an engine's radiator helps prevent overheating.",true,"Check levels when the engine is cool.");
+  o(M,"Arrange a routine generator service in order.",["Isolate and allow the engine to cool","Drain old oil and replace the oil filter","Replace or clean the air and fuel filters","Refill with the correct oil and check coolant","Test-run and record in the maintenance log"],"A consistent routine extends generator life.");
+  s(E,"What hand-held instrument measures small dimensions to 0.01 mm?",["micrometer","micrometre","micrometer screw gauge","micrometer screw guage"],"Vernier calipers are less precise.");
+  m(M,"The function of a thermostat in an engine cooling system is to:",["Pump water","Regulate coolant flow to keep the engine at operating temperature","Filter oil","Start the engine"],1,"A stuck thermostat can cause overheating.");
+  m(M,"Welding safety requires:",["No eye protection","A suitable welding shield, gloves, ventilation and fire precautions","Working near fuel","Bare hands"],1,"Arc light can cause eye injury ('arc eye').");
+  m(E,"A fire extinguisher suitable for the workshop should be:",["Hidden","Easily accessible and regularly inspected","Locked away","Used as a doorstop"],1,"Workshops contain flammable materials.");
+
+  /* ---------------- Technical Officer (Electrical) ---------------- */
+  cadre("Technical Officer (Electrical) Cadre");
+  m(M,"In domestic wiring, lighting circuits commonly use cable of:",["0.5 mm²","1.5 mm²","6 mm²","16 mm²"],1,"Socket circuits commonly use 2.5 mm² cable.");
+  m(E,"A multimeter can measure:",["Only resistance","Voltage, current and resistance","Only temperature","Only light"],1,"Select the correct range and function before testing.");
+  m(M,"A continuity test checks that:",["Voltage is present","A conductor or circuit has an unbroken path","A fuse is hot","The meter is new"],1,"Done with the supply isolated.");
+  m(E,"Before working on a circuit, the technician should:",["Work on it live","Switch off, isolate and confirm it is dead with a tester","Ask someone to hold the switch","Use wet hands"],1,"Never assume a circuit is dead.");
+  m(M,"An MCB that trips repeatedly most likely indicates:",["Normal operation","An overload or a fault on the circuit","A new installation","Low voltage only"],1,"Find the cause; do not replace with a larger rating.");
+  m(E,"In IEC colour coding, the protective earth conductor is:",["Brown","Blue","Green/yellow","Red"],2,"Brown = line, blue = neutral.");
+  m(M,"Which lamp type is most energy-efficient for office lighting?",["Incandescent","LED","Halogen","Candle"],1,"LEDs use far less energy for the same light.");
+  m(M,"Three 60 W lamps and a 1,500 W heater run together on 230 V. The total current is about:",["5 A","7.3 A","10 A","1.7 A"],1,"Total power = 180 + 1,500 = 1,680 W; I = 1,680 ÷ 230 ≈ 7.3 A.");
+  m(M,"A lightning arrester (surge protection) on a building:",["Attracts electricity bills","Provides a safe path to earth for lightning or surges","Increases voltage","Saves water"],1,"It protects the building and equipment.");
+  m(M,"Conduits are used in electrical installations to:",["Increase current","Protect cables mechanically and allow rewiring","Store energy","Cool cables completely"],1,"PVC and steel conduits are common.");
+  m(M,"In an inverter system, batteries store energy as:",["AC","DC","Heat","Light"],1,"The inverter converts it to AC.");
+  m(M,"Insulation resistance testing (megger) must be done:",["With the supply on","With the circuit isolated and sensitive equipment disconnected","In the rain","With bare hands on conductors"],1,"Test voltages can damage electronics.");
+  x(E,"Match each device to its function.",[["Fuse/MCB","Overcurrent protection"],["RCD","Earth leakage (shock) protection"],["Distribution board","Divides supply into circuits"],["Isolator","Disconnects supply for safe work"]],"Basic protective and control devices.");
+  t(E,"Water and electricity are a dangerous combination; never handle electrical equipment with wet hands.",true,"Water lowers skin resistance, increasing shock risk.");
+  t(M,"Replacing a blown fuse with a thicker wire is a safe temporary repair.",false,"It removes protection and can cause fires.");
+  t(M,"Switches should break the live conductor.",true,"So the appliance is dead when switched off.");
+  o(E,"Arrange the steps to replace a faulty socket outlet safely.",["Switch off and isolate the circuit","Confirm it is dead with a tester","Remove the faulty socket","Connect the new socket correctly (L, N, E)","Restore power and test"],"Safe isolation comes first.");
+  s(E,"What colour is the neutral conductor under IEC colour coding?",["blue"],"Line is brown; earth is green/yellow.");
+  m(M,"Prepaid electricity meters record consumption in:",["Litres","kWh","Volts","Amperes only"],1,"Tokens purchase kWh units.");
+  m(M,"An electric shock victim still in contact with the source should first be:",["Pulled by the hand","Separated from the source by switching off the supply or using a dry non-conductive object","Splashed with water","Left alone"],1,"Protect yourself first, then give first aid and call for help.");
+
+  /* ---------------- Technical Officer (Town Planning) ---------------- */
+  cadre("Technical Officer (Town Planning) Cadre");
+  m(M,"On land-use maps, the conventional colour for residential use is usually:",["Red","Yellow","Purple","Green"],1,"Commercial is often red, industrial purple and open space green.");
+  m(E,"On a land-use map, green usually represents:",["Industry","Open space and recreation","Commercial","Residential"],1,"Colour conventions make maps easy to read.");
+  m(M,"During a development-control site inspection, the technical officer checks mainly that:",["The owner is wealthy","Construction complies with the approved plan and permit (setbacks, height, use)","Workers are paid","The paint matches"],1,"Deviations are reported for enforcement.");
+  m(M,"A building is 3 m from the boundary but the approved setback is 4.5 m. This is:",["Compliant","A setback contravention","An approved variation automatically","A survey error only"],1,"It should be documented and reported.");
+  m(E,"On a plan at 1:500, 2 cm represents:",["2 m","10 m","100 m","50 m"],1,"2 cm × 500 = 1,000 cm = 10 m.");
+  m(M,"Planning applications in Lagos are processed and permits issued by:",["LASPPPA","LASWA","LASTMA","LIRS"],0,"The Lagos State Physical Planning Permit Authority.");
+  m(M,"A survey plan accompanying a planning application shows:",["The building's colours","The plot's boundaries, beacons, dimensions and coordinates","Furniture layout","Owner's income"],1,"It establishes the legal extent of the plot.");
+  m(M,"Before a contravention notice is served, the officer should:",["Assume guilt","Inspect, measure, photograph and record the contravention accurately","Collect money","Ignore the owner"],1,"Accurate evidence supports enforcement.");
+  m(M,"A plot measures 18 m × 36 m. Its area is:",["54 m²","648 m²","324 m²","1,296 m²"],1,"18 × 36 = 648 m².");
+  m(M,"Map scale 1:2,500 is larger-scale (more detailed) than 1:50,000 because:",["It covers a bigger area","Each map unit represents a smaller ground distance","It uses colour","It is newer"],1,"Larger-scale maps show more detail over smaller areas.");
+  m(M,"A GIS layer showing roads, overlaid on a layer showing plots, helps the officer to:",["Print money","Identify encroachment on road setbacks and rights of way","Collect tax","Draw buildings"],1,"Spatial overlay supports enforcement.");
+  m(E,"A handheld GPS receiver is used in the field to:",["Measure noise","Record the coordinates of locations","Test soil","Count people"],1,"Useful for locating and mapping sites.");
+  x(M,"Match each document to its purpose.",[["Planning permit","Authorises development"],["Survey plan","Defines plot boundaries"],["Contravention notice","Notifies a breach of regulations"],["Stop-work order","Halts unauthorised construction"]],"Key development-control documents.");
+  t(E,"North point and scale should appear on every site plan.",true,"They orient and size the drawing.");
+  t(M,"A permit holder may change the approved use of a building from residential to commercial without approval.",false,"Change of use requires planning approval.");
+  t(M,"Photographs with dates and locations strengthen inspection reports.",true,"They provide objective evidence.");
+  o(M,"Arrange the steps of a routine development-control inspection.",["Review the approved plan and permit","Visit the site and identify the plot","Measure setbacks, heights and coverage","Photograph and record findings","Write the inspection report and recommendation"],"Preparation and documentation make inspections defensible.");
+  s(E,"What colour usually represents commercial land use on planning maps? (one word)",["red"],"Colour conventions vary slightly between agencies.");
+  m(M,"A building covers 450 m² of a 900 m² plot. Its plot coverage is:",["20%","50%","45%","200%"],1,"450 ÷ 900 × 100 = 50%.");
+  m(M,"A stop-work order is served when:",["Work is complete","Construction is proceeding without a permit or in breach of it","A building is old","The owner pays tax"],1,"Work must stop until the breach is resolved.");
+
+  for(var n in out)out[n].forEach(function(z){z.scope=n;});
+  return out;
+})();
+
+
+/* ==================== inlined from cbt-bank-prof-science.js ==================== */
+/* ============================================================
+   PROFESSIONAL KNOWLEDGE — agriculture, veterinary, natural-resources
+   and scientific officer cadres. 20 questions per cadre.
+   Shared file (browser + Apps Script).
+   ============================================================ */
+var SEED_PROF_SCIENCE=(function(){
+  var out={},cur=null,C="Professional Knowledge",E="easy",M="medium",H="hard";
+  function cadre(n){cur=out[n]=[];}
+  function q(t,d,stem,x,ex){var o={scope:null,category:C,type:t,difficulty:d,stem:stem,explanation:ex};for(var k in x)o[k]=x[k];cur.push(o);}
+  function m(d,stem,o,a,ex){q("mcq",d,stem,{options:o,answer:a},ex);}
+  function t(d,stem,a,ex){q("truefalse",d,stem,{answer:a},ex);}
+  function s(d,stem,acc,ex){q("shortanswer",d,stem,{accept:acc},ex);}
+  function o(d,stem,items,ex){q("ordering",d,stem,{items:items},ex);}
+  function x(d,stem,pairs,ex){q("matching",d,stem,{pairs:pairs.map(function(p){return {l:p[0],r:p[1]};})},ex);}
+
+  /* ---------------- Agriculture ---------------- */
+  cadre("Agriculture Cadre");
+  m(M,"Most arable crops grow best in soils with a pH of about:",["3.0–4.0","6.0–7.0","8.5–9.5","10–11"],1,"Very acidic soils are corrected by liming.");
+  m(M,"Urea fertiliser contains about what percentage of nitrogen?",["10%","21%","46%","90%"],2,"Urea is the most concentrated common solid nitrogen fertiliser.");
+  m(M,"A farmer applies fertiliser at 200 kg/ha on a 2.5 ha farm. The total fertiliser needed is:",["80 kg","250 kg","500 kg","800 kg"],2,"200 × 2.5 = 500 kg.");
+  m(H,"Maize planted at 75 cm × 25 cm with one plant per stand gives a plant population per hectare of about:",["13,333","26,667","53,333","75,000"],2,"10,000 m² ÷ (0.75 × 0.25 m²) ≈ 53,333 plants.");
+  m(E,"Cassava is usually propagated by:",["Seeds","Stem cuttings","Tubers","Leaves"],1,"Healthy stem cuttings of 20–25 cm are planted.");
+  m(M,"Crop rotation helps mainly to:",["Increase pests","Maintain soil fertility and break pest and disease cycles","Reduce yields","Increase erosion"],1,"Legumes in the rotation also fix nitrogen.");
+  m(M,"Integrated Pest Management (IPM) combines:",["Only chemical sprays","Cultural, biological, mechanical and (as a last resort) chemical methods","Burning farms","Only resistant varieties"],1,"IPM reduces pesticide use, cost and environmental harm.");
+  m(M,"The main role of agricultural extension services is to:",["Collect taxes","Transfer knowledge and technologies to farmers and feed back their problems to research","Sell land","Run markets"],1,"Extension links research and farmers.");
+  m(M,"The Lagos Rice Mill at Imota is designed to:",["Produce cassava flour","Process paddy into milled rice for the regional market","Make fertiliser","Can fish"],1,"It is one of the largest rice mills in sub-Saharan Africa.");
+  m(M,"The Lagos State agency that implements agricultural development programmes and extension is the:",["LADA (Lagos State Agricultural Development Authority)","LASTMA","LASWA","LAWMA"],0,"It works with farmers across the State.");
+  m(M,"Drip irrigation is preferred in water-scarce areas because it:",["Floods the field","Delivers water directly to roots with minimal losses","Uses more water","Needs no pipes"],1,"It is the most water-efficient common method.");
+  m(M,"Broiler chickens are raised mainly for:",["Eggs","Meat","Feathers","Draught power"],1,"Layers are raised for eggs.");
+  x(M,"Match each crop to its usual propagation material.",[["Yam","Seed yams / setts"],["Plantain","Suckers"],["Maize","Seeds (grains)"],["Pineapple","Suckers, slips or crowns"]],"Correct planting material affects yield.");
+  o(M,"Arrange the stages of crop production in order.",["Land preparation","Planting","Weeding and fertiliser application","Pest and disease control","Harvesting","Storage and marketing"],"Good post-harvest handling reduces losses.");
+  t(E,"Legumes such as cowpea can fix atmospheric nitrogen through root nodules.",true,"Rhizobium bacteria in the nodules fix nitrogen.");
+  t(M,"Post-harvest losses in Nigeria are negligible.",false,"Significant losses occur through poor storage, handling and processing.");
+  t(M,"Fadama refers to low-lying, seasonally flooded land suitable for dry-season farming.",true,"Fadama projects supported irrigation and rural infrastructure.");
+  s(E,"What do the letters NPK on a fertiliser bag stand for? (give the three nutrients, e.g. 'nitrogen phosphorus potassium')",["nitrogen phosphorus potassium","nitrogen, phosphorus, potassium","nitrogen phosphorous potassium"],"These are the primary plant macronutrients.");
+  m(M,"Mulching in crop production helps to:",["Increase weeds","Conserve soil moisture, suppress weeds and reduce erosion","Kill crops","Raise soil temperature to harmful levels only"],1,"Organic mulch also adds organic matter.");
+  m(H,"Vaccinating poultry against Newcastle disease is best done:",["After an outbreak only","According to a scheduled programme from an early age","Never","Only for old birds"],1,"Scheduled vaccination prevents devastating losses.");
+
+  /* ---------------- Fisheries ---------------- */
+  cadre("Fisheries Cadre");
+  m(E,"The most widely cultured fish species in Nigeria is the:",["Atlantic salmon","African catfish (Clarias gariepinus)","Trout","Shark"],1,"Tilapia is also commonly farmed.");
+  m(M,"Dissolved oxygen in fish ponds should generally be kept above about:",["0.5 mg/L","5 mg/L","50 mg/L","100 mg/L"],1,"Low oxygen stresses or kills fish, especially at dawn.");
+  m(M,"The suitable pH range for most pond fish is about:",["3.0–4.5","6.5–8.5","9.5–11","12–14"],1,"Liming corrects acidic ponds.");
+  m(H,"Fish fed 150 kg of feed gained 100 kg in weight. The feed conversion ratio (FCR) is:",["0.67","1.5","2.5","15"],1,"FCR = feed given ÷ weight gain = 150 ÷ 100 = 1.5. Lower is better.");
+  m(M,"Overfeeding fish in ponds mainly causes:",["Faster growth only","Water pollution, ammonia build-up and oxygen depletion","Cleaner water","No effect"],1,"Uneaten feed decomposes.");
+  m(M,"Induced breeding of catfish in hatcheries uses:",["Antibiotics","Hormones such as pituitary extract or synthetic preparations (e.g. Ovaprim)","Vaccines","Salt only"],1,"Hormones trigger ovulation.");
+  m(M,"Most fish landed in Nigeria comes from:",["Industrial trawlers only","Artisanal (small-scale) fisheries","Aquariums","Imports only"],1,"Artisanal fishers dominate inland and coastal catches.");
+  m(M,"The Chorkor smoker is an improved kiln used for:",["Drying cocoa","Smoking fish more efficiently and hygienically","Making ice","Hatching fingerlings"],1,"It reduces fuelwood use and improves quality.");
+  m(M,"Regulating the minimum mesh size of fishing nets mainly helps to:",["Catch more juveniles","Allow juvenile fish to escape and grow, sustaining stocks","Reduce costs","Increase by-catch"],1,"It prevents growth overfishing.");
+  m(M,"A country's Exclusive Economic Zone extends up to:",["12 nautical miles","24 nautical miles","200 nautical miles","500 nautical miles"],2,"Under UNCLOS; the territorial sea is 12 nautical miles.");
+  m(M,"Fresh fish should be kept on ice mainly to:",["Add weight","Slow bacterial spoilage and enzymatic deterioration","Change colour","Remove scales"],1,"Fish spoils quickly at tropical temperatures.");
+  m(M,"Lagos's fisheries rely heavily on the:",["Sahara desert","Lagos Lagoon, creeks and the Atlantic coast","Lake Chad","River Benue only"],1,"Lagos has extensive lagoon and coastal fisheries.");
+  x(M,"Match each stage of fish to its description.",[["Fry","Newly hatched fish that have started feeding"],["Fingerling","Young fish about finger size, used for stocking"],["Juvenile","Growing fish before maturity"],["Broodstock","Mature fish used for breeding"]],"Terms used in hatchery and grow-out.");
+  o(M,"Arrange the main steps in a pond fish-farming cycle.",["Pond preparation (draining, liming, fertilising)","Stocking with fingerlings","Feeding and water quality management","Monitoring growth and health","Harvesting and marketing"],"Good preparation and management raise survival and yield.");
+  t(E,"Tilapia and catfish are both freshwater species commonly cultured in Nigeria.",true,"They tolerate a range of pond conditions.");
+  t(M,"Stocking ponds far above recommended density always increases profit.",false,"Overstocking causes stress, disease and poor growth.");
+  t(M,"Liming acidic ponds can improve water quality and pond productivity.",true,"Lime raises pH and alkalinity.");
+  s(M,"Feed given is 300 kg and weight gain is 200 kg. What is the FCR? (number only)",["1.5"],"300 ÷ 200 = 1.5.");
+  m(H,"Fish gasping at the water surface at dawn most likely indicates:",["Too much oxygen","Low dissolved oxygen","Cold water","Good health"],1,"Oxygen is lowest at dawn after night-time respiration.");
+  m(M,"Aquaculture differs from capture fisheries because it:",["Uses only the sea","Involves farming fish under controlled conditions","Never uses feed","Is illegal"],1,"Capture fisheries harvest wild stocks.");
+
+  /* ---------------- Produce Inspection ---------------- */
+  cadre("Produce Inspection Cadre");
+  m(M,"The maximum moisture content generally required for export-grade cocoa beans is about:",["2%","7.5%","15%","25%"],1,"Wetter beans go mouldy in storage and transit.");
+  m(M,"Grains such as maize are generally safe to store at a moisture content of about:",["13% or less","25%","35%","50%"],0,"Higher moisture encourages mould and insects.");
+  m(M,"Aflatoxins in stored produce are produced by:",["Weevils","Moulds such as Aspergillus flavus","Rats","Sunlight"],1,"Aflatoxins are carcinogenic and restrict exports.");
+  m(M,"The 'cut test' on cocoa beans assesses:",["Weight","Defects such as mouldy, slaty and insect-damaged beans","Price","Colour of the sack"],1,"Beans are cut lengthwise and inspected.");
+  m(M,"A representative sample is important in produce inspection because:",["It is cheaper","Grades must reflect the whole consignment, not only the top layer","It saves paper","It is required for photos"],1,"Samples are drawn from different bags and positions.");
+  m(M,"Phosphine fumigation of stored produce must be done:",["By anyone without protection","By trained personnel under gas-tight conditions with safety precautions","In occupied rooms","Without notices"],1,"Phosphine is highly toxic to humans.");
+  m(M,"A phytosanitary certificate for plant exports in Nigeria is issued by:",["NAQS (Nigeria Agricultural Quarantine Service)","NAFDAC","NCC","NBC"],0,"It certifies freedom from regulated pests and diseases.");
+  m(M,"Hermetic storage bags (e.g. PICS bags) protect grain by:",["Adding pesticides","Cutting off oxygen so insects die","Increasing moisture","Allowing ventilation"],1,"They are an effective chemical-free method.");
+  m(M,"The agency that promotes non-oil exports in Nigeria is the:",["NEPC (Nigerian Export Promotion Council)","NNPC","CBN","FIRS"],0,"Produce quality affects export competitiveness.");
+  m(M,"After inspection and grading, produce bags are:",["Left unmarked","Sealed and marked with grade and inspection details","Opened again","Repacked randomly"],1,"Marking and sealing prevent substitution.");
+  m(M,"Weevil infestation in stored grain mainly causes:",["Higher quality","Weight loss, quality loss and contamination","Better germination","No damage"],1,"Infested produce may be rejected.");
+  m(H,"A 100 kg bag of beans at 18% moisture is dried to 12% moisture. Its approximate new weight is:",["94.0 kg","93.2 kg","88.0 kg","82.0 kg"],1,"Dry matter = 82 kg; at 12% moisture, weight = 82 ÷ 0.88 ≈ 93.2 kg.");
+  x(M,"Match each defect to its likely cause.",[["Mouldy beans","Poor drying or wet storage"],["Slaty cocoa beans","Inadequate fermentation"],["Insect-damaged beans","Pest infestation in storage"],["Germinated beans","Moisture causing sprouting"]],"Identifying causes helps advise farmers.");
+  o(M,"Arrange the steps of a produce inspection.",["Receive the consignment and documents","Draw representative samples","Carry out tests (moisture, cut test, foreign matter)","Grade the produce","Seal, mark and certify"],"Systematic inspection gives reliable grades.");
+  t(E,"Foreign matter such as stones and sticks reduces the grade of produce.",true,"Grading standards limit foreign matter.");
+  t(M,"Produce that fails inspection should be certified anyway to help the exporter.",false,"False certification damages the country's export reputation.");
+  t(M,"Good drying and clean storage are the best defences against aflatoxin contamination.",true,"Prevention is better than testing and rejection.");
+  s(M,"What is the name of the toxin produced by Aspergillus moulds in stored grains and nuts?",["aflatoxin","aflatoxins"],"Strict limits apply in export markets.");
+  m(M,"Produce inspectors advise farmers mainly on:",["Politics","Harvesting, processing, drying and storage practices that maintain quality","Land disputes","Bank loans only"],1,"Quality starts on the farm.");
+  m(E,"A moisture meter is used to:",["Weigh bags","Measure the moisture content of produce","Count beans","Seal bags"],1,"Moisture content is a key grading factor.");
+
+  /* ---------------- Veterinary ---------------- */
+  cadre("Veterinary Cadre");
+  m(M,"Veterinarians in Nigeria are registered by the:",["MDCN","Veterinary Council of Nigeria (VCN)","PCN","NAFDAC"],1,"VCN regulates veterinary practice.");
+  m(E,"Rabies is mainly transmitted to humans through:",["Mosquito bites","Bites of infected animals, especially dogs","Contaminated water","Air"],1,"It is almost always fatal once symptoms appear.");
+  m(M,"The most effective way to prevent human rabies in a community is:",["Killing all cats","Regular vaccination of dogs plus prompt post-exposure treatment for bite victims","Avoiding all animals","Antibiotics"],1,"Dog vaccination interrupts transmission at its source.");
+  m(M,"Newcastle disease is an important viral disease of:",["Cattle","Poultry","Fish","Dogs"],1,"Vaccination controls it.");
+  m(M,"African swine fever is especially serious because:",["It is mild","There is no effective vaccine and mortality is very high","It affects only cattle","It is cured by antibiotics"],1,"Control relies on biosecurity and culling.");
+  m(M,"Peste des petits ruminants (PPR) affects:",["Poultry","Sheep and goats","Horses","Fish"],1,"It causes high mortality in small ruminants.");
+  m(M,"An anthrax-suspect carcass should NOT be:",["Reported","Opened, because spores form on exposure to air","Disposed of safely","Isolated"],1,"Opening it releases spores that persist in soil for years.");
+  m(M,"Ante-mortem inspection at an abattoir is carried out:",["After slaughter","On live animals before slaughter","On meat in markets","On hides only"],1,"Post-mortem inspection examines the carcass and organs after slaughter.");
+  m(M,"Lagos State's major abattoir complex is located at:",["Oko-Oba, Agege","Epe","Badagry","Lekki"],0,"It is the State's main meat-processing hub.");
+  m(M,"The 'One Health' approach recognises that:",["Only human health matters","Human, animal and environmental health are interconnected","Animals cannot spread disease","Vets should not work with doctors"],1,"Most emerging diseases are zoonotic.");
+  m(M,"A drug withdrawal period is:",["The time a vet withdraws from practice","The time after treatment before an animal's meat, milk or eggs can be used for food","Price reduction","Vaccine storage time"],1,"It prevents drug residues in food.");
+  m(M,"The normal rectal temperature of a dog is about:",["35°C","38.5°C","41°C","33°C"],1,"About 38–39°C; higher suggests fever.");
+  x(M,"Match each animal to its approximate gestation period.",[["Cow","About 9 months (≈283 days)"],["Goat","About 5 months (≈150 days)"],["Pig","About 3 months, 3 weeks, 3 days (≈114 days)"],["Dog","About 2 months (≈63 days)"]],"Gestation periods guide breeding management.");
+  x(H,"Match each zoonotic disease to an animal source.",[["Brucellosis","Cattle, goats (unpasteurised milk)"],["Bovine TB","Cattle"],["Lassa fever","Multimammate rats"],["Avian influenza","Poultry"]],"Zoonoses require joint human–animal surveillance.");
+  o(M,"Arrange the steps of responding to a suspected notifiable animal disease outbreak.",["Report to the veterinary authority","Isolate affected animals and restrict movement","Collect samples for laboratory confirmation","Implement control measures (vaccination, culling, disinfection)","Monitor and lift restrictions when safe"],"Rapid reporting and containment limit spread.");
+  t(E,"Biosecurity measures on farms include footbaths, restricted visitors and quarantine of new animals.",true,"They keep diseases out.");
+  t(M,"Antibiotics should be given routinely to healthy animals to promote growth.",false,"This drives antimicrobial resistance; use them only as prescribed.");
+  s(M,"What is the name for diseases transmitted between animals and humans?",["zoonoses","zoonosis","zoonotic diseases","zoonotic"],"E.g. rabies, anthrax, brucellosis.");
+  m(M,"Highly pathogenic avian influenza (H5N1) outbreaks in poultry are usually controlled by:",["Ignoring them","Culling infected flocks, movement control, disinfection and compensation","Antibiotics","Releasing birds"],1,"Rapid stamping out prevents spread.");
+  m(M,"Deworming livestock regularly helps to:",["Reduce weight","Control internal parasites that reduce growth and productivity","Change coat colour","Increase disease"],1,"Strategic deworming avoids resistance.");
+
+  /* ---------------- Forestry ---------------- */
+  cadre("Forestry Cadre");
+  m(M,"Afforestation means:",["Cutting down forests","Planting trees on land that has not recently been forest","Replanting a recently felled forest","Burning bush"],1,"Reforestation is replanting where forest was recently removed.");
+  m(M,"The Taungya system involves:",["Logging only","Farmers growing food crops between young forest trees during plantation establishment","Fish farming","Charcoal production"],1,"It was widely used in Nigerian plantations.");
+  m(M,"Common exotic plantation species in southern Nigeria include:",["Teak and Gmelina","Baobab and acacia only","Pine only","Mangrove only"],0,"They grow fast and supply timber and poles.");
+  m(M,"Diameter at breast height (DBH) is measured at about:",["0.5 m","1.3 m above ground","3 m","At the top of the tree"],1,"DBH is the standard tree-measurement height.");
+  m(M,"Silviculture is:",["Silver mining","The science and practice of establishing, growing and tending forests","Wood carving","Paper making"],1,"It covers regeneration, thinning and protection.");
+  m(M,"Mangrove forests along the Lagos coast are important because they:",["Have no value","Protect shorelines, serve as fish nurseries and store carbon","Cause flooding","Are only firewood"],1,"Mangroves are threatened by urban expansion.");
+  m(M,"The Lekki Conservation Centre is managed by the:",["Nigerian Conservation Foundation","LASTMA","FRSC","LAWMA"],0,"It protects a portion of the Lekki wetland ecosystem.");
+  m(M,"Sustainable yield in forestry means:",["Cutting all trees at once","Harvesting no more timber than the forest regrows over time","Never harvesting","Burning forests"],1,"It maintains forest resources for the future.");
+  m(M,"Planting trees at a spacing of 3 m × 3 m gives about how many trees per hectare?",["333","1,111","3,333","10,000"],1,"10,000 m² ÷ 9 m² ≈ 1,111 trees.");
+  m(M,"Timber seasoning means:",["Painting timber","Drying timber to a suitable moisture content to improve strength and stability","Cutting timber","Soaking timber in water permanently"],1,"Air drying and kiln drying are common methods.");
+  m(M,"CITES regulates:",["Fishing nets","International trade in endangered species of wild fauna and flora","Timber prices","Carbon credits only"],1,"It protects species threatened by trade.");
+  m(M,"Forests contribute to climate change mitigation mainly by:",["Emitting oxygen only","Sequestering carbon dioxide in biomass and soils","Raising temperatures","Producing methane"],1,"Deforestation releases stored carbon.");
+  x(M,"Match each term to its meaning.",[["Thinning","Removing some trees to give others space to grow"],["Agroforestry","Combining trees with crops or livestock"],["Forest reserve","Area legally set aside for forest management"],["Nursery","Place where seedlings are raised before planting"]],"Basic forestry vocabulary.");
+  o(M,"Arrange the steps of establishing a forest plantation.",["Site selection and survey","Raising seedlings in the nursery","Land preparation","Planting","Weeding and maintenance","Thinning and protection"],"Careful establishment determines plantation success.");
+  t(E,"Deforestation can increase soil erosion and flooding.",true,"Tree cover protects soil and regulates water flow.");
+  t(M,"Bush burning is a sound way to manage forest reserves.",false,"Uncontrolled fires destroy regeneration and biodiversity.");
+  t(M,"Agroforestry can improve soil fertility and diversify farmers' incomes.",true,"Trees provide shade, fodder, fuel and nutrients.");
+  s(E,"What term describes replanting trees on recently cleared forest land?",["reforestation","reafforestation"],"Afforestation is planting where there was no recent forest.");
+  m(H,"Selective logging that removes only the best trees repeatedly is called 'high-grading' and leads to:",["Better forests","Degradation of forest quality and genetic stock","More timber over time","No change"],1,"Poor trees are left to regenerate the stand.");
+  m(M,"Forest guards mainly protect forest reserves against:",["Rain","Illegal logging, encroachment, fire and poaching","Tourists","Research"],1,"Enforcement maintains reserve integrity.");
+
+  /* ---------------- Geology ---------------- */
+  cadre("Geology Cadre");
+  x(M,"Match each rock to its type.",[["Granite","Igneous"],["Sandstone","Sedimentary"],["Marble","Metamorphic"],["Basalt","Igneous (volcanic)"]],"Rocks are classified by how they formed.");
+  m(M,"Lagos is underlain mainly by:",["Precambrian basement granites","Sedimentary deposits of the Dahomey (Benin) Basin","Volcanic rocks","Coal measures"],1,"Much of south-western Nigeria inland is basement complex.");
+  m(M,"On Mohs' scale of hardness, the hardest mineral (10) is:",["Quartz","Talc","Diamond","Corundum"],2,"Talc is 1; quartz is 7.");
+  m(M,"Porosity is the proportion of a rock that is:",["Solid","Pore space","Water-saturated only","Metal"],1,"Permeability is the ability to transmit fluids.");
+  m(M,"Excessive groundwater abstraction in coastal Lagos can cause:",["More rainfall","Saltwater intrusion and land subsidence","Earthquakes only","Volcanoes"],1,"Over-pumping lowers water tables near the coast.");
+  m(M,"Vertical Electrical Sounding (VES) is commonly used to:",["Find oil only","Investigate subsurface layers and locate groundwater","Measure rainfall","Date fossils"],1,"Resistivity contrasts reveal aquifers.");
+  m(M,"The agency responsible for geological mapping and data in Nigeria is the:",["NGSA (Nigerian Geological Survey Agency)","NIMET","NNPC only","SON"],0,"It produces geological maps and mineral data.");
+  m(M,"Nigeria's large bitumen deposits are found mainly in:",["Ondo, Ogun and Edo States","Sokoto","Borno","Kano"],0,"The bitumen belt runs through these states.");
+  m(M,"'Strike and dip' describe the:",["Age of a rock","Orientation of a rock layer or plane","Hardness of minerals","Colour of soil"],1,"Strike is the horizontal direction; dip is the angle of inclination.");
+  m(M,"A fault is:",["A fold in rocks","A fracture along which rocks have moved","A type of mineral","A water well"],1,"Folds bend rocks without breaking them.");
+  m(M,"An aquifer is:",["A layer that blocks water","A rock or sediment layer that stores and transmits usable groundwater","A river","A cloud"],1,"Aquitards restrict flow.");
+  m(M,"Chemical weathering is especially active in:",["Cold deserts","Hot, humid climates like southern Nigeria","Polar regions","High mountains only"],1,"Warmth and moisture speed chemical reactions.");
+  o(M,"Arrange these geological eras from oldest to youngest.",["Precambrian","Palaeozoic","Mesozoic","Cenozoic"],"The Cenozoic is the current era.");
+  t(E,"Sedimentary rocks may contain fossils.",true,"Fossils are preserved in sediments.");
+  t(M,"Clay layers usually have high permeability.",false,"Clays have high porosity but very low permeability.");
+  t(M,"Geotechnical investigations help determine suitable foundations for buildings.",true,"They assess soil strength and groundwater.");
+  s(E,"What type of rock forms from cooled magma or lava?",["igneous","igneous rock"],"Examples include granite and basalt.");
+  m(H,"Land subsidence in parts of coastal Lagos increases the risk of:",["Drought","Flooding and structural damage","Volcanic activity","Desertification"],1,"Lower land levels worsen flood exposure.");
+  m(M,"The Precambrian Basement Complex in Nigeria hosts many:",["Oil fields","Solid minerals such as gold, tin and gemstones","Coal seams only","Limestone only"],1,"Sedimentary basins host oil, coal and limestone.");
+  m(M,"Geological maps are important for:",["Weather forecasting","Mineral exploration, groundwater development, engineering and land-use planning","Tax collection","Traffic control"],1,"They show rock distribution and structures.");
+
+  /* ---------------- Scientific Officer (Mining) ---------------- */
+  cadre("Scientific Officer (Mining) Cadre");
+  m(M,"The principal federal law governing solid minerals in Nigeria is the:",["Petroleum Industry Act","Nigerian Minerals and Mining Act 2007","Land Use Act only","Environmental Act"],1,"It regulates exploration and mining of solid minerals.");
+  m(M,"Under the 1999 Constitution, ownership and control of all minerals in Nigeria is vested in the:",["States","Federal Government","Landowners","Local governments"],1,"Section 44(3).");
+  m(M,"Mineral titles in Nigeria are administered by the:",["Mining Cadastre Office","NAFDAC","LASTMA","CBN"],0,"It issues and manages mineral titles.");
+  x(M,"Match each mineral title to its purpose.",[["Reconnaissance permit","Preliminary, non-exclusive search for minerals"],["Exploration licence","Exclusive detailed exploration"],["Mining lease","Large-scale mining"],["Quarry lease","Extraction of construction materials"]],"Titles progress with the stage of activity.");
+  m(M,"Ore is:",["Waste rock","Rock containing minerals that can be extracted at a profit","Topsoil","Water"],1,"Gangue is the worthless material associated with ore.");
+  m(M,"An orebody of 500 tonnes grades 2% copper. The copper content is:",["1 tonne","10 tonnes","25 tonnes","100 tonnes"],1,"500 × 0.02 = 10 tonnes.");
+  m(M,"If 300 tonnes of waste must be removed to mine 100 tonnes of ore, the stripping ratio is:",["1:3","3:1","300:1","1:1"],1,"Waste ÷ ore = 3:1.");
+  o(M,"Arrange the basic stages of mineral processing.",["Crushing","Grinding","Concentration (e.g. gravity, flotation)","Dewatering","Refining or smelting"],"Processing liberates and concentrates valuable minerals.");
+  m(M,"Tailings dams store:",["Drinking water","Waste slurry left after mineral processing","Explosives","Ore for export"],1,"Dam failures can cause disasters and pollution.");
+  m(M,"The 2010 lead-poisoning crisis in Zamfara State resulted mainly from:",["Oil spills","Unsafe artisanal gold ore processing in villages","Industrial chemicals","Contaminated rice"],1,"Many children died from lead exposure.");
+  m(M,"Enugu is historically known for mining of:",["Tin","Coal","Gold","Bitumen"],1,"Coal was discovered there in 1909.");
+  m(M,"The Jos Plateau is historically known for:",["Coal","Tin and columbite","Oil","Diamonds"],1,"Tin mining shaped the region's economy.");
+  m(M,"Mine closure plans should provide for:",["Abandonment without action","Land reclamation and rehabilitation after mining","Selling equipment only","Leaving open pits"],1,"Reclamation is required by law.");
+  m(M,"Limestone is a key raw material for:",["Cement production","Steel only","Fertiliser only","Glass only"],0,"Nigeria's cement industry depends on limestone deposits.");
+  t(E,"An Environmental Impact Assessment is required before large mining projects start.",true,"It identifies and mitigates environmental and social impacts.");
+  t(M,"Artisanal miners face no health or safety risks.",false,"They face risks from pit collapse, dust, mercury and lead.");
+  t(M,"Open-pit mining is generally used for shallow, large orebodies.",true,"Deep or narrow orebodies may require underground mining.");
+  s(M,"What is the worthless material associated with ore called?",["gangue"],"It is separated during processing.");
+  m(H,"Use of mercury in artisanal gold processing is dangerous because:",["It is expensive","Mercury vapour and contamination cause serious neurological harm and pollution","It reduces gold","It is illegal everywhere only"],1,"The Minamata Convention aims to reduce mercury use.");
+  m(M,"Explosives used in quarrying should be stored:",["In offices","In licensed magazines under strict security and records","In vehicles","In homes"],1,"Strict control prevents accidents and misuse.");
+
+  /* ---------------- Scientific Officer (Water) ---------------- */
+  cadre("Scientific Officer (Water) Cadre");
+  o(M,"Arrange the conventional stages of surface water treatment.",["Screening","Coagulation and flocculation","Sedimentation","Filtration","Disinfection"],"Each stage removes different contaminants.");
+  m(M,"The most common coagulant used in water treatment is:",["Salt","Aluminium sulphate (alum)","Sugar","Chlorine"],1,"Coagulants clump fine particles into settleable flocs.");
+  m(M,"The WHO-recommended pH range for drinking water is generally:",["4.0–5.0","6.5–8.5","9.0–10.5","11–12"],1,"Outside this range water may be corrosive or scale-forming.");
+  m(M,"Turbidity of treated drinking water should ideally be below about:",["1 NTU (and not above 5 NTU)","50 NTU","100 NTU","500 NTU"],0,"Low turbidity improves disinfection.");
+  m(M,"The public water utility responsible for water supply in Lagos is the:",["Lagos Water Corporation","LAWMA","LASEPA","LASWA"],0,"It operates waterworks such as Iju and Adiyan.");
+  m(M,"Lagos's water sector regulator is the:",["Lagos State Water Regulatory Commission (LASWARCO)","NAFDAC","NBC","LASTMA"],0,"It regulates water supply and sanitation services.");
+  m(M,"'Non-revenue water' refers to:",["Bottled water","Water produced but not billed, due to leaks, theft or metering errors","Rainwater","Wastewater"],1,"Reducing it improves utility finances.");
+  m(M,"Water hardness is caused mainly by dissolved:",["Sodium and chloride","Calcium and magnesium","Iron only","Oxygen"],1,"Hard water forms scale and reduces soap lather.");
+  m(M,"Excess fluoride in drinking water can cause:",["Rickets","Dental and skeletal fluorosis","Scurvy","Anaemia"],1,"Moderate levels protect teeth; high levels harm them.");
+  m(M,"High nitrate in drinking water is especially dangerous for infants because it can cause:",["Blue baby syndrome (methaemoglobinaemia)","Measles","Malaria","Rickets"],0,"Sources include fertilisers and sewage.");
+  m(M,"Biochemical Oxygen Demand (BOD) measures:",["Water hardness","The amount of oxygen used by microbes to break down organic matter — an indicator of organic pollution","Salt content","Temperature"],1,"High BOD indicates heavy organic pollution.");
+  m(M,"A pumping test on a new borehole determines:",["Water colour","Yield and aquifer characteristics","Price","Depth only"],1,"It informs pump selection and sustainable abstraction.");
+  m(M,"A town of 10,000 people with a demand of 120 litres per person per day needs:",["120,000 L/day","1.2 million L/day","12 million L/day","12,000 L/day"],1,"10,000 × 120 = 1,200,000 L/day.");
+  m(M,"In a slow sand filter, the biological layer that removes pathogens is called the:",["Scum","Schmutzdecke","Floc","Sludge blanket"],1,"It forms on the sand surface.");
+  x(M,"Match each water quality parameter to what it indicates.",[["E. coli","Faecal contamination"],["Turbidity","Suspended particles / cloudiness"],["Residual chlorine","Ongoing disinfection protection"],["Conductivity","Dissolved salts"]],"Routine parameters for water quality monitoring.");
+  t(E,"Chlorine is widely used to disinfect drinking water.",true,"It kills most bacteria and viruses.");
+  t(M,"Clear water is always safe to drink.",false,"Clear water may still contain pathogens or chemicals.");
+  t(M,"A Water Safety Plan manages risks from catchment to consumer.",true,"It is the WHO-recommended approach.");
+  s(E,"What chemical is most commonly used to disinfect public water supplies?",["chlorine"],"Chlorine leaves a protective residual.");
+  m(H,"Adequate chlorine contact time before water reaches consumers is important because:",["It improves taste only","Disinfection needs time for chlorine to inactivate pathogens","It reduces cost","It removes hardness"],1,"CT (concentration × time) determines effectiveness.");
+
+  for(var n in out)out[n].forEach(function(z){z.scope=n;});
+  return out;
+})();
+
+
+/* ==================== inlined from cbt-bank-prof-finance.js ==================== */
+/* ============================================================
+   PROFESSIONAL KNOWLEDGE — legal, finance, audit, procurement,
+   statistics, planning, research, social, media, printing and youth
+   cadres. 20 questions per cadre. Shared file (browser + Apps Script).
+   ============================================================ */
+var SEED_PROF_FINANCE=(function(){
+  var out={},cur=null,C="Professional Knowledge",E="easy",M="medium",H="hard";
+  function cadre(n){cur=out[n]=[];}
+  function q(t,d,stem,x,ex){var o={scope:null,category:C,type:t,difficulty:d,stem:stem,explanation:ex};for(var k in x)o[k]=x[k];cur.push(o);}
+  function m(d,stem,o,a,ex){q("mcq",d,stem,{options:o,answer:a},ex);}
+  function t(d,stem,a,ex){q("truefalse",d,stem,{answer:a},ex);}
+  function s(d,stem,acc,ex){q("shortanswer",d,stem,{accept:acc},ex);}
+  function o(d,stem,items,ex){q("ordering",d,stem,{items:items},ex);}
+  function x(d,stem,pairs,ex){q("matching",d,stem,{pairs:pairs.map(function(p){return {l:p[0],r:p[1]};})},ex);}
+
+  /* ---------------- Legal ---------------- */
+  cadre("Legal Cadre");
+  m(M,"The chief law officer of a State is the:",["Chief Judge","Attorney-General and Commissioner for Justice","Solicitor-General","Governor"],1,"Section 195 of the Constitution establishes the office.");
+  m(H,"Under section 211 of the Constitution, the State Attorney-General may:",["Only defend the Governor","Institute, take over and discontinue criminal proceedings in State courts","Appoint judges","Dissolve the House of Assembly"],1,"These powers must be exercised in the public interest.");
+  m(M,"Under the Public Officers Protection Act/Law, an action against a public officer for an act done in execution of duty must generally be brought within:",["3 months","1 year","6 years","12 years"],0,"Exceptions apply, e.g. continuing injury.");
+  o(M,"Arrange the stages of a bill in the State House of Assembly.",["First reading","Second reading","Committee stage","Third reading","Governor's assent"],"A bill becomes law on assent (or by veto override).");
+  m(H,"If the Governor withholds assent to a bill, the House of Assembly can pass it into law by a resolution supported by:",["A simple majority","Two-thirds of all members","Three-quarters of members","Unanimous vote"],1,"Section 100(5) of the Constitution.");
+  x(M,"Match each prerogative order to its function.",[["Certiorari","Quashes a decision made without jurisdiction or in breach of natural justice"],["Mandamus","Compels a public body to perform a public duty"],["Prohibition","Stops a body from exceeding its jurisdiction"],["Habeas corpus","Secures release of a person unlawfully detained"]],"Remedies in judicial review.");
+  m(M,"The doctrine of stare decisis means that:",["Courts may ignore earlier decisions","Lower courts are bound by the decisions of higher courts on similar facts","Statutes override the Constitution","Judges make laws freely"],1,"It promotes certainty and consistency.");
+  m(M,"'Locus standi' refers to:",["The court's location","A party's legal standing to bring an action","A type of contract","The burden of proof"],1,"Without standing, a suit may be struck out.");
+  m(M,"The essential elements of a valid contract include:",["Offer, acceptance, consideration, intention to create legal relations and capacity","Only a written document","A lawyer's signature","A stamp"],0,"Some contracts also require writing.");
+  m(M,"In criminal trials, the prosecution must prove guilt:",["On the balance of probabilities","Beyond reasonable doubt","Beyond all doubt","By confession only"],1,"Civil cases use the balance of probabilities.");
+  m(M,"'Mens rea' means:",["The guilty act","The guilty mind (criminal intent)","The trial","The sentence"],1,"Actus reus is the guilty act.");
+  m(M,"The Lagos Multi-Door Courthouse, established in 2002, is notable as:",["A prison","The first court-connected ADR centre in Africa","A land registry","A police station"],1,"It offers mediation, arbitration and other ADR options.");
+  m(M,"The Lagos State Office of the Public Defender provides:",["Free legal representation and advice to indigent persons","Police services","Tax services","Land titles"],0,"It promotes access to justice.");
+  m(M,"Nigeria's current principal law on arbitration and mediation is the:",["Arbitration and Conciliation Act 1988","Arbitration and Mediation Act 2023","Evidence Act 2011","Companies Act"],1,"It replaced the 1988 Act.");
+  t(E,"The Constitution is the supreme law, and any law inconsistent with it is void to the extent of the inconsistency.",true,"Section 1(3).");
+  t(M,"Pre-action notices are required before suing certain government agencies where the enabling law provides.",true,"Failure to give notice can defeat the suit.");
+  t(M,"A State House of Assembly may make laws on any item on the Exclusive Legislative List.",false,"Exclusive items are reserved to the National Assembly.");
+  s(M,"What is the Latin term for the legal standing to sue? (two words)",["locus standi"],"A claimant must show sufficient interest.");
+  m(H,"When drafting legislation, the section that defines key terms used in the law is the:",["Long title","Interpretation section","Schedule","Commencement clause"],1,"Definitions avoid ambiguity.");
+  m(M,"Sources of Nigerian law include:",["Only the Constitution","The Constitution, legislation, received English law, customary law, Islamic law and judicial precedent","Only customary law","Only English law"],1,"Nigeria has a plural legal system.");
+
+  /* ---------------- Statistics (graduate) ---------------- */
+  cadre("Statistics Cadre (graduate)");
+  x(M,"Match each sampling method to its description.",[["Simple random","Every unit has an equal chance of selection"],["Stratified","Population divided into groups, then sampled within each"],["Cluster","Groups (e.g. villages) selected, then units within them surveyed"],["Systematic","Every k-th unit selected from a list"]],"Choice depends on the frame, cost and precision needed.");
+  m(M,"A Type I error occurs when:",["A false null hypothesis is accepted","A true null hypothesis is rejected","The sample is too large","Data are missing"],1,"Its probability is the significance level α.");
+  m(M,"A p-value of 0.03 at the 5% significance level means:",["Accept the null hypothesis","Reject the null hypothesis","The study is invalid","The effect is large"],1,"p < 0.05 indicates statistical significance (not necessarily practical importance).");
+  m(M,"The correlation coefficient r ranges from:",["0 to 1","−1 to +1","−∞ to +∞","0 to 100"],1,"0 means no linear relationship.");
+  m(M,"In a normal distribution, about 95% of values lie within:",["±1 standard deviation","±1.96 standard deviations of the mean","±3 standard deviations","±0.5 standard deviations"],1,"About 68% lie within ±1 SD and 99.7% within ±3 SD.");
+  m(M,"With a population standard deviation of 20 and a sample size of 100, the standard error of the mean is:",["0.2","2","20","200"],1,"SE = σ ÷ √n = 20 ÷ 10 = 2.");
+  m(H,"The data set 2, 4, 4, 4, 5, 5, 7, 9 has a mean of 5. Its population standard deviation is:",["1","2","3","4"],1,"Squared deviations sum to 32; variance = 32 ÷ 8 = 4; SD = 2.");
+  m(M,"The national agency responsible for official statistics in Nigeria is the:",["NBS (National Bureau of Statistics)","CBN","NPC only","NIMC"],0,"The NBS coordinates the National Statistical System.");
+  m(M,"Lagos State's statistics office is the:",["Lagos Bureau of Statistics","LIRS","LASRRA","LASEPA"],0,"It produces State-level statistics such as the Abstract of Local Government Statistics.");
+  m(M,"The Consumer Price Index (CPI) is used to measure:",["Population","Inflation (changes in the price level of a basket of goods and services)","GDP","Employment"],1,"Headline inflation is the year-on-year change in CPI.");
+  m(M,"A Laspeyres price index uses:",["Current-period quantities","Base-period quantities as weights","No weights","Only prices of one item"],1,"The Paasche index uses current-period quantities.");
+  m(M,"'Correlation does not imply causation' means:",["Correlations are always wrong","Two variables moving together does not prove one causes the other","Causation is impossible","Data are useless"],1,"A third factor may explain both.");
+  o(M,"Arrange the stages of a statistical survey.",["Define objectives","Design the questionnaire and sample","Pilot test","Fieldwork (data collection)","Data processing and analysis","Reporting and dissemination"],"Piloting catches problems before full fieldwork.");
+  t(E,"The median is less affected by extreme values than the mean.",true,"It is preferred for skewed data such as incomes.");
+  t(M,"A larger, properly drawn random sample generally gives more precise estimates.",true,"Standard error falls as sample size rises.");
+  t(M,"Leading questions in a questionnaire improve data quality.",false,"They bias responses.");
+  s(M,"Data: 3, 7, 7, 9, 14. What is the mode? (number only)",["7"],"The mode is the most frequent value.");
+  m(M,"A census differs from a sample survey because it:",["Covers only a sample","Attempts to enumerate every unit in the population","Is cheaper","Has no errors"],1,"Censuses are costly but give small-area data.");
+  m(M,"In linear regression y = a + bx, the coefficient b represents:",["The intercept","The change in y for a one-unit change in x","The error","The sample size"],1,"a is the intercept.");
+  m(H,"Non-sampling errors include:",["Only random sampling variation","Errors from non-response, poor questions, interviewer bias and processing mistakes","Only large samples","None"],1,"They can occur even in a census.");
+
+  /* ---------------- Economic Planning ---------------- */
+  cadre("Economic Planning Cadre");
+  m(M,"Real GDP differs from nominal GDP because it:",["Includes imports only","Is adjusted for inflation","Excludes services","Is measured in dollars"],1,"Real GDP reflects changes in output volume.");
+  m(M,"If the marginal propensity to consume (MPC) is 0.8, the simple expenditure multiplier is:",["0.8","1.25","5","8"],2,"Multiplier = 1 ÷ (1 − MPC) = 1 ÷ 0.2 = 5.");
+  m(M,"The Internal Rate of Return (IRR) of a project is the discount rate at which:",["NPV is maximised","NPV equals zero","Costs are zero","Benefits double"],1,"Projects are accepted if IRR exceeds the cost of capital.");
+  m(M,"Opportunity cost is:",["The money price of a good","The value of the next best alternative forgone","A sunk cost","A tax"],1,"Every allocation decision has an opportunity cost.");
+  m(M,"Monetary policy in Nigeria is conducted by the:",["Ministry of Finance","Central Bank of Nigeria","National Assembly","State governments"],1,"Fiscal policy (taxes and spending) is set by governments.");
+  m(M,"A Gini coefficient of 0 indicates:",["Perfect inequality","Perfect equality of income","High poverty","No data"],1,"1 (or 100) indicates maximum inequality.");
+  m(M,"The Sustainable Development Goals consist of:",["8 goals by 2015","17 goals to be achieved by 2030","10 goals by 2050","5 goals"],1,"They succeeded the Millennium Development Goals.");
+  m(M,"Public goods are:",["Rival and excludable","Non-rival and non-excludable","Always produced by firms","Luxury goods"],1,"E.g. street lighting and national defence.");
+  m(M,"Price elasticity of demand of −2 means that a 10% price increase reduces quantity demanded by:",["2%","5%","10%","20%"],3,"%ΔQ = −2 × 10% = −20%: demand is elastic.");
+  m(M,"Comparative advantage means a country should specialise in goods it can produce at:",["The highest cost","A lower opportunity cost than other countries","Any cost","No cost"],1,"Specialisation and trade raise total output.");
+  m(M,"Nigeria's National Development Plan covering 2021–2025 succeeded the:",["Vision 2010","Economic Recovery and Growth Plan (2017–2020)","SAP","NEEDS 2004"],1,"Lagos has its own Lagos State Development Plan 2052.");
+  m(M,"A logical framework (logframe) matrix sets out a project's:",["Staff salaries","Goal, purpose, outputs and activities with indicators, means of verification and assumptions","Building designs","Tax rates"],1,"It supports planning, monitoring and evaluation.");
+  o(M,"Arrange the stages of the project cycle.",["Identification","Preparation and appraisal","Approval and financing","Implementation","Monitoring","Evaluation"],"Lessons from evaluation inform new projects.");
+  t(E,"GDP per capita is GDP divided by population.",true,"It is a rough measure of average income.");
+  t(M,"A budget deficit occurs when government revenue exceeds expenditure.",false,"A deficit occurs when spending exceeds revenue.");
+  t(M,"Cost-benefit analysis compares the discounted costs and benefits of a project to society.",true,"It guides public investment decisions.");
+  s(M,"If MPC is 0.75, what is the expenditure multiplier? (number only)",["4"],"1 ÷ (1 − 0.75) = 4.");
+  m(H,"Stagflation describes a situation of:",["High growth and low inflation","High inflation combined with stagnant growth and high unemployment","Falling prices and boom","Balanced budget"],1,"It challenges conventional demand-management policy.");
+  m(M,"The balance of payments records:",["Only government budgets","A country's transactions with the rest of the world","Bank balances","Tax receipts"],1,"It includes the current, capital and financial accounts.");
+  m(M,"An economic planner forecasting state revenue should mainly consider:",["Only last year's figure","Economic growth, tax base, policy changes, oil prices/transfers and collection efficiency","The weather only","The Governor's preferences only"],1,"Realistic revenue forecasts underpin credible budgets.");
+
+  /* ---------------- Research ---------------- */
+  cadre("Research Cadre");
+  o(M,"Arrange the stages of the research process.",["Identify the research problem","Review the literature","Formulate questions or hypotheses","Design the methodology","Collect data","Analyse and interpret data","Report findings"],"Each stage builds on the previous one.");
+  m(M,"The null hypothesis usually states that:",["There is an effect","There is no effect or no difference","The researcher is right","Data are missing"],1,"Research tests whether evidence allows it to be rejected.");
+  m(M,"Validity refers to whether a research instrument:",["Gives consistent results","Measures what it is intended to measure","Is cheap","Is long"],1,"Reliability refers to consistency.");
+  m(M,"Reliability refers to:",["Accuracy of measuring the right concept","Consistency of results when measurement is repeated","Speed of data collection","Sample size"],1,"A reliable instrument may still be invalid.");
+  m(M,"Qualitative research is best suited to:",["Measuring averages","Exploring meanings, experiences and reasons in depth","Large-scale statistical tests","Calculating GDP"],1,"Quantitative research measures and counts.");
+  m(M,"In an experiment testing whether training affects productivity, productivity is the:",["Independent variable","Dependent variable","Control variable","Confounder"],1,"Training is the independent variable.");
+  m(M,"Data collected first-hand by the researcher through surveys or interviews are:",["Secondary data","Primary data","Meta-data","Big data"],1,"Secondary data were collected by others.");
+  m(M,"Triangulation in research means:",["Using three researchers only","Using multiple data sources or methods to cross-check findings","Drawing triangles","A sampling method"],1,"It strengthens credibility.");
+  m(M,"A pilot study is conducted to:",["Replace the main study","Test the instruments and procedures before the main study","Publish results early","Save money only"],1,"It reveals problems early.");
+  m(M,"A focus group discussion typically involves:",["One respondent","A small group (about 6–10) discussing a topic guided by a moderator","Thousands of people","A questionnaire only"],1,"It is a qualitative method.");
+  m(M,"A Likert scale measures:",["Height","Attitudes, e.g. strongly agree to strongly disagree","Income only","Temperature"],1,"It is common in surveys.");
+  m(M,"Before collecting data from human participants, researchers should obtain:",["Nothing","Informed consent and, where required, ethical approval","Payment from participants","Permission from the media"],1,"Ethics committees review research involving people.");
+  m(M,"Plagiarism is:",["Citing sources correctly","Presenting another person's work or ideas as one's own without acknowledgement","Doing original research","Using statistics"],1,"Proper referencing avoids plagiarism.");
+  x(M,"Match each research design to its description.",[["Case study","In-depth study of one or a few cases"],["Cross-sectional survey","Data collected at one point in time"],["Longitudinal study","Same subjects followed over time"],["Experiment","Researcher manipulates a variable and observes effects"]],"Design choice depends on the research question.");
+  t(E,"A literature review helps identify what is already known and the gaps a study can fill.",true,"It situates the research.");
+  t(M,"Participants' identities in research should be kept confidential unless they agree otherwise.",true,"Confidentiality is a core ethical principle.");
+  t(M,"A study with a biased sample can still be generalised to the whole population without limitations.",false,"Sampling bias limits generalisation.");
+  s(E,"What is the name for a research participant's agreement after understanding the study? (two words)",["informed consent"],"Consent must be voluntary and informed.");
+  m(H,"Action research is characterised by:",["Laboratory experiments only","Practitioners researching their own practice in cycles of planning, acting, observing and reflecting","Purely theoretical work","Only secondary data"],1,"It is common in education and public administration.");
+  m(M,"A policy research report for decision-makers should begin with:",["The raw data","An executive summary of key findings and recommendations","The bibliography","The questionnaire"],1,"Busy readers need the key messages first.");
+
+  /* ---------------- Social Welfare ---------------- */
+  cadre("Social Welfare Cadre");
+  m(M,"Under the Child's Rights Act 2003 (and the Lagos Child's Rights Law), a child is a person below the age of:",["12","16","18","21"],2,"Lagos domesticated the Act in 2007.");
+  m(M,"Lagos State's main law against domestic violence was enacted in:",["1999","2007","2015","2023"],1,"The Protection Against Domestic Violence Law 2007.");
+  m(M,"The federal Violence Against Persons (Prohibition) Act was enacted in:",["2003","2010","2015","2020"],2,"It criminalises many forms of violence, including harmful traditional practices.");
+  o(M,"Arrange the stages of the social casework process.",["Intake and engagement","Assessment","Planning","Intervention","Evaluation","Termination and follow-up"],"Casework is client-centred and goal-directed.");
+  m(M,"The social work principle of 'client self-determination' means:",["The worker decides everything","Clients have the right to make their own choices, within the law","Clients must obey","Families decide for clients"],1,"Workers support informed choice.");
+  m(M,"Foster care differs from adoption mainly because foster care:",["Is permanent","Is usually temporary, while adoption permanently transfers parental rights","Requires no assessment","Is only for adults"],1,"Both require proper assessment and court/agency processes.");
+  m(M,"The Lagos agency responsible for the welfare and inclusion of persons with disabilities is:",["LASODA (Lagos State Office of Disability Affairs)","LASTMA","LIRS","LAWMA"],0,"Established under the Lagos Special People's Law 2011.");
+  m(M,"The federal law prohibiting discrimination against persons with disabilities was enacted in:",["2011","2018","2007","1999"],1,"The Discrimination Against Persons with Disabilities (Prohibition) Act 2018.");
+  m(M,"Lagos State's Domestic and Sexual Violence Agency (formerly the Response Team) mainly:",["Collects taxes","Coordinates response and support services for survivors of domestic and sexual violence","Runs schools","Licenses vehicles"],1,"It links survivors to medical, legal and psychosocial support.");
+  m(M,"Social workers who suspect child abuse should:",["Ignore it to avoid trouble","Act promptly in line with child protection procedures, including reporting to the appropriate authority","Confront the abuser alone","Tell neighbours"],1,"Child safety comes first.");
+  m(M,"A case conference brings together:",["Only lawyers","Professionals and, where appropriate, the family to plan support for a client","Only the client","Journalists"],1,"Multi-agency planning improves outcomes.");
+  m(M,"Conditional cash transfers are a form of:",["Taxation","Social protection that pays poor households if they meet conditions such as school attendance","Loans","Fines"],1,"They aim to reduce poverty and build human capital.");
+  x(M,"Match each social work value to its meaning.",[["Confidentiality","Protecting client information"],["Non-judgemental attitude","Accepting clients without condemnation"],["Individualisation","Treating each client as unique"],["Self-determination","Respecting clients' right to choose"]],"Core values of social work practice.");
+  t(E,"Remand homes and approved schools form part of the juvenile justice and child welfare system.",true,"They care for children in conflict with the law.");
+  t(M,"Social workers may share clients' case information freely on social media to raise awareness.",false,"This breaches confidentiality.");
+  t(M,"Psychosocial support helps people cope with trauma and stress.",true,"It is part of comprehensive care for survivors.");
+  s(M,"Under the Child's Rights Act, below what age is a person a child? (number only)",["18"],"Persons under 18 are children.");
+  m(M,"The best interest of the child principle requires that:",["Parents' wishes always prevail","The child's welfare is the primary consideration in all decisions concerning the child","Courts decide quickly","Children decide alone"],1,"It is central to child protection law.");
+  m(H,"In working with an elderly person who lives alone and is neglecting self-care, the social worker should first:",["Force institutionalisation","Assess needs, capacity and wishes, and mobilise family and community support","Ignore it","Take their property"],1,"Least restrictive, person-centred options come first.");
+  m(M,"Rehabilitation of street children typically involves:",["Arrest only","Rescue, temporary shelter, family tracing and reunification or alternative care, and education/skills","Sending them away","Ignoring them"],1,"Reintegration is the goal.");
+
+  /* ---------------- Community Development ---------------- */
+  cadre("Community Development Cadre");
+  m(M,"A core principle of community development is:",["Imposing projects from outside","Community participation and self-help based on felt needs","Paying communities to accept projects","Avoiding local leaders"],1,"Ownership improves sustainability.");
+  m(M,"In Lagos, Community Development Associations (CDAs) are coordinated at LGA/LCDA level by:",["Community Development Committees (CDCs)","LASTMA","LAWMA","Police"],0,"CDAs link communities with government.");
+  m(M,"Participatory Rural Appraisal (PRA) tools include:",["Tax forms","Transect walks, seasonal calendars and resource mapping","Court orders","Bank loans"],1,"They let communities analyse their own situations.");
+  m(M,"Asset-based community development (ABCD) starts by:",["Listing community problems only","Identifying and mobilising existing community strengths and resources","Seeking donor funds first","Ignoring local groups"],1,"It contrasts with needs-based approaches.");
+  m(M,"On Arnstein's 'ladder of citizen participation', the highest rung is:",["Manipulation","Consultation","Citizen control","Informing"],2,"Manipulation and therapy are non-participation.");
+  m(M,"A 'felt need' is:",["A need identified only by experts","A need the community itself recognises and expresses","A government target","A donor priority"],1,"Projects based on felt needs attract participation.");
+  m(M,"Counterpart funding in community projects means:",["Communities pay nothing","Communities contribute cash, labour or materials alongside government or donor funds","Funds are borrowed","Funds are returned"],1,"It builds commitment.");
+  m(M,"A cooperative society is:",["A government agency","An autonomous association of people who pool resources for mutual economic benefit","A political party","A bank branch only"],1,"Cooperatives support savings, credit and marketing.");
+  m(M,"Sustainability of a community project depends most on:",["Media coverage","Community ownership, maintenance arrangements and local capacity","A big launch","Imported materials"],1,"Many projects fail when no one maintains them.");
+  m(M,"Gender mainstreaming in community development means:",["Excluding men","Considering the needs and roles of women and men at every stage of a project","Hiring only women","Ignoring gender"],1,"It promotes equitable benefits.");
+  m(M,"A community needs assessment is used to:",["Collect taxes","Identify, prioritise and document community needs and resources","Approve buildings","Elect leaders"],1,"It guides planning.");
+  m(M,"Conflict between two communities over a project site is best handled by:",["Force","Dialogue, mediation and involving traditional and community leaders","Cancelling all projects","Choosing one side"],1,"Peaceful resolution protects relationships.");
+  x(M,"Match each PRA tool to its purpose.",[["Transect walk","Observing land use and resources across the community"],["Seasonal calendar","Showing activities and problems through the year"],["Resource map","Locating community resources and facilities"],["Venn diagram","Showing relationships with institutions"]],"Tools for participatory analysis.");
+  o(M,"Arrange the stages of a community development project.",["Community entry and mobilisation","Needs assessment","Prioritisation and planning","Implementation with community participation","Monitoring and evaluation","Handover and sustainability"],"Participation runs through all stages.");
+  t(E,"Self-help projects encourage communities to use their own resources to solve problems.",true,"Government often supports with matching resources.");
+  t(M,"Community leaders should be bypassed to speed up projects.",false,"Engaging leaders builds legitimacy and cooperation.");
+  t(M,"Monitoring helps detect problems during implementation so they can be corrected.",true,"Evaluation assesses results after or at key points.");
+  s(E,"What does 'CDA' stand for in community development? (three words)",["community development association","community development associations"],"CDAs are registered community groups.");
+  m(H,"A borehole provided to a community breaks down within a year because no one was trained to maintain it. This mainly reflects failure of:",["The weather","Sustainability planning and community capacity building","Engineering only","The water table only"],1,"Maintenance committees and training are essential.");
+  m(M,"Community mobilisation involves:",["Ignoring residents","Raising awareness and motivating community members to participate in development","Collecting levies by force","Political campaigns only"],1,"It builds participation.");
+
+  /* ---------------- Accountant (graduate) ---------------- */
+  cadre("Accountant Cadre (graduate)");
+  m(M,"The two statutory professional accountancy bodies in Nigeria are:",["ICAN and ANAN","NBA and NMA","COREN and ARCON","NIM and CIPM"],0,"The Institute of Chartered Accountants of Nigeria and the Association of National Accountants of Nigeria.");
+  m(M,"The regulator responsible for accounting and financial reporting standards in Nigeria is the:",["FRCN (Financial Reporting Council of Nigeria)","CBN","SEC only","FIRS"],0,"FRCN adopted IFRS and IPSAS for Nigeria.");
+  m(M,"The public sector in Nigeria has adopted:",["US GAAP","IPSAS (International Public Sector Accounting Standards)","No standards","Tax rules only"],1,"Accrual-basis IPSAS replaced cash-basis reporting.");
+  x(M,"Match each cash flow to its category.",[["Salaries paid","Operating activities"],["Purchase of a vehicle","Investing activities"],["Proceeds of a loan","Financing activities"],["Fees received for services","Operating activities"]],"Statement of cash flows classification.");
+  m(M,"The going-concern assumption means that:",["The entity will close soon","The entity is expected to continue operating for the foreseeable future","Assets are valued at scrap","Debts are ignored"],1,"It underlies normal valuation of assets and liabilities.");
+  m(M,"An asset costing ₦1,000,000 is depreciated at 20% a year on the reducing-balance method. Depreciation in year 2 is:",["₦200,000","₦160,000","₦128,000","₦100,000"],1,"Year 1: 200,000 (NBV 800,000). Year 2: 20% × 800,000 = 160,000.");
+  m(M,"Current assets of ₦6m and current liabilities of ₦4m give a current ratio of:",["0.67","1.5","2.0","24"],1,"6 ÷ 4 = 1.5.");
+  m(M,"An expense incurred but not yet paid at the reporting date is recorded as:",["A prepayment (asset)","An accrual (liability)","Revenue","Equity"],1,"Accrual accounting matches expenses to periods.");
+  m(M,"A favourable budget variance on expenditure means:",["Actual spending exceeded budget","Actual spending was below budget","Revenue fell","The budget was wrong"],1,"Variances must be investigated, not just reported.");
+  m(M,"The fundamental principles of professional ethics for accountants include:",["Integrity, objectivity, professional competence and due care, confidentiality and professional behaviour","Speed, profit and loyalty","Secrecy and silence","Popularity"],0,"From the IESBA Code adopted by ICAN.");
+  m(M,"A Treasury Single Account improves public finance mainly by:",["Hiding balances","Consolidating government cash for visibility, control and better cash management","Increasing bank charges","Removing budgets"],1,"Idle balances in commercial banks are eliminated.");
+  m(M,"An Integrated Financial Management Information System (IFMIS) mainly:",["Replaces accountants","Automates budgeting, accounting and reporting in one integrated system","Prints receipts only","Pays contractors in cash"],1,"It improves control and timeliness of reports.");
+  o(M,"Arrange the stages of the accounting cycle.",["Identify and record transactions in books of prime entry","Post to the ledger","Prepare a trial balance","Make adjustments (accruals, depreciation)","Prepare financial statements","Close the books"],"The cycle repeats each period.");
+  t(E,"Under accrual accounting, revenue is recognised when earned, not necessarily when cash is received.",true,"This gives a truer picture of performance.");
+  t(M,"The statement of financial position shows revenue and expenses for a period.",false,"It shows assets, liabilities and net assets at a date; performance is in the statement of financial performance.");
+  t(M,"Bank reconciliations should be prepared regularly, at least monthly.",true,"They detect errors and fraud early.");
+  s(M,"Current assets are ₦9m and current liabilities ₦6m. What is the current ratio? (number only)",["1.5"],"9 ÷ 6 = 1.5.");
+  m(H,"Under IPSAS, property, plant and equipment is initially measured at:",["Market value always","Cost","Zero","Insured value"],1,"Subsequent measurement may use the cost or revaluation model.");
+  m(M,"The Consolidated Revenue Fund of a State is:",["A private account","The fund into which all State revenues are paid, except where the law provides otherwise","A pension fund","A loan account"],1,"Withdrawals require appropriation.");
+  m(M,"Prudence (conservatism) in accounting means:",["Overstating assets","Exercising caution so that assets and income are not overstated and liabilities and expenses not understated","Ignoring risks","Delaying all reporting"],1,"It tempers optimistic estimates.");
+
+  /* ---------------- Internal Audit ---------------- */
+  cadre("Internal Audit Cadre");
+  m(M,"The IIA defines internal auditing as an independent, objective assurance and consulting activity designed to:",["Replace management","Add value and improve an organisation's operations","Prepare budgets","Approve payments"],1,"It evaluates governance, risk management and control.");
+  m(M,"In the Three Lines Model, internal audit is the:",["First line","Second line","Third line","Fourth line"],2,"Management is the first line; risk and compliance functions the second.");
+  o(M,"Arrange the five components of the COSO internal control framework.",["Control environment","Risk assessment","Control activities","Information and communication","Monitoring activities"],"All five must be present and functioning.");
+  m(M,"Risk-based audit planning means:",["Auditing everything equally","Focusing audit resources on areas with the highest risk","Auditing only cash","Auditing at random"],1,"It makes best use of limited resources.");
+  m(M,"An internal audit charter defines:",["Salaries","The purpose, authority and responsibility of internal audit","Building layout","Audit fees"],1,"It is approved by the board or audit committee.");
+  m(M,"Computer-Assisted Audit Techniques (CAATs) are used to:",["Type reports","Analyse large volumes of data electronically, e.g. to find duplicates and anomalies","Replace auditors","Print vouchers"],1,"They allow testing of whole populations.");
+  x(M,"Match each element of an audit finding to its meaning.",[["Criteria","What should be (standard or rule)"],["Condition","What actually is"],["Cause","Why the gap occurred"],["Effect","The impact or risk of the gap"]],"Plus a recommendation to fix the cause.");
+  m(M,"Inherent risk is:",["Risk after controls","The risk before considering controls","Risk the auditor fails to detect","No risk"],1,"Control risk and detection risk complete the audit risk model.");
+  m(M,"Benford's Law is used in audit analytics to:",["Calculate tax","Detect unusual digit patterns that may indicate manipulated data","Sample randomly","Count stock"],1,"Naturally occurring numbers follow predictable leading-digit frequencies.");
+  m(M,"An audit committee mainly:",["Runs operations","Oversees financial reporting, internal control and the audit functions","Approves all payments","Recruits all staff"],1,"It strengthens independence.");
+  m(M,"Internal auditors maintain objectivity by:",["Auditing areas they recently managed","Avoiding conflicts of interest and not auditing their own work","Taking gifts from auditees","Agreeing with management always"],1,"Objectivity is an IIA core principle.");
+  m(M,"Follow-up audits are carried out to:",["Repeat the full audit","Confirm whether agreed recommendations have been implemented","Punish staff","Close the unit"],1,"Without follow-up, findings may never be fixed.");
+  m(M,"A red flag for payroll fraud is:",["Staff on leave","Several employees sharing the same bank account number","Annual increments","Retirements"],1,"It may indicate ghost workers.");
+  t(E,"Internal auditors should report functionally to the audit committee and administratively to the Accounting Officer.",true,"This dual reporting protects independence.");
+  t(M,"Internal auditors should design and operate the controls they audit.",false,"That would impair objectivity.");
+  t(M,"Statistical sampling allows the auditor to quantify sampling risk.",true,"Non-statistical sampling relies on judgement.");
+  s(M,"In the Three Lines Model, which line is internal audit? (one word)",["third","3rd","3","three"],"It provides independent assurance.");
+  m(H,"Detection risk is reduced by:",["Doing less testing","Performing more extensive or more effective substantive procedures","Ignoring controls","Using smaller samples"],1,"Auditors adjust procedures to keep overall audit risk acceptable.");
+  m(M,"The best evidence that an asset exists is usually:",["A verbal assurance","Physical inspection by the auditor","An email","An old invoice"],1,"Direct evidence obtained by the auditor is most reliable.");
+  m(M,"Continuous auditing means:",["Auditing once every five years","Ongoing, often automated, testing of transactions and controls","No audits","Only annual audits"],1,"It enables early detection of problems.");
+
+  /* ---------------- Procurement ---------------- */
+  cadre("Procurement Cadre");
+  m(M,"Public procurement by Lagos State MDAs is governed principally by the:",["Federal Public Procurement Act only","Lagos State Public Procurement Law, administered by the Lagos State Public Procurement Agency","Companies Act","Tenancy Law"],1,"The Agency sets thresholds and issues No Objection.");
+  x(M,"Match each procurement method to when it is typically used.",[["Open competitive bidding","Default method for most procurements"],["Request for quotations","Low-value, readily available goods"],["Direct procurement","Only one supplier exists or in justified urgent cases"],["Two-stage tendering","Complex requirements needing technical clarification first"]],"Non-default methods require justification.");
+  m(M,"A bid security is required to:",["Pay the contractor in advance","Protect the procuring entity if a bidder withdraws its bid or fails to sign the contract","Guarantee quality after delivery","Pay taxes"],1,"It is returned to unsuccessful bidders.");
+  m(M,"A performance bond protects the procuring entity against:",["Bid withdrawal","Failure by the contractor to perform the contract","Exchange rate changes","Late bid opening"],1,"It is provided by the winning bidder before contract signing.");
+  m(M,"A bid security of 2% on a ₦50m bid amounts to:",["₦100,000","₦1,000,000","₦2,500,000","₦500,000"],1,"2% of 50m = ₦1m.");
+  m(M,"Contracts are usually awarded to the:",["Cheapest bid regardless of compliance","Lowest evaluated responsive bid","Bidder with the biggest office","First bid received"],1,"Bids must meet the requirements before price is compared.");
+  m(M,"A procurement plan should be prepared:",["After contracts are awarded","At the start of the year, linked to the approved budget","Only when audited","By contractors"],1,"It sequences procurement and avoids splitting.");
+  m(M,"An officer whose relative owns a bidding company should:",["Evaluate the bid","Declare the conflict of interest and withdraw from the process","Hide the relationship","Award the contract"],1,"Undeclared conflicts are serious misconduct.");
+  m(M,"An advance payment guarantee is required when:",["The contractor is paid in advance, to secure repayment if they default","Bids are opened","A contract ends","A supplier complains"],0,"Advances should be secured.");
+  m(M,"Procurement records should be kept to:",["Fill cabinets","Provide an audit trail of every decision for accountability and review","Delay payments","Impress visitors"],1,"Records support audits and complaints review.");
+  m(M,"A bidder who believes the process was unfair can:",["Do nothing","Submit a complaint for administrative review under the procurement law","Bribe officials","Go to the press only"],1,"Complaint and review mechanisms protect fairness.");
+  m(M,"E-procurement mainly improves:",["Secrecy","Transparency, efficiency and access for bidders","Paper use","Contract splitting"],1,"It reduces opportunities for manipulation.");
+  o(M,"Arrange the stages of the procurement cycle.",["Needs identification and planning","Preparation of specifications and bidding documents","Advertisement and bid submission","Bid opening and evaluation","Approval and contract award","Contract management and closure"],"Contract management ensures value is delivered.");
+  t(E,"Splitting a contract into smaller lots to avoid approval thresholds is prohibited.",true,"It is a breach of procurement law.");
+  t(M,"Bids received after the deadline should be accepted if the bidder has a good excuse.",false,"Late bids are returned unopened.");
+  t(M,"Value for money considers the whole-life cost and quality, not just the purchase price.",true,"The cheapest option may be costlier over time.");
+  s(M,"What is the name of the guarantee a winning contractor provides to secure proper performance? (two words)",["performance bond","performance security","performance guarantee"],"Usually a percentage of the contract value.");
+  m(H,"During evaluation, a bid contains an arithmetic error where the unit rate × quantity does not equal the line total. Usually:",["The bid is disqualified automatically","The error is corrected in line with the bidding documents (often the unit rate prevails) and the bidder is asked to accept","The total is accepted","The evaluator chooses whichever is lower"],1,"Bidding documents set rules for correcting arithmetic errors.");
+  m(M,"Contract variations should be:",["Agreed verbally","Justified, approved by the appropriate authority and documented","Avoided by changing the contract quietly","Paid without approval"],1,"Uncontrolled variations inflate costs.");
+  m(M,"The standstill period after notifying the intended award allows:",["Faster payment","Unsuccessful bidders time to raise complaints before the contract is signed","The contractor to start work","Re-advertisement"],1,"It supports fairness and accountability.");
+
+  /* ---------------- Information (graduate) ---------------- */
+  cadre("Information Cadre");
+  x(M,"Match each media theory to its main idea.",[["Agenda-setting","Media influence what issues people think about"],["Two-step flow","Media messages reach people through opinion leaders"],["Gatekeeping","Editors decide which stories get through"],["Uses and gratifications","Audiences actively choose media to meet their needs"]],"Theories that inform government communication strategy.");
+  m(M,"Agenda-setting theory is associated with:",["McCombs and Shaw","Marx and Engels","Maslow","Lewin"],0,"Their 1968 Chapel Hill study.");
+  m(M,"The 'spiral of silence' theory suggests that people:",["Always speak openly","Stay silent when they believe their views are in the minority","Ignore the media","Prefer radio"],1,"Proposed by Noelle-Neumann.");
+  m(M,"Misinformation differs from disinformation because misinformation is:",["Deliberately false","False information shared without intent to deceive","Always true","Official information"],1,"Disinformation is deliberately false.");
+  m(M,"Nigeria's Cybercrimes (Prohibition, Prevention, etc.) Act was enacted in:",["2007","2015","2020","2023"],1,"It was amended in 2024.");
+  m(M,"The main purpose of a government communication strategy is to:",["Silence critics","Inform citizens, explain policies and build understanding and trust through planned messages","Advertise products","Replace the press"],1,"Strategy defines objectives, audiences, messages and channels.");
+  m(M,"Fact-checking before publication is essential mainly to:",["Delay news","Ensure accuracy and protect credibility","Satisfy lawyers only","Shorten stories"],1,"Errors damage public trust.");
+  m(M,"An editorial expresses:",["A news report","The opinion of the publication on an issue","An advertisement","A photo caption"],1,"Editorials are distinct from news reporting.");
+  m(M,"Audience research helps an information officer to:",["Write longer stories","Understand target audiences' needs, media habits and perceptions","Avoid all media","Increase costs"],1,"Messages should be tailored to audiences.");
+  m(M,"The Lagos State Ministry responsible for government information and public communication is the Ministry of:",["Information and Strategy","Works","Health","Transport"],0,"It coordinates government communication.");
+  m(M,"In crisis communication, the information officer should:",["Speculate","Be first, be right and be credible with timely, accurate updates","Blame the media","Stay silent for weeks"],1,"Silence allows rumours to dominate.");
+  m(M,"Propaganda differs from public information mainly because propaganda:",["Is always true","Uses selective or misleading messages mainly to manipulate opinion","Is two-way","Is unbiased"],1,"Government information should be factual and transparent.");
+  m(M,"A media kit for a launch typically contains:",["Only a photo","Press release, fact sheet, backgrounder, photos and contacts","Contracts","Salary details"],1,"It equips journalists with accurate information.");
+  o(M,"Arrange the steps in planning a public enlightenment campaign.",["Research the issue and audience","Set objectives","Develop key messages","Choose channels and materials","Implement the campaign","Evaluate impact"],"Evaluation shows whether behaviour or awareness changed.");
+  t(E,"Social media monitoring helps detect rumours and public concerns early.",true,"Early detection allows timely response.");
+  t(M,"Government information officers should publish unverified claims if they are popular.",false,"Accuracy comes before speed or popularity.");
+  t(M,"Two-way communication involves listening to feedback from the public, not only sending messages.",true,"Feedback improves policies and communication.");
+  s(M,"What term describes false information deliberately created to deceive?",["disinformation"],"Misinformation lacks deliberate intent.");
+  m(H,"Under the Freedom of Information Act 2011, a public institution must generally respond to a request within:",["24 hours","7 days","30 days","90 days"],1,"An extension of up to 7 days may be allowed in certain cases.");
+  m(M,"An effective press briefing by a government spokesperson requires:",["Avoiding all questions","Clear key messages, accurate facts and preparation for likely questions","Reading a long document","Arguing with journalists"],1,"Preparation builds credibility.");
+
+  /* ---------------- Public Relations ---------------- */
+  cadre("Public Relations Cadre");
+  m(M,"The statutory body that regulates public relations practice in Nigeria is the:",["NBC","NIPR (Nigerian Institute of Public Relations)","APCON","NUJ"],1,"Established by Decree No. 16 of 1990.");
+  m(M,"Public relations is best defined as:",["Advertising only","The deliberate, planned and sustained effort to establish and maintain mutual understanding between an organisation and its publics","Selling products","Writing press releases only"],1,"PR is about relationships and reputation.");
+  o(M,"Arrange the stages of the RACE model of public relations.",["Research","Action (planning)","Communication","Evaluation"],"A systematic approach to PR programmes.");
+  m(M,"In Grunig's four models of PR, the ideal model based on dialogue and mutual adjustment is:",["Press agentry","Public information","Two-way asymmetric","Two-way symmetric"],3,"It seeks mutual understanding rather than persuasion only.");
+  m(M,"'Publics' in PR refers to:",["Only the general public","Groups of people with an interest in or impact on the organisation","Shareholders only","Journalists only"],1,"Internal and external publics need different approaches.");
+  m(M,"Advertising value equivalency (AVE) is criticised as a PR measure because it:",["Is too accurate","Does not measure outcomes such as changes in awareness, attitudes or behaviour","Is required by law","Measures only social media"],1,"The Barcelona Principles reject AVEs.");
+  m(M,"Internal communication in a Ministry mainly aims to:",["Inform only the press","Keep staff informed, engaged and aligned with organisational goals","Advertise","Replace management"],1,"Staff are important ambassadors.");
+  m(M,"Corporate social responsibility (CSR) refers to:",["Profit only","An organisation's commitment to ethical conduct and contributing to society and the environment","Tax evasion","Marketing only"],1,"CSR supports reputation and stakeholder trust.");
+  m(M,"Corporate identity includes:",["Only the logo","Visual and behavioural elements such as logo, colours, values and conduct that express who the organisation is","Salaries","Buildings only"],1,"Consistency builds recognition.");
+  m(M,"A reputation crisis is best managed by:",["Denial","Acknowledging the issue, taking responsibility where appropriate, acting and communicating openly","Attacking critics","Deleting accounts"],1,"Transparency helps rebuild trust.");
+  m(M,"Sponsorship as a PR tool mainly helps to:",["Pay staff","Associate the organisation with valued causes or events to build goodwill","Collect taxes","Hide information"],1,"Choose sponsorships aligned with organisational values.");
+  m(M,"A PR officer organising an official event must pay particular attention to:",["Personal benefits","Protocol, invitations, logistics, media arrangements and contingency plans","Only food","Only music"],1,"Good events need detailed planning.");
+  x(M,"Match each PR tool to its purpose.",[["Press release","Announces news to the media"],["Feature article","Tells an in-depth story"],["Newsletter","Regular communication with stakeholders"],["Open day","Invites the public to see the organisation's work"]],"Tools are chosen to suit audiences and goals.");
+  t(E,"Research is the first step in planning a PR programme.",true,"It identifies problems, publics and opportunities.");
+  t(M,"PR and propaganda are the same thing.",false,"Ethical PR is truthful and two-way; propaganda manipulates.");
+  t(M,"Evaluation should measure outcomes, not just outputs such as the number of press releases.",true,"Outcomes show real impact.");
+  s(E,"What does 'NIPR' stand for? (five words)",["nigerian institute of public relations"],"It regulates PR practice in Nigeria.");
+  m(H,"An organisation receives negative social media comments about delays in service. The best PR response is to:",["Delete the comments","Respond promptly and politely, acknowledge the issue, explain actions being taken and follow up","Block users","Ignore them"],1,"Responsiveness can turn critics into supporters.");
+  m(M,"Stakeholder mapping helps PR practitioners to:",["Avoid all stakeholders","Prioritise stakeholders by influence and interest and plan engagement","Draw maps of roads","Hire staff"],1,"It focuses effort where it matters most.");
+  m(M,"Media relations in PR involves:",["Bribing journalists","Building honest, professional relationships with journalists and providing accurate information","Avoiding the media","Controlling editorial decisions"],1,"Credibility is the foundation of media relations.");
+
+  /* ---------------- Printing ---------------- */
+  cadre("Printing Cadre");
+  m(M,"Offset lithography works on the principle that:",["Metal repels ink","Oil (ink) and water do not mix","Paper absorbs all colours","Heat transfers images"],1,"Image areas attract ink; non-image areas attract water.");
+  m(E,"The four process colours used in full-colour printing are:",["RGB","CMYK (Cyan, Magenta, Yellow, Key/Black)","Red, Green, Blue, White","Pantone only"],1,"RGB is used for screens.");
+  m(E,"The size of an A4 sheet is:",["148 × 210 mm","210 × 297 mm","297 × 420 mm","216 × 279 mm"],1,"A3 (297 × 420 mm) is twice A4.");
+  m(M,"Paper weight is commonly expressed in:",["Litres","GSM (grams per square metre)","Kilowatts","Centimetres"],1,"Higher GSM means heavier, thicker paper.");
+  m(M,"For good-quality print, images are usually prepared at a resolution of about:",["72 dpi","150 dpi","300 dpi","1,200 dpi"],2,"72 dpi is typical for screen display.");
+  m(M,"'Bleed' in print design is:",["Ink spilling","Extending images or colour beyond the trim line (usually about 3 mm) so no white edges remain after cutting","A paper type","A binding method"],1,"It allows for trimming tolerances.");
+  x(M,"Match each binding method to its typical use.",[["Saddle stitching","Thin booklets and magazines (staples on the fold)"],["Perfect binding","Paperback books with glued spines"],["Spiral (coil) binding","Manuals that lie flat"],["Case binding","Hardback books"]],"Binding depends on page count and use.");
+  m(M,"Imposition in printing refers to:",["Charging extra","Arranging pages on a printing sheet so they appear in the correct order after folding and cutting","Proofreading","Mixing ink"],1,"Correct imposition is essential for booklets.");
+  m(M,"Computer-to-plate (CTP) technology:",["Uses film negatives","Images printing plates directly from digital files","Prints on screens","Replaces paper"],1,"CTP improves quality and speed.");
+  m(E,"A ream of paper contains:",["100 sheets","250 sheets","500 sheets","1,000 sheets"],2,"Paper stock is usually ordered by the ream.");
+  m(M,"Registration marks on a print sheet are used to:",["Show the price","Align the different colour plates accurately","Mark the customer","Count sheets"],1,"Mis-registration causes blurred colour edges.");
+  m(M,"Pantone (spot) colours are used when:",["Any colour will do","An exact, consistent brand colour is required","Printing in black only","Printing photos only"],1,"Spot colours are pre-mixed inks.");
+  m(M,"Gravure printing is an example of:",["Relief printing","Intaglio printing (image recessed in the plate)","Planographic printing","Screen printing"],1,"Letterpress is relief; lithography is planographic.");
+  m(M,"The Lagos State Government Printer is responsible for printing:",["Private novels","Official publications such as the Official Gazette, laws and government documents","Newspapers","Currency"],1,"Security and accuracy are essential.");
+  o(M,"Arrange the stages of a print job.",["Receive job brief and artwork","Pre-press (proofing, imposition, plate making)","Obtain client approval of proof","Printing","Finishing (cutting, folding, binding)","Delivery"],"Proof approval prevents costly reprints.");
+  t(E,"A proof should be approved before the full print run begins.",true,"Errors are cheaper to fix at proof stage.");
+  t(M,"RGB colour files can be printed on an offset press without conversion with exactly the same colours.",false,"They should be converted to CMYK; colours may shift.");
+  t(M,"Security printing uses features such as watermarks, microtext and special inks to prevent forgery.",true,"Used for certificates, receipts and official documents.");
+  s(E,"How many sheets of paper are in a ream? (number only)",["500"],"Some specialist papers use 480 sheets, but 500 is standard.");
+  m(H,"A job requires 2,000 copies of an 8-page A4 booklet printed 4 pages per side on A3 sheets (one A3 sheet carries all 8 pages). Ignoring spoilage, how many A3 sheets are needed?",["1,000","2,000","4,000","16,000"],1,"Each booklet uses one A3 sheet (4 pages per side × 2 sides), so 2,000 sheets.");
+
+  /* ---------------- Statistics (technician) ---------------- */
+  cadre("Statistics Cadre (technician)");
+  m(E,"Grouping raw data into classes and counting how many fall into each produces a:",["Pie chart","Frequency table","Questionnaire","Map"],1,"It summarises data for analysis.");
+  m(M,"In a survey, 45 of 180 respondents chose option A. On a pie chart, option A's angle is:",["45°","60°","90°","120°"],2,"45 ÷ 180 × 360° = 90°.");
+  m(E,"The mean of 4, 6, 8 and 10 is:",["6","7","8","28"],1,"(4 + 6 + 8 + 10) ÷ 4 = 7.");
+  m(M,"The median of 3, 9, 5, 11, 7 is:",["5","7","9","35"],1,"Sorted: 3, 5, 7, 9, 11 — the middle value is 7.");
+  m(M,"An enumerator's main duty is to:",["Analyse data","Collect data accurately from respondents following the survey instructions","Design the sample","Write the final report"],1,"Enumerators must not alter or invent responses.");
+  m(M,"An enumeration area (EA) is:",["A type of questionnaire","A small, clearly defined geographic unit assigned to an enumerator","A statistical formula","A data entry screen"],1,"EAs ensure complete coverage without overlap.");
+  m(M,"Household listing before a survey is done to:",["Collect taxes","Create an up-to-date frame of households from which to select the sample","Count animals","Map roads only"],1,"A good frame reduces coverage error.");
+  m(M,"Data editing involves:",["Changing answers to look better","Checking completed questionnaires for completeness, consistency and errors","Deleting data","Printing tables"],1,"Queries are resolved, not guessed.");
+  m(M,"A validation rule in data entry software (e.g. CSPro) can:",["Change respondents' answers","Prevent impossible values, such as age 250, from being entered","Print questionnaires","Select samples"],1,"Validation improves data quality.");
+  m(M,"Which chart is best for showing changes in a value over time?",["Pie chart","Line graph","Map","Venn diagram"],1,"Line graphs show trends clearly.");
+  m(M,"A school had 400 pupils last year and 460 this year. The percentage increase is:",["6%","13%","15%","60%"],2,"(460 − 400) ÷ 400 × 100 = 15%.");
+  m(M,"Coding in survey work means:",["Writing software","Assigning numerical codes to responses for processing","Encrypting files","Numbering pages"],1,"E.g. Male = 1, Female = 2.");
+  x(E,"Match each chart type to its best use.",[["Bar chart","Comparing categories"],["Pie chart","Showing parts of a whole"],["Line graph","Showing trends over time"],["Histogram","Showing the distribution of continuous data"]],"Choose charts that suit the data.");
+  t(E,"Respondents' answers must be kept confidential.",true,"Confidentiality encourages honest responses and is required by law.");
+  t(M,"An enumerator may fill in a questionnaire on behalf of a household that refused to be interviewed.",false,"This is fabrication; non-response is recorded as such.");
+  t(M,"Rounding 3.456 to two decimal places gives 3.46.",true,"The third decimal (6) rounds the second up.");
+  o(E,"Arrange the stages of survey data processing.",["Receipt and checking of questionnaires","Editing and coding","Data entry","Validation and cleaning","Tabulation and analysis"],"Each stage improves data quality.");
+  s(M,"In a class of 40 pupils, 12 are absent. What percentage are present? (number only)",["70","70%"],"28 ÷ 40 × 100 = 70%.");
+  m(M,"The range of the data 12, 5, 19, 8, 15 is:",["7","14","19","5"],1,"Range = highest − lowest = 19 − 5 = 14.");
+  m(M,"'Census night' or a reference date is used in a population census to:",["Celebrate","Count each person once at a fixed point in time","Delay counting","Count only adults"],1,"It avoids double counting and omissions.");
+
+  /* ---------------- Youth Development ---------------- */
+  cadre("Youth Development Officer Cadre");
+  m(M,"Nigeria's National Youth Policy (2019) defines youth as persons aged:",["10–19","15–29","18–35","20–40"],1,"The earlier policy used 18–35.");
+  m(M,"The National Youth Service Corps (NYSC) was established in:",["1960","1973","1999","2010"],1,"It promotes national unity through service by graduates.");
+  m(M,"The Lagos State Employment Trust Fund (LSETF) mainly supports:",["Road building","Entrepreneurs and job seekers through loans, training and job placement","Tax collection","Water supply"],1,"It was established in 2016 to reduce unemployment.");
+  m(M,"The federal agency responsible for drug law enforcement and demand reduction is the:",["NDLEA","NAFDAC only","NSCDC","FRSC"],0,"Youth officers often partner with NDLEA on drug-abuse prevention.");
+  m(M,"Positive youth development focuses on:",["Treating youth only as problems","Building young people's strengths, skills and relationships","Punishment","Exclusion"],1,"Often described by the '5 Cs': competence, confidence, connection, character and caring.");
+  m(M,"Peer education programmes use:",["Older officials only","Trained young people to share information and influence their peers positively","Police officers","Parents only"],1,"Peers can be credible messengers.");
+  m(M,"Skills acquisition programmes for youth should be linked to:",["Political rallies","Labour market demand and access to start-up support","Random trades","Only certificates"],1,"Demand-driven skills improve employment outcomes.");
+  m(M,"Mentoring helps young people mainly by:",["Giving money only","Providing guidance, role models and support for personal and career development","Replacing parents","Punishment"],1,"Structured mentoring improves outcomes.");
+  m(M,"Youth participation in governance can be promoted through:",["Excluding youth","Youth parliaments, councils and consultation in policy-making","Age restrictions","Ignoring youth groups"],1,"Participation builds leadership and civic responsibility.");
+  m(M,"Volunteering benefits young people by:",["Wasting time","Building skills, networks, civic values and employability","Reducing income permanently","Excluding them"],1,"It also benefits communities.");
+  m(M,"Life skills education includes:",["Only mathematics","Decision-making, communication, problem-solving and coping with stress","Only sports","Only religion"],1,"Life skills help youth handle daily challenges.");
+  m(M,"Prevention of cultism among youth in schools is best supported by:",["Ignoring it","Awareness, mentoring, positive clubs and activities, and cooperation with schools, parents and security agencies","Only arrests","Closing schools"],1,"Prevention addresses the reasons youth join.");
+  x(M,"Match each youth programme to its main aim.",[["Entrepreneurship training","Business start-up and self-employment"],["Sports development","Health, teamwork and talent development"],["Leadership training","Building leadership and civic skills"],["Drug-abuse prevention","Reducing substance use"]],"Programmes address different youth needs.");
+  o(M,"Arrange the stages of planning a youth programme.",["Needs assessment with young people","Set objectives","Design activities and select partners","Implement","Monitor and evaluate"],"Involving youth throughout improves relevance.");
+  t(E,"Involving young people in designing programmes makes those programmes more relevant and effective.",true,"Youth voice is a key principle.");
+  t(M,"Youth unemployment has no link to social problems such as crime.",false,"Unemployment can contribute to frustration and vulnerability to crime.");
+  t(M,"Youth centres can provide safe spaces for recreation, learning and counselling.",true,"They are a common youth development facility.");
+  s(E,"What does 'NYSC' stand for? (four words)",["national youth service corps"],"Established in 1973.");
+  m(H,"A youth empowerment programme trains 500 youths, but follow-up shows few started businesses. The most likely gap is:",["Too much training","Lack of post-training support such as start-up capital, mentoring and market access","Too many participants","Training was too short only"],1,"Training alone rarely creates businesses without follow-up support.");
+  m(M,"Monitoring a youth programme mainly involves:",["Only photographs","Regularly tracking activities, outputs and participation against the plan","Ending the programme","Recruiting staff only"],1,"Monitoring allows timely corrections.");
+
+  for(var n in out)out[n].forEach(function(z){z.scope=n;});
   return out;
 })();

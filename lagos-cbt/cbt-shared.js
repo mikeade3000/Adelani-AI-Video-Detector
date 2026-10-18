@@ -20,6 +20,7 @@ var TRAFFIC_CADRE="Traffic Management Officer Cadre (LASTMA)";
 var VIO_CADRE="Vehicle Inspection Officer Cadre (VIS)";
 var ENV_CADRE="Environmental & Special Offences Enforcement Cadre";
 var LNSC_CADRE="Neighbourhood Safety Corps Cadre (LNSC)";
+var FIRE_CADRE="Fire & Rescue Service Cadre (LSFRS)";
 /* A GROUP scope is a question bank shared by several cadres. */
 var LE_GROUP="GROUP: Law Enforcement (all enforcement cadres)";
 var CADRE_GROUPS={};
@@ -77,6 +78,18 @@ function getSeedBanks(){
   if(typeof SEED_VIO!=="undefined")b.push({key:"vio",scope:VIO_CADRE,data:SEED_VIO});
   if(typeof SEED_ENV!=="undefined")b.push({key:"env",scope:ENV_CADRE,data:SEED_ENV});
   if(typeof SEED_LNSC!=="undefined")b.push({key:"lnsc",scope:LNSC_CADRE,data:SEED_LNSC});
+  if(typeof SEED_FIRE!=="undefined")b.push({key:"fire",scope:FIRE_CADRE,data:SEED_FIRE});
+  if(typeof SEED_ENV_EXTRA!=="undefined")b.push({key:"env_extra_v1",scope:ENV_CADRE,data:SEED_ENV_EXTRA});
+  if(typeof SEED_LNSC_EXTRA!=="undefined")b.push({key:"lnsc_extra_v1",scope:LNSC_CADRE,data:SEED_LNSC_EXTRA});
+  /* professional-knowledge banks: one bank (and one seed flag) per cadre */
+  [typeof SEED_PROF_ADMIN!=="undefined"?SEED_PROF_ADMIN:null,
+   typeof SEED_PROF_HEALTH!=="undefined"?SEED_PROF_HEALTH:null,
+   typeof SEED_PROF_WORKS!=="undefined"?SEED_PROF_WORKS:null,
+   typeof SEED_PROF_SCIENCE!=="undefined"?SEED_PROF_SCIENCE:null,
+   typeof SEED_PROF_FINANCE!=="undefined"?SEED_PROF_FINANCE:null].forEach(function(map){
+    if(!map)return;
+    for(var name in map)b.push({key:"prof_"+name.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,""),scope:name,data:map[name]});
+  });
   return b;
 }
 
@@ -89,7 +102,8 @@ var CADRES = [{"name": "Administrative Officer Cadre", "levels": [{"gl": "08", "
 {"name": "Traffic Management Officer Cadre (LASTMA)", "levels": [{"gl": "05", "post": "Traffic Assistant"}, {"gl": "06", "post": "Senior Traffic Assistant"}, {"gl": "07", "post": "Assistant Traffic Officer"}, {"gl": "08", "post": "Traffic Officer II"}, {"gl": "09", "post": "Traffic Officer I"}, {"gl": "10", "post": "Senior Traffic Officer"}, {"gl": "12", "post": "Principal Traffic Officer"}, {"gl": "13", "post": "Assistant Chief Traffic Officer"}, {"gl": "14", "post": "Chief Traffic Officer / Deputy Controller (Traffic)"}, {"gl": "15", "post": "Controller (Traffic) / Assistant Director"}, {"gl": "16", "post": "Deputy Director (Traffic Operations)"}, {"gl": "17", "post": "Director (Traffic Operations)"}]},
 {"name": "Vehicle Inspection Officer Cadre (VIS)", "levels": [{"gl": "06", "post": "Assistant Vehicle Inspection Officer"}, {"gl": "07", "post": "Vehicle Inspection Officer III"}, {"gl": "08", "post": "Vehicle Inspection Officer II"}, {"gl": "09", "post": "Vehicle Inspection Officer I"}, {"gl": "10", "post": "Senior Vehicle Inspection Officer"}, {"gl": "12", "post": "Principal Vehicle Inspection Officer"}, {"gl": "13", "post": "Assistant Chief Vehicle Inspection Officer"}, {"gl": "14", "post": "Chief Vehicle Inspection Officer"}, {"gl": "15", "post": "Assistant Director (Vehicle Inspection Service)"}, {"gl": "16", "post": "Deputy Director (Vehicle Inspection Service)"}, {"gl": "17", "post": "Director (Vehicle Inspection Service)"}]},
 {"name": "Environmental & Special Offences Enforcement Cadre", "levels": [{"gl": "05", "post": "Enforcement Assistant"}, {"gl": "06", "post": "Senior Enforcement Assistant"}, {"gl": "07", "post": "Enforcement Officer II"}, {"gl": "08", "post": "Enforcement Officer I"}, {"gl": "09", "post": "Senior Enforcement Officer"}, {"gl": "10", "post": "Principal Enforcement Officer"}, {"gl": "12", "post": "Assistant Chief Enforcement Officer"}, {"gl": "13", "post": "Chief Enforcement Officer"}, {"gl": "14", "post": "Assistant Director (Enforcement)"}, {"gl": "15", "post": "Deputy Director (Enforcement)"}, {"gl": "16", "post": "Director (Enforcement)"}]},
-{"name": "Neighbourhood Safety Corps Cadre (LNSC)", "levels": [{"gl": "04", "post": "Corps Member"}, {"gl": "05", "post": "Senior Corps Member"}, {"gl": "06", "post": "Assistant Safety Officer"}, {"gl": "07", "post": "Safety Officer II"}, {"gl": "08", "post": "Safety Officer I"}, {"gl": "09", "post": "Senior Safety Officer"}, {"gl": "10", "post": "Principal Safety Officer"}, {"gl": "12", "post": "Assistant Chief Safety Officer"}, {"gl": "13", "post": "Chief Safety Officer"}, {"gl": "14", "post": "Assistant Director (Neighbourhood Safety)"}]}
+{"name": "Neighbourhood Safety Corps Cadre (LNSC)", "levels": [{"gl": "04", "post": "Corps Member"}, {"gl": "05", "post": "Senior Corps Member"}, {"gl": "06", "post": "Assistant Safety Officer"}, {"gl": "07", "post": "Safety Officer II"}, {"gl": "08", "post": "Safety Officer I"}, {"gl": "09", "post": "Senior Safety Officer"}, {"gl": "10", "post": "Principal Safety Officer"}, {"gl": "12", "post": "Assistant Chief Safety Officer"}, {"gl": "13", "post": "Chief Safety Officer"}, {"gl": "14", "post": "Assistant Director (Neighbourhood Safety)"}]},
+{"name": "Fire & Rescue Service Cadre (LSFRS)", "levels": [{"gl": "04", "post": "Fireman / Firewoman"}, {"gl": "05", "post": "Leading Firefighter"}, {"gl": "06", "post": "Sub-Officer"}, {"gl": "07", "post": "Station Officer II"}, {"gl": "08", "post": "Station Officer I"}, {"gl": "09", "post": "Assistant Divisional Officer"}, {"gl": "10", "post": "Divisional Officer"}, {"gl": "12", "post": "Senior Divisional Officer"}, {"gl": "13", "post": "Assistant Chief Fire Officer"}, {"gl": "14", "post": "Deputy Chief Fire Officer"}, {"gl": "15", "post": "Chief Fire Officer"}, {"gl": "16", "post": "Deputy Director (Fire and Rescue Services)"}, {"gl": "17", "post": "Director (Fire and Rescue Services)"}]}
 ];
 
 /* ============================================================
