@@ -7,6 +7,17 @@ Two files make up the portal:
 | `Y2027_Eligibility_List_Portal.html` | The portal page that officers, MDA users and administrators open. |
 | `Code.gs` | The Google Apps Script backend that stores everything in a Google Sheet. |
 
+## Live backend
+
+The portal uses this Apps Script Web App URL:
+
+`https://script.google.com/macros/s/AKfycbxKTcVbT3zHq4TeCmRHWjl9aPn6xxqH5SNrfXEjvt7Yw9yAAbitMpBqR5p0UWSemitk/exec`
+
+It is set in `DEFAULT_SCRIPT_URL` near the top of the portal's script, so the first-time setup screen
+no longer appears. When updating `Code.gs`, deploy it as a **new version of this same deployment**
+(Deploy → Manage deployments → Edit → Version: New version). That keeps the URL above unchanged.
+A brand-new deployment would get a different URL, and this constant would then need updating.
+
 ## Deploying this update
 
 Officers have already submitted Form A, so **keep the same Google Sheet**. Don't create a new one. The update adds to the existing data and leaves it in place.
