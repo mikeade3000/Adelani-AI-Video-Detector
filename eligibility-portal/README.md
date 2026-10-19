@@ -17,7 +17,7 @@ Officers have already submitted Form A, so **keep the same Google Sheet**. Don't
    This keeps the same Web App URL, so the portal doesn't need to be reconfigured.
 4. Replace the hosted `Y2027_Eligibility_List_Portal.html` with the new file.
 
-A new **Verifications** sheet is created automatically the first time an MDA runs a check.
+New **Verifications** and **Verified and Authentic Data** sheets are created automatically the first time an MDA runs a check.
 
 ## Verification (new tab)
 
@@ -48,6 +48,24 @@ Comparisons ignore differences that don't change the meaning: letter case, extra
 ("ADEYEMI JOHN OLU" vs "Adeyemi Olu John"), and date format (Excel date, 01/03/2010, 01-Mar-2010, 2010-03-01).
 *Lagos* vs *Lagos State* also counts as the same value.
 If an officer submitted Form A more than once, only the latest submission is checked, and the summary says so.
+
+### Verified and Authentic Data
+
+When the check compares against **Form A**, officers whose uploaded row matches their Form A on every
+compared field are saved automatically to a new **Verified and Authentic Data** sheet, and the screen
+confirms how many were stored. Officers with differences or missing details are listed, and are **not** saved.
+
+* A value missing on either side counts as a discrepancy, for example a blank *Date of Confirmation* in the sheet.
+* **Official email, WhatsApp number and disability are never compared.** The screen lists them as "Not compared (by policy)".
+* Each saved row combines the officer's eligibility-list values (grade levels, promotion post, proposed
+  dates, email, WhatsApp number, disability, remarks) with their Form A details (date of birth, state of
+  origin, education, service record, certifying officer), plus who verified them and when.
+* The sheet always reflects the latest check. Re-checking an officer replaces their row rather than adding a duplicate.
+  If a later check finds a discrepancy, the officer is removed until the record is corrected and checked again.
+* The server only saves officers whose Form A belongs to the user's MDA and whose Oracle No agrees with it.
+  The Form A details are copied from the stored submission, not from the browser.
+* Panel **03 · Verified and Authentic Data** on the Verification tab lists the saved officers (MDA users
+  see their own MDA) and downloads them as Excel.
 
 Each check is also logged, one row per officer, in the **Verifications** sheet (who checked, when,
 which file, the result and the discrepancies).

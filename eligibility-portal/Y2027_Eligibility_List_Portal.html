@@ -490,7 +490,7 @@
   <section class="panel" id="panel-verify">
     <div class="card">
       <h2><span class="idx">01</span>Verify Officers' Online Submissions</h2>
-      <p class="hint">Upload the Excel sheet that holds your officers' official details (for example from your HR records or nominal roll). Every detail each officer submitted online is checked against that sheet, field by field. Officers are matched by <b>Oracle No</b>, then <b>CSC File No</b>, then <b>Name</b>. Only columns present in your sheet are compared, so you can use the verification template below or your own sheet with recognisable column headings.</p>
+      <p class="hint">Upload the Excel sheet that holds your officers' official details (for example from your HR records or nominal roll). Every detail each officer submitted online is checked against that sheet, field by field. Officers are matched by <b>Oracle No</b>, then <b>CSC File No</b>, then <b>Name</b>. Anything that differs, or is missing on either side, is pointed out; officers that match on every field are stored in <b>Verified and Authentic Data</b>. Official email, WhatsApp number and disability are not compared. Only columns present in your sheet are compared, so you can use the verification template below or your own sheet with recognisable column headings.</p>
       <div id="verify-admin-mda" style="display:none;margin:0 0 12px;">
         <label>Department/Ministry (MDA) to verify</label>
         <select id="verify-mda-select" style="max-width:420px;"></select>
@@ -537,6 +537,19 @@
         <span class="count-badge" id="verify-count"></span>
       </div>
       <div class="tablewrap"><table id="verify-table"><thead></thead><tbody></tbody></table></div>
+    </div>
+
+    <div class="card" id="verified-card">
+      <div class="staging-toolbar">
+        <h2 style="margin:0"><span class="idx">03</span>Verified and Authentic Data</h2>
+        <div class="btnbar" style="margin:0">
+          <button class="btn btn-ghost" id="verified-refresh">Refresh</button>
+          <button class="btn btn-gold" id="verified-download">Download (.xlsx)</button>
+        </div>
+      </div>
+      <p class="hint">Officers whose eligibility-list row matched their Form A on <b>every</b> compared field are stored here automatically after each check, together with their eligibility-list values and Form A details. Re-checking an officer refreshes their entry; an officer whose latest check finds a discrepancy is removed until it is corrected. Official email, WhatsApp number and disability are not compared.</p>
+      <div id="verified-msg" class="msgbox"></div>
+      <div class="tablewrap"><table id="verified-table"><thead></thead><tbody></tbody></table></div>
     </div>
   </section>
 
@@ -2757,12 +2770,18 @@ const VERIFY_SOURCES = {
       { key:'grade_promotion', label:'Grade Level (Promotion)', type:'grade', aliases:['grade level promotion','promotion grade level','promotion gl','gl promotion'], gradeAfter:'promotion_post' },
       { key:'proposed_notional_date', label:'Proposed Notional Date', type:'date', aliases:['proposed notional date','notional date'] },
       { key:'proposed_financial_date', label:'Proposed Financial Date', type:'date', aliases:['proposed financial date','financial date'] },
-      { key:'official_email', label:'Official Email', type:'email', aliases:['official functional email address','official email','functional email','email','email address','official functional email'] },
-      { key:'mobile_no', label:'Mobile No', type:'phone', aliases:['mobile no whatsapp','mobile no','phone no','phone','mobile','telephone','gsm no'] },
-      { key:'disability', label:'People Living with Disability', type:'text', aliases:['people living with disability type','disability','plwd'] },
     ],
   },
 };
+// Never compared (by instruction): carried into "Verified and Authentic Data" as uploaded.
+const VERIFY_IGNORED = [
+  { key:'official_email', label:'Official Email', type:'email', aliases:['official functional email address','official email','functional email','email','email address','official functional email'] },
+  { key:'mobile_no', label:'Mobile No (WhatsApp)', type:'phone', aliases:['mobile no whatsapp','mobile no','whatsapp no','whatsapp','phone no','phone','mobile','telephone','gsm no'] },
+  { key:'disability', label:'People Living with Disability', type:'text', aliases:['people living with disability type','people living with disability','disability','plwd'] },
+];
+// Everything read from an uploaded eligibility list for storage (compared or not).
+const VERIFY_STORE_FIELDS = VERIFY_SOURCES.eligibility.fields.concat(VERIFY_IGNORED)
+  .concat([{ key:'remarks', label:'Remarks', type:'text', aliases:['remarks','remark','comments'] }]);
 const VERIFY_STATUS = {
   matched:      { label:'Verified — all match', short:'Matched' },
   discrepancy:  { label:'Discrepancies found', short:'Discrepancy' },
@@ -2813,7 +2832,8 @@ function vDisplay(type, v){
 function compareField(f, onlineVal, sheetVal){
   const o = vNorm(f.type, onlineVal), s = vNorm(f.type, sheetVal);
   const res = { key:f.key, label:f.label, online:vDisplay(f.type, onlineVal), sheet:vDisplay(f.type, sheetVal), result:'', note:'' };
-  if (!s){ res.result = 'skip'; res.note = 'Blank in MDA sheet — not compared'; return res; }
+  if (!s && !o){ res.result = 'skip'; res.note = 'Blank in both — not compared'; return res; }
+  if (!s){ res.result = 'mismatch'; res.note = 'Missing in the uploaded sheet'; return res; }
   if (!o){ res.result = 'mismatch'; res.note = 'Not supplied online'; return res; }
   if (o === s){
     res.result = 'match';
@@ -2850,8 +2870,11 @@ function onlineIdentity(rec){
 // --- reading the uploaded sheet ---
 // Finds the heading row (the one in the first 25 rows matching the most known
 // headings), maps each column to a field, and returns the officer rows.
-function parseVerifySheet(grid){
-  const F = verifyFields();
+function parseVerifySheet(grid, fieldList){
+  const F = fieldList || verifyFields();
+  const fieldOf = key => F.find(f=>f.key===key);
+  const ignoredAliases = new Set();
+  if (!fieldList) VERIFY_IGNORED.forEach(f=>[f.label, f.key].concat(f.aliases).forEach(a=>ignoredAliases.add(normAlias(a))));
   const aliasMap = {};
   F.forEach(f=>{ [f.label, f.key].concat(f.aliases).forEach(a=>{ const k=normAlias(a); if(k && !(k in aliasMap)) aliasMap[k]=f.key; }); });
   const isGradeHeader = h => /^(gradelevel|gl|grade|gradelevelgl)$/.test(h);
@@ -2863,7 +2886,7 @@ function parseVerifySheet(grid){
   }
   if (best.idx === -1 || best.score < 2) return { error:'Could not find a heading row with at least two recognised column headings (for example "Names (Surname First)" and "Oracle No"). Download the Verification Template to see the expected headings.' };
   const header = grid[best.idx].map(c=>String(c==null?'':c).trim());
-  const colMap = {}; const mapped = []; const unmapped = [];
+  const colMap = {}; const mapped = []; const unmapped = []; const ignored = [];
   let lastPostKey = null;
   header.forEach((h,ci)=>{
     const n = normAlias(h);
@@ -2875,7 +2898,8 @@ function parseVerifySheet(grid){
     if (key && !(key in colMap)){
       colMap[key] = ci; mapped.push({ header:h, field:fieldOf(key).label });
       if (fieldOf(key).type==='post') lastPostKey = key;
-    } else unmapped.push(h);
+    } else if (ignoredAliases.has(n)) ignored.push(h);
+    else unmapped.push(h);
   });
   const sheetMDA = readSheetTitleMDA(grid, best.idx);
   const mdaField = F.find(f=>f.key==='mda' || f.key==='Department/Ministry');
@@ -2893,7 +2917,7 @@ function parseVerifySheet(grid){
     rows.push(rec);
   }
   if (mdaField && !(mdaField.key in colMap) && sheetMDA) mapped.push({ header:'MDA: (title line)', field:mdaField.label });
-  return { rows, colMap, mapped, unmapped, sheetMDA, headerRow: best.idx+1 };
+  return { rows, colMap, mapped, unmapped, ignored, sheetMDA, headerRow: best.idx+1 };
 }
 // Reads the MDA written beside an "MDA:" title line above the heading row.
 function readSheetTitleMDA(grid, headerIdx){
@@ -2986,6 +3010,7 @@ function initVerifyPanel(){
   if (!admin && CURRENT_USER) userMda.innerHTML = `Verifying officers of <b>${escapeHtml(CURRENT_USER.mda)}</b>. Only your MDA's online submissions are checked.`;
   const sel = document.getElementById('verify-mda-select');
   if (admin && !sel.options.length) sel.innerHTML = mdaOptionsHTML('').replace('<option value="">Select MDA…</option>','<option value="">All MDAs</option>');
+  loadVerifiedData();
 }
 document.getElementById('verify-file').addEventListener('change', async e=>{
   const file = e.target.files[0]; if (!file) return;
@@ -3005,7 +3030,11 @@ document.getElementById('verify-file').addEventListener('change', async e=>{
     const res = await callScript({action:'getVerificationData', token:AUTH_TOKEN, mda});
     if (!res || !res.success){ showMsg('verify-msg','err',(res&&res.message)||'Could not load the online submissions.'); return; }
     VERIFY.data = res; VERIFY.mda = res.mda || '';
-    VERIFY.sheetMDA = parsed.sheetMDA; VERIFY.mapped = parsed.mapped; VERIFY.unmapped = parsed.unmapped;
+    VERIFY.sheetMDA = parsed.sheetMDA; VERIFY.mapped = parsed.mapped; VERIFY.unmapped = parsed.unmapped; VERIFY.ignored = parsed.ignored;
+    // Second read of the same sheet with the full eligibility-list layout, for storage.
+    const store = parseVerifySheet(grid, VERIFY_STORE_FIELDS);
+    const storeByRow = {}; (store.rows||[]).forEach(r=>{ storeByRow[r._rowNum] = r; });
+    parsed.rows.forEach(r=>{ r._store = storeByRow[r._rowNum] || {}; });
     parsed.colMapKeys = new Set(Object.keys(parsed.colMap));
     if (VERIFY.sheetMDA && !(['mda','Department/Ministry'].some(k=>k in parsed.colMap))) parsed.colMapKeys.add(VERIFY.source==='briefs'?'Department/Ministry':'mda');
     VERIFY.results = runVerification(parsed);
@@ -3014,8 +3043,10 @@ document.getElementById('verify-file').addEventListener('change', async e=>{
     if (!online.length) showMsg('verify-msg','warn',`No ${VERIFY_SOURCES[VERIFY.source].label} have been submitted online${VERIFY.mda?' for '+VERIFY.mda:''} yet — every row in the sheet is shown as “not submitted online”.`);
     else showMsg('verify-msg','ok',`Checked ${parsed.rows.length} officer row(s) in “${file.name}” against ${online.length} online submission(s). Results are below — download individual summaries from each row.`);
     document.getElementById('verify-filter').value=''; document.getElementById('verify-search').value='';
+    VERIFY.stored = null;
     renderVerifyResults();
     saveVerificationLog();
+    if (VERIFY.source==='briefs') await saveVerifiedData();
   }catch(err){ showMsg('verify-msg','err','Could not complete the check: '+err.message); }
 });
 function verifyCounts(){
@@ -3044,7 +3075,8 @@ function renderVerifyResults(){
   const notCompared = verifyFields().filter(f=>!VERIFY.mapped.some(m=>m.field===f.label)).map(f=>f.label);
   document.getElementById('verify-map').innerHTML =
     `<b>Columns compared (${VERIFY.mapped.length}):</b> ${VERIFY.mapped.map(m=>`<span class="tag">${escapeHtml(m.header)} → ${escapeHtml(m.field)}</span>`).join('')}`
-    + (VERIFY.unmapped.length ? `<br><b>Columns in your sheet not used:</b> ${VERIFY.unmapped.map(h=>`<span class="tag">${escapeHtml(h)}</span>`).join('')}` : '')
+    + (VERIFY.ignored && VERIFY.ignored.length ? `<br><b>Not compared (by policy):</b> ${VERIFY.ignored.map(h=>`<span class="tag">${escapeHtml(h)}</span>`).join('')}` : '')
+    + (VERIFY.unmapped.length ? `<br><b>${VERIFY.source==='briefs'?'Columns with nothing to compare in Form A (stored with verified officers, not compared):':'Columns in your sheet not used:'}</b> ${VERIFY.unmapped.map(h=>`<span class="tag">${escapeHtml(h)}</span>`).join('')}` : '')
     + (notCompared.length ? `<br><b>Online fields not in your sheet (not checked):</b> ${notCompared.map(h=>escapeHtml(h)).join(', ')}` : '');
   renderVerifyTable();
 }
@@ -3070,7 +3102,7 @@ function renderVerifyTable(){
       <td>${escapeHtml(String(r.sheetRowNum||'—'))}</td><td>${escapeHtml(r.matchBy||'—')}</td>
       <td>${r.status==='matched'||r.status==='discrepancy' ? `${r.matched}/${r.compared} match` : '—'}</td>
       <td>${issues.length ? `<ul class="err-list">${issues.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>` : (r.status==='matched'?'<span class="ok-badge">None</span>':'—')}</td>
-      <td><span class="vstat ${r.status}">${VERIFY_STATUS[r.status].short}</span></td>
+      <td><span class="vstat ${r.status}">${VERIFY_STATUS[r.status].short}</span>${r.storedVerified?'<div class="ok-badge" style="margin-top:4px;font-size:11px;">✓ Stored as verified</div>':''}</td>
       <td class="action-btns"><button class="btn btn-ghost" onclick="openVerifyModal(${r.idx})">View</button><button class="btn btn-primary" onclick="downloadVerifySummary(${r.idx})">Download Summary</button></td>
     </tr>`;
   }).join('') : '<tr><td colspan="10" class="hint">No officers match this filter.</td></tr>';
@@ -3082,6 +3114,7 @@ document.querySelectorAll('input[name="verify-source"]').forEach(r=>r.addEventLi
   if (VERIFY.results.length) showMsg('verify-msg','warn','Source changed — choose the sheet again to re-run the check against '+VERIFY_SOURCES[r.value].label+'.');
 }));
 document.getElementById('verify-mda-select').addEventListener('change', ()=>{
+  loadVerifiedData();
   if (VERIFY.results.length) showMsg('verify-msg','warn','MDA changed — choose the sheet again to re-run the check for the selected MDA.');
 });
 
@@ -3160,7 +3193,7 @@ function verifySummaryHTML(r){
       ${row('Row in MDA sheet', r.sheetRowNum ? 'Row '+r.sheetRowNum : 'Not found')}${row('Matched by', r.matchBy || '—')}
       ${r.duplicates?row('Duplicate submissions', r.duplicates+' earlier submission(s) — the latest one was checked'):''}
     </table>
-    <div class="banner ${r.status}"><b>RESULT: ${escapeHtml(VERIFY_STATUS[r.status].label.toUpperCase())}</b><br>${escapeHtml(verifyStatusSentence(r))}</div>
+    <div class="banner ${r.status}"><b>RESULT: ${escapeHtml(VERIFY_STATUS[r.status].label.toUpperCase())}</b><br>${escapeHtml(verifyStatusSentence(r))}${r.storedVerified?'<br><b>Stored in “Verified and Authentic Data”.</b>':''}</div>
     ${issues.length?`<h3>2. Discrepancies to resolve</h3><ul>${issues.map(f=>`<li><b>${escapeHtml(f.label)}</b>: submitted online “${escapeHtml(f.online||'(blank)')}”, MDA sheet “${escapeHtml(f.sheet||'(blank)')}”${f.note?' — '+escapeHtml(f.note):''}</li>`).join('')}</ul>`:''}
     <h3>${issues.length?'3':'2'}. Field-by-field comparison</h3>${verifyFieldTableHTML(r)}
     <div class="sig"><div>_______________________<br>Verified by (MDA officer)<br>${escapeHtml(who)}</div><div>_______________________<br>Officer's acknowledgement</div><div>_______________________<br>Date &amp; Official Stamp</div></div>
@@ -3234,6 +3267,67 @@ document.getElementById('verify-template').addEventListener('click', ()=>{
   ws['!cols'] = [{wch:6}].concat(fields.map(f=>({wch:Math.max(14, Math.min(32, f.label.length+2))})));
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Officers');
   XLSX.writeFile(wb, `Verification_Template_${source==='briefs'?'FormA':'Eligibility'}.xlsx`);
+});
+/* ---- Verified and Authentic Data ---- */
+// Value for storage: dates DD/MM/YYYY, grade levels "08", phone numbers with their leading 0.
+function storeValue(f, v){
+  if (v===null || v===undefined || v==='') return '';
+  if (f.type==='grade') return normalizeGrade(v) || String(v).trim();
+  if (f.type==='date' || f.type==='phone') return vDisplay(f.type, v);
+  return String(v instanceof Date ? fmtDate(parseFlexibleDate(v)) : v).trim();
+}
+async function saveVerifiedData(){
+  const verified = VERIFY.results.filter(r=>r.status==='matched' && r.online && r.online.id).map(r=>{
+    const out = { brief_id: r.online.id, fields_compared: r.fields.filter(f=>f.result==='match').map(f=>f.label).join(', ') };
+    VERIFY_STORE_FIELDS.forEach(f=>{ if (f.key!=='mda') out[f.key] = storeValue(f, (r.sheet._store||{})[f.key]); });
+    return out;
+  });
+  const revoke = VERIFY.results.filter(r=>r.status==='discrepancy' && r.online && r.online.id).map(r=>r.online.id);
+  if (!verified.length && !revoke.length){ VERIFY.stored = {stored:0, revoked:0, rejected:[]}; renderVerifiedNote(); return; }
+  try{
+    const res = await callScript({action:'saveVerifiedData', token:AUTH_TOKEN, fileName:VERIFY.fileName, verified, revoke});
+    if (!res || !res.success) throw new Error((res&&res.message)||'not saved');
+    VERIFY.stored = res;
+    const storedIds = new Set((res.storedIds||[]).map(String));
+    VERIFY.results.forEach(r=>{ r.storedVerified = !!(r.online && storedIds.has(String(r.online.id))); });
+  }catch(err){
+    VERIFY.stored = {error: err.message};
+  }
+  renderVerifiedNote(); renderVerifyTable(); loadVerifiedData();
+}
+function renderVerifiedNote(){
+  const st = VERIFY.stored; if (!st) return;
+  if (st.error){ showMsg('verify-msg','err','The check finished, but the verified officers could not be stored in “Verified and Authentic Data”: '+st.error+'. Run the check again.'); return; }
+  const c = verifyCounts();
+  const bits = [`✓ Check complete. ${st.stored} fully matched officer(s) stored in “Verified and Authentic Data”.`];
+  if (st.revoked) bits.push(`${st.revoked} previously verified officer(s) removed because their latest check found a discrepancy.`);
+  if (c.discrepancy || c.not_in_sheet || c.not_online) bits.push(`${c.discrepancy} with discrepancies, ${c.not_online} in the sheet with no Form A and ${c.not_in_sheet} Form A(s) not in the sheet were NOT stored — see the list below.`);
+  if (st.rejected && st.rejected.length) bits.push('Not stored: '+st.rejected.join('; ')+'.');
+  showMsg('verify-msg', (c.discrepancy||c.not_in_sheet||c.not_online||(st.rejected&&st.rejected.length)) ? 'warn' : 'ok', bits.join(' '));
+}
+let VERIFIED_DATA = [];
+const VERIFIED_VIEW_COLS = [['surname_first','Name'],['oracle_no','Oracle No'],['csc_file_no','CSC File No'],['mda','MDA'],['present_post','Present Post'],['grade_present','GL'],['promotion_post','Promotion Post'],['grade_promotion','GL (Promo)'],['verified_at','Verified'],['verified_by','Verified By']];
+async function loadVerifiedData(){
+  const table = document.getElementById('verified-table');
+  try{
+    const mda = isAdminRole() ? document.getElementById('verify-mda-select').value : '';
+    const res = await callScript({action:'listVerifiedData', token:AUTH_TOKEN, mda});
+    if (!res || !res.success){ showMsg('verified-msg','err',(res&&res.message)||'Could not load verified data.'); return; }
+    VERIFIED_DATA = res.records || [];
+    document.getElementById('verified-msg').className = 'msgbox';
+    table.querySelector('thead').innerHTML = '<tr><th>#</th>'+VERIFIED_VIEW_COLS.map(c=>`<th>${c[1]}</th>`).join('')+'</tr>';
+    table.querySelector('tbody').innerHTML = VERIFIED_DATA.length
+      ? VERIFIED_DATA.map((r,i)=>`<tr><td>${i+1}</td>${VERIFIED_VIEW_COLS.map(c=>`<td>${escapeHtml(String(r[c[0]]==null?'':r[c[0]]))}</td>`).join('')}</tr>`).join('')
+      : `<tr><td colspan="${VERIFIED_VIEW_COLS.length+1}" class="hint">No verified officers yet${res.mda?' for '+escapeHtml(res.mda):''}. Run a check above.</td></tr>`;
+  }catch(err){ showMsg('verified-msg','err','Could not load verified data: '+err.message); }
+}
+document.getElementById('verified-refresh').addEventListener('click', loadVerifiedData);
+document.getElementById('verified-download').addEventListener('click', ()=>{
+  if (!VERIFIED_DATA.length){ showMsg('verified-msg','warn','There are no verified officers to download yet.'); return; }
+  const ws = XLSX.utils.json_to_sheet(VERIFIED_DATA);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Verified and Authentic Data');
+  const mda = isAdminRole() ? document.getElementById('verify-mda-select').value : (CURRENT_USER?CURRENT_USER.mda:'');
+  XLSX.writeFile(wb, `Verified_and_Authentic_Data_${safeFileName(mda||'All_MDAs')}.xlsx`);
 });
 // Audit log (best effort — a failure never blocks the downloads).
 async function saveVerificationLog(){

@@ -11,6 +11,8 @@
  *   - "AdminConfig"  -> one-time bootstrap password/email for the first admin
  *   - "Briefs"       -> Form A (Brief on Candidate) submitted by officers
  *   - "Verifications"-> audit log of MDA checks of Form A against an uploaded Excel sheet
+ *   - "Verified and Authentic Data" -> officers whose eligibility-list row fully matched
+ *                       their Form A (one row per officer, refreshed on every check)
  */
 
 const SUBMISSIONS_SHEET = 'Submissions';
@@ -34,6 +36,25 @@ const VERIFICATIONS_SHEET = 'Verifications';
 const VERIFICATION_COLUMNS = ['id','timestamp','checked_by','mda','source','file_name','officer_name',
   'oracle_no','csc_file_no','record_id','status','match_method','fields_compared','fields_matched',
   'discrepancies','discrepancy_details'];
+const VERIFIED_SHEET = 'Verified and Authentic Data';
+// Values from the uploaded eligibility list (sent by the client) ...
+const VERIFIED_SHEET_FIELDS = ['surname_first','oracle_no','csc_file_no','post_1st_appt','grade_1st',
+  'date_1st_appt','date_confirmation','present_post','grade_present','date_present_appt','promotion_post',
+  'grade_promotion','proposed_notional_date','proposed_financial_date','official_email','mobile_no',
+  'disability','remarks'];
+// ... and values copied by the server straight from the officer's Form A.
+const VERIFIED_BRIEF_FIELDS = [
+  ['date_of_birth','Date of Birth'],['state_of_origin','State of Origin'],['nationality','Nationality'],['age','Age'],
+  ['conversion_post','Conversion Post'],['educ_post_primary','Educ: Post Primary'],['educ_secondary','Educ: Secondary School'],
+  ['educ_university','Educ: University etc'],['educ_professional','Educ: Professional Certificates'],
+  ['educ_additional','Educ: Additional Qualification'],['last_query','Date issued last query'],
+  ['disciplinary_action','Facing disciplinary action?'],['pending_request','Pending request/appeal/appraisal'],
+  ['appraisal_2023','Appraisal 2023 Score'],['appraisal_2024','Appraisal 2024 Score'],['appraisal_2025','Appraisal 2025 Score'],
+  ['appraisal_2026','Appraisal 2026 Score'],['certifying_officer','Certifying Officer Name'],['certifying_rank','Certifying Officer Rank'],
+  ['certifying_phone','Certifying Officer Telephone'],['certification_date','Certification Date'],
+  ['form_a_status','Status'],['form_a_submitted','timestamp']];
+const VERIFIED_COLUMNS = ['brief_id','verified_at','verified_by','mda','source_file','fields_compared']
+  .concat(VERIFIED_SHEET_FIELDS).concat(VERIFIED_BRIEF_FIELDS.map(p => p[0]));
 
 function doPost(e) {
   let body;
@@ -64,6 +85,8 @@ function doPost(e) {
       case 'authorizeBrief': return handleAuthorizeBrief(body);
       case 'getVerificationData': return handleGetVerificationData(body);
       case 'saveVerification': return handleSaveVerification(body);
+      case 'saveVerifiedData': return handleSaveVerifiedData(body);
+      case 'listVerifiedData': return handleListVerifiedData(body);
       default: return jsonOut({ success: false, message: 'Unknown action: ' + body.action });
     }
   } catch (err) {
@@ -868,4 +891,100 @@ function handleSaveVerification(body) {
   const sheet = getOrCreateVerificationsSheet();
   writeRowsAsText(sheet, sheet.getLastRow() + 1, rows, VERIFICATION_COLUMNS.length);
   return jsonOut({ success: true, saved: rows.length });
+}
+
+/* ========================================================================
+   VERIFIED AND AUTHENTIC DATA — officers whose uploaded eligibility-list row
+   matched their Form A on every compared field. The sheet always reflects the
+   latest check: a re-check updates the officer's row, and an officer whose
+   latest check found a discrepancy is removed.
+   ======================================================================== */
+function getOrCreateVerifiedSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(VERIFIED_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(VERIFIED_SHEET);
+    sheet.getRange(1, 1, 1, VERIFIED_COLUMNS.length).setValues([VERIFIED_COLUMNS]).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+function digitsOnly(v) { return String(v == null ? '' : v).replace(/\D/g, '').replace(/^0+/, ''); }
+
+// body.verified: [{brief_id, fields_compared, <VERIFIED_SHEET_FIELDS from the uploaded sheet>}]
+// body.revoke:   [brief_id, ...] — officers whose latest check found a discrepancy.
+function handleSaveVerifiedData(body) {
+  const session = requireUser(body.token);
+  const isAdmin = isAdminSession(session);
+  const verified = Array.isArray(body.verified) ? body.verified : [];
+  const revoke = Array.isArray(body.revoke) ? body.revoke.map(String) : [];
+
+  // Index Form A submissions by id, so every record is checked against the real submission.
+  const briefSheet = getOrCreateBriefsSheet();
+  ensureBriefWorkflowColumns(briefSheet);
+  const briefs = {};
+  if (briefSheet.getLastRow() >= 2) {
+    const headers = briefSheet.getRange(1, 1, 1, briefSheet.getLastColumn()).getValues()[0].map(String);
+    briefSheet.getRange(2, 1, briefSheet.getLastRow() - 1, briefSheet.getLastColumn()).getValues()
+      .forEach(row => { const o = briefRowToObj(headers, row.map(fmtCell)); briefs[String(o.id)] = o; });
+  }
+  const inScope = b => b && (isAdmin || sameMda(b['Department/Ministry'], session.mda));
+
+  const sheet = getOrCreateVerifiedSheet();
+  const values = sheet.getLastRow() >= 2 ? sheet.getRange(2, 1, sheet.getLastRow() - 1, VERIFIED_COLUMNS.length).getValues() : [];
+  const idCol = VERIFIED_COLUMNS.indexOf('brief_id'), oracleCol = VERIFIED_COLUMNS.indexOf('oracle_no'), mdaCol = VERIFIED_COLUMNS.indexOf('mda');
+  // Rows to drop: the officer's previous entry (same Form A, or same Oracle No in the same MDA).
+  const drop = new Set();
+  const markOfficer = (b) => {
+    const oracle = digitsOnly(b['Oracle No.']);
+    values.forEach((row, i) => {
+      if (String(row[idCol]) === String(b.id)) drop.add(i);
+      else if (oracle && digitsOnly(row[oracleCol]) === oracle && sameMda(row[mdaCol], b['Department/Ministry'])) drop.add(i);
+    });
+  };
+
+  const now = new Date();
+  const verifiedBy = session.name + ' (' + session.email + ')';
+  const newRows = []; const rejected = []; const storedIds = [];
+  verified.forEach(rec => {
+    const b = briefs[String(rec.brief_id || '')];
+    if (!inScope(b)) { rejected.push((rec.surname_first || rec.brief_id || '?') + ': Form A not found for your MDA'); return; }
+    const sheetOracle = digitsOnly(rec.oracle_no), briefOracle = digitsOnly(b['Oracle No.']);
+    if (sheetOracle && briefOracle && sheetOracle !== briefOracle) { rejected.push((rec.surname_first || b['Name (Surname first)']) + ': Oracle No does not match Form A'); return; }
+    markOfficer(b);
+    const out = { brief_id: b.id, verified_at: now, verified_by: verifiedBy, mda: b['Department/Ministry'],
+      source_file: String(body.fileName || ''), fields_compared: String(rec.fields_compared || '') };
+    VERIFIED_SHEET_FIELDS.forEach(k => { out[k] = rec[k] == null ? '' : String(rec[k]); });
+    if (!out.surname_first) out.surname_first = b['Name (Surname first)'];
+    if (!out.oracle_no) out.oracle_no = b['Oracle No.'];
+    if (!out.csc_file_no) out.csc_file_no = b['CSC File No.'];
+    VERIFIED_BRIEF_FIELDS.forEach(p => { out[p[0]] = b[p[1]] == null ? '' : b[p[1]]; });
+    newRows.push(VERIFIED_COLUMNS.map(c => out[c]));
+    storedIds.push(String(b.id));
+  });
+  let revoked = 0;
+  revoke.forEach(id => { const b = briefs[id]; if (inScope(b)) { const before = drop.size; markOfficer(b); revoked += drop.size - before; } });
+
+  // Delete bottom-up so row numbers stay valid, then append the fresh rows.
+  Array.from(drop).sort((a, b) => b - a).forEach(i => sheet.deleteRow(i + 2));
+  if (newRows.length) writeRowsAsText(sheet, sheet.getLastRow() + 1, newRows, VERIFIED_COLUMNS.length);
+  return jsonOut({ success: true, stored: newRows.length, storedIds: storedIds, revoked: revoked, rejected: rejected });
+}
+
+function handleListVerifiedData(body) {
+  const session = requireUser(body.token);
+  const isAdmin = isAdminSession(session);
+  const mda = isAdmin ? String(body.mda || '').trim() : String(session.mda || '').trim();
+  const sheet = getOrCreateVerifiedSheet();
+  const records = [];
+  if (sheet.getLastRow() >= 2) {
+    const mdaCol = VERIFIED_COLUMNS.indexOf('mda');
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, VERIFIED_COLUMNS.length).getValues().forEach(row => {
+      if (mda && !sameMda(row[mdaCol], mda)) return;
+      const o = {};
+      VERIFIED_COLUMNS.forEach((c, i) => { o[c] = fmtCell(row[i]); });
+      records.push(o);
+    });
+  }
+  return jsonOut({ success: true, mda: mda, records: records });
 }
