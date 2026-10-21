@@ -26,13 +26,17 @@ PAGES = [
 
 
 class FakeMessages:
+    """Stands in for client.beta.messages; replies are returned in order, the last one repeats."""
+
     def __init__(self, reply="Tuition is five and a half million shillings.", stop_reason="end_turn"):
-        self.calls, self.reply, self.stop_reason = [], reply, stop_reason
+        self.calls, self.stop_reason = [], stop_reason
+        self.replies = list(reply) if isinstance(reply, list) else [reply]
 
     def create(self, **kwargs):
         self.calls.append(kwargs)
+        text = self.replies[min(len(self.calls), len(self.replies)) - 1]
         return SimpleNamespace(stop_reason=self.stop_reason,
-                               content=[SimpleNamespace(type="text", text=self.reply)])
+                               content=[SimpleNamespace(type="text", text=text)])
 
 
 def fake_client(**kw):
@@ -70,6 +74,30 @@ def test_assistant_sends_grounded_request():
     assert "5,500,000 UGX" in call["messages"][-1]["content"]
 
 
+def test_swahili_question_is_translated_for_search_and_answered_in_swahili():
+    client, messages = fake_client(reply=["tuition fees medicine", "Ada ni shilingi milioni tano na nusu."])
+    out = Assistant(KnowledgeBase(PAGES), client=client).answer("Ada ya udaktari ni kiasi gani?", language="sw")
+
+    assert out["answer"].startswith("Ada")
+    assert out["sources"][0]["url"] == "https://kiu.ac.ug/fees"
+    translate, reply = messages.calls
+    assert translate["messages"][0]["content"] == "Ada ya udaktari ni kiasi gani?"
+    assert "Reply language: Kiswahili" in reply["messages"][-1]["content"]
+
+
+def test_english_question_skips_translation():
+    client, messages = fake_client()
+    Assistant(KnowledgeBase(PAGES), client=client).answer("fees?", language="en")
+    assert len(messages.calls) == 1
+    assert "Reply language: English" in messages.calls[0]["messages"][-1]["content"]
+
+
+def test_swahili_refusal_reply_is_in_swahili():
+    client, _ = fake_client(reply="", stop_reason="refusal")
+    out = Assistant(KnowledgeBase(PAGES), client=client).answer("ada?", language="sw")
+    assert out["answer"].startswith("Samahani")
+
+
 def test_refusal_gets_safe_reply():
     client, _ = fake_client(reply="", stop_reason="refusal")
     out = Assistant(KnowledgeBase(PAGES), client=client).answer("fees?")
@@ -84,6 +112,8 @@ def test_api_endpoints():
     r = http.post("/api/ask", json={"question": "tuition fees?"})
     assert r.status_code == 200 and r.json()["answer"]
     assert http.post("/api/ask", json={"question": ""}).status_code == 422
+    assert http.post("/api/ask", json={"question": "ada?", "language": "sw"}).status_code == 200
+    assert http.post("/api/ask", json={"question": "hi", "language": "fr"}).status_code == 422
     assert "KIU Voice Assistant" in http.get("/").text
 
 

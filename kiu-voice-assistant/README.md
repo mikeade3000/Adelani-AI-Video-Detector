@@ -41,11 +41,26 @@ uvicorn server:app --port 8000
 Open http://localhost:8000 in **Chrome or Edge**, tap the microphone and ask, e.g.
 *"What are the requirements for the Bachelor of Nursing?"* You can also type questions.
 
+## English and Kiswahili
+
+Use the **English / Kiswahili** switch at the top of the page (the choice is remembered).
+In Kiswahili mode:
+
+- the microphone listens for Swahili (`sw-KE`), e.g. *"Ada ya udaktari ni kiasi gani?"*;
+- the question is translated to English first, because the website is in English, so
+  the right pages are found;
+- Claude answers in Kiswahili, keeping programme and office names in English;
+- answers are spoken with a Swahili voice if the device has one. Android Chrome and
+  Microsoft Edge usually do; on other devices, install a Swahili voice in the system
+  speech settings, otherwise the default voice reads the Swahili text.
+
+Swahili questions take one extra Claude call (the translation), so they are slightly slower.
+
 ## How answers stay accurate
 
 - Each question retrieves the 6 most relevant passages from the crawled site; Claude is told to
   answer **only** from those passages and to say so when the site doesn't have the answer.
-- Answers are short, plain spoken sentences (no URLs or markdown) so they sound natural aloud.
+- Answers are short, plain spoken sentences in English or Kiswahili (no URLs or markdown) so they sound natural aloud.
 - Source page links are shown under each answer so staff can verify.
 
 ## Configuration
@@ -66,6 +81,6 @@ pytest -q tests
 
 - **Phone line:** connect a number through a telephony provider (e.g. Twilio or Africa's
   Talking) whose speech webhook calls `/api/ask`, so callers get the same answers by phone.
-- **Languages:** browser speech recognition supports Swahili (`sw-KE`/`sw-TZ`); set
-  `recognizer.lang` and ask Claude to reply in the caller's language.
+- **More languages:** add an entry to `TEXT` in `static/index.html` and to `LANGUAGES` in
+  `assistant.py` (e.g. Luganda, if the browser supports its speech recognition).
 - **Deployment:** run behind HTTPS (required for microphone access on non-localhost sites).

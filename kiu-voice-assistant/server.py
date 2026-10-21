@@ -5,6 +5,7 @@ Run:  uvicorn server:app --port 8000     then open http://localhost:8000
 
 import os
 from pathlib import Path
+from typing import Literal
 
 import anthropic
 from fastapi import FastAPI, HTTPException
@@ -27,6 +28,7 @@ class Turn(BaseModel):
 class Question(BaseModel):
     question: str = Field(min_length=1, max_length=1000)
     history: list[Turn] = Field(default_factory=list, max_length=20)
+    language: Literal["en", "sw"] = "en"
 
 
 def create_app(assistant=None):
@@ -49,7 +51,7 @@ def create_app(assistant=None):
         if not bot.kb.chunks:
             raise HTTPException(503, "No website content loaded. Run crawler.py first.")
         try:
-            return bot.answer(q.question.strip(), [t.model_dump() for t in q.history])
+            return bot.answer(q.question.strip(), [t.model_dump() for t in q.history], q.language)
         except anthropic.RateLimitError:
             raise HTTPException(429, "The assistant is busy. Please try again in a moment.")
         except anthropic.APIStatusError as e:
