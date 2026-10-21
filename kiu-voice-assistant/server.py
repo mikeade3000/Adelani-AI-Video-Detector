@@ -29,6 +29,7 @@ class Question(BaseModel):
     question: str = Field(min_length=1, max_length=1000)
     history: list[Turn] = Field(default_factory=list, max_length=20)
     language: Literal["en", "sw"] = "en"
+    caller_name: str | None = Field(default=None, max_length=60)
 
 
 def create_app(assistant=None):
@@ -51,7 +52,8 @@ def create_app(assistant=None):
         if not bot.kb.chunks:
             raise HTTPException(503, "No website content loaded. Run crawler.py first.")
         try:
-            return bot.answer(q.question.strip(), [t.model_dump() for t in q.history], q.language)
+            return bot.answer(q.question.strip(), [t.model_dump() for t in q.history], q.language,
+                              q.caller_name)
         except anthropic.RateLimitError:
             raise HTTPException(429, "The assistant is busy. Please try again in a moment.")
         except anthropic.APIStatusError as e:

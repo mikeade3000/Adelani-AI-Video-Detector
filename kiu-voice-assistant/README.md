@@ -1,4 +1,4 @@
-# KIU Voice Assistant
+# Dlano — KIU Voice Assistant
 
 A voice question-answering assistant for Kampala International University. It reads the
 whole of **kiu.ac.ug** and answers spoken questions about anything on the site
@@ -54,6 +54,25 @@ uvicorn server:app --port 8000
 
 Open http://localhost:8000 in **Chrome or Edge**, tap the microphone and ask, e.g.
 *"What are the requirements for the Bachelor of Nursing?"* You can also type questions.
+
+## Talking to Dlano
+
+1. Open http://localhost:8000 and tap the microphone **once**. It turns green: Dlano is now
+   listening for its name. It ignores everything else said in the room.
+2. Say **"Dlano"**, alone or followed by your question:
+   *"Dlano, can you assist me with information concerning KIU, Uganda?"*
+3. Dlano introduces itself and asks for your name. Answer naturally: *"My name is Amina"*,
+   *"I'm John Okello"* or just *"Peter"*.
+4. Dlano welcomes you by name, answers the question you started with, and then uses your
+   first name in every reply. Keep talking: there's no need to repeat "Dlano" during the
+   conversation.
+5. Say **"goodbye"** (or *"kwaheri"*) to end, or just stop talking. After 90 seconds of quiet
+   the session ends. Dlano then forgets the name and waits for "Dlano" again, so the next
+   caller is asked for their own name.
+
+The microphone pauses while Dlano speaks, so it doesn't answer itself. If speech recognition
+writes the name differently (e.g. "Delano", "the Lano"), Dlano still wakes up.
+You can also type into the box below instead of speaking.
 
 ## English and Kiswahili
 

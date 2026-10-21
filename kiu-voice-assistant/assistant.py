@@ -1,12 +1,13 @@
 """Answers caller questions with Claude, grounded in excerpts retrieved from the KIU website."""
 
 import os
+import re
 
 import anthropic
 
 MODEL = os.environ.get("KIU_MODEL", "claude-opus-5-5")
 
-SYSTEM_PROMPT = """You are the voice assistant for Kampala International University (KIU), \
+SYSTEM_PROMPT = """You are Dlano, the voice assistant for Kampala International University (KIU), \
 answering questions from prospective students, parents, current students and visitors.
 
 Answer using only the website excerpts supplied with each question. The excerpts are page \
@@ -19,6 +20,8 @@ Your reply will be read aloud by a text-to-speech voice, so:
 - Keep it to two to four short sentences unless the caller asks for detail.
 - Use plain spoken sentences: no markdown, bullet points, tables, emojis or URLs.
 - Say amounts and dates the way a person would speak them.
+- When the caller's name is given, address them by name once in every reply, naturally \
+(for example "Sure, Amina, ..."). Never invent a name when none is given.
 - If the question is ambiguous (for example, which campus or programme), give the most \
 likely answer briefly and offer to clarify.
 
@@ -37,6 +40,12 @@ FALLBACK_REPLY = {
 
 TRANSLATE_PROMPT = ("Translate this question about Kampala International University into English "
                     "search keywords. Reply with the English translation only, nothing else.")
+
+
+def clean_name(name):
+    """Keep only a plausible personal name (letters, spaces, hyphens, apostrophes)."""
+    name = re.sub(r"[^\w\s'-]|\d|_", "", name or "").strip()
+    return " ".join(name.split()[:3])[:40]
 
 
 def format_excerpts(results):
@@ -78,8 +87,9 @@ class Assistant:
             return text
         return response_text(response) or text
 
-    def answer(self, question, history=None, language="en"):
+    def answer(self, question, history=None, language="en", caller_name=None):
         language = language if language in LANGUAGES else "en"
+        caller_name = clean_name(caller_name)
         history = (history or [])[-6:]
         # Include the previous user turn in retrieval so follow-ups ("what about its fees?") still match.
         previous = " ".join(h["content"] for h in history if h.get("role") == "user")[-300:]
@@ -95,8 +105,9 @@ class Assistant:
         excerpts = format_excerpts(results) if results else "<excerpts>No matching pages found.</excerpts>"
         if self.kb.crawled_at:
             excerpts += f"\n(Website copied on {self.kb.crawled_at[:10]}.)"
+        caller = f"\nCaller's name: {caller_name}" if caller_name else ""
         messages.append({"role": "user", "content": (f"{excerpts}\n\nReply language: {LANGUAGES[language]}"
-                                                     f"\nCaller's question: {question}")})
+                                                     f"{caller}\nCaller's question: {question}")})
 
         response = self._create(
             max_tokens=2048,  # spoken answers are short; this also bounds latency
