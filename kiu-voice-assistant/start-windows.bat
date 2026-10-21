@@ -7,7 +7,8 @@ if "%ANTHROPIC_API_KEY%"=="" (
 )
 
 if not exist .venv (
-  python -m venv .venv || (echo Python is not installed. Get it from https://www.python.org/downloads/ & pause & exit /b 1)
+  REM Prefer Python 3.13 (installed with "py install 3.13"); newer versions may lack package builds.
+  py -3.13 -m venv .venv 2>nul || python -m venv .venv || (echo Python is not installed. See README: install Python 3.13 from https://www.python.org/downloads/ & pause & exit /b 1)
 )
 call .venv\Scripts\activate.bat
 pip install -q -r requirements.txt

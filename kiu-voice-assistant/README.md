@@ -13,7 +13,13 @@ whole of **kiu.ac.ug** and answers spoken questions about anything on the site
 
 ## Quick start on Windows
 
-1. Install Python 3.10+ from https://www.python.org/downloads/ (tick **"Add python.exe to PATH"**).
+1. Install Python 3.13:
+   - **Python Install Manager** (the default download on python.org): run the MSIX installer,
+     then in Command Prompt run `py install 3.13` and answer **Y** if asked to add Python to PATH.
+   - **Classic installer:** download Python 3.13 from https://www.python.org/downloads/windows/
+     and tick **"Add python.exe to PATH"** on the first screen.
+
+   Avoid Python 3.15 for now: some packages may not have Windows builds for it yet.
 2. Get an API key at https://console.anthropic.com.
 3. Double-click **`start-windows.bat`** and paste the key when asked.
 
