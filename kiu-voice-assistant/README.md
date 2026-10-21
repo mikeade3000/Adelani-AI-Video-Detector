@@ -11,13 +11,27 @@ whole of **kiu.ac.ug** and answers spoken questions about anything on the site
  Browser speaker ◀──text-to-speech── answer + source links ◀──────────────┘
 ```
 
-## Setup
+## Quick start on Windows
+
+1. Install Python 3.10+ from https://www.python.org/downloads/ (tick **"Add python.exe to PATH"**).
+2. Get an API key at https://console.anthropic.com.
+3. Double-click **`start-windows.bat`** and paste the key when asked.
+
+The first run reads the whole of kiu.ac.ug (20-30 minutes), then opens
+http://localhost:8000. Later runs start straight away. To refresh the website content,
+delete `data\pages.jsonl` and run it again.
+
+> **"Failed to fetch"?** The page must be opened from the running server at
+> http://localhost:8000. Opening `index.html` by double-click, VS Code Live Server or
+> GitHub Pages shows the page but can't reach the Python server that answers questions.
+
+## Setup (any system)
 
 ```bash
 cd kiu-voice-assistant
 python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-export ANTHROPIC_API_KEY=sk-ant-...                  # from https://console.anthropic.com
+export ANTHROPIC_API_KEY=sk-ant-...                  # Windows PowerShell: $env:ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
 ## 1. Crawl the website

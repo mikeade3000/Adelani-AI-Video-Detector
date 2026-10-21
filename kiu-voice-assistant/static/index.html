@@ -98,7 +98,9 @@
       tagline: "Ask anything about Kampala International University — admissions, fees, programmes, campuses.",
       hint: "Tap the microphone and ask a question.", placeholder: "…or type your question", send: "Ask",
       speakLabel: "Read answers aloud", sources: "Sources:", thinking: "Thinking…", listening: "Listening…",
-      error: "Sorry, something went wrong: ", blocked: "Microphone access was blocked.",
+      error: "Sorry, something went wrong: ",
+      offline: "Can't reach the assistant server. Start it with \"uvicorn server:app --port 8000\" in the kiu-voice-assistant folder, then open http://localhost:8000 (don't open index.html directly).",
+      blocked: "Microphone access was blocked.",
       missed: "Didn't catch that — try again.", noVoice: "Voice input isn't supported in this browser — type your question instead.",
       speech: ["en-GB", "en-UG", "en-KE", "en-US"],
     },
@@ -106,7 +108,9 @@
       tagline: "Uliza chochote kuhusu Kampala International University — udahili, ada, kozi, kampasi.",
       hint: "Gusa kipaza sauti kisha uulize swali.", placeholder: "…au andika swali lako", send: "Uliza",
       speakLabel: "Soma majibu kwa sauti", sources: "Vyanzo:", thinking: "Inafikiri…", listening: "Inasikiliza…",
-      error: "Samahani, kuna tatizo: ", blocked: "Ruhusa ya kipaza sauti imezuiwa.",
+      error: "Samahani, kuna tatizo: ",
+      offline: "Siwezi kufikia seva ya msaidizi. Iwashe kwa \"uvicorn server:app --port 8000\" ndani ya folda ya kiu-voice-assistant, kisha fungua http://localhost:8000 (usifungue index.html moja kwa moja).",
+      blocked: "Ruhusa ya kipaza sauti imezuiwa.",
       missed: "Sikusikia vizuri — jaribu tena.", noVoice: "Kivinjari hiki hakitumii sauti — andika swali lako badala yake.",
       speech: ["sw-KE", "sw-TZ", "sw-UG", "sw"],
     },
@@ -165,19 +169,24 @@
     addMessage("user", question);
     setStatus(t("thinking"));
     try {
-      const res = await fetch("/api/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, history, language: lang }),
-      });
-      const data = await res.json();
+      let res;
+      try {
+        res = await fetch("/api/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question, history, language: lang }),
+        });
+      } catch (networkErr) {
+        throw new Error(t("offline"));  // server not running, or page not opened from it
+      }
+      const data = await res.json().catch(() => ({ detail: t("offline") }));
       if (!res.ok) throw new Error(data.detail || "Request failed");
       addMessage("bot", data.answer, data.sources);
       history.push({ role: "user", content: question }, { role: "assistant", content: data.answer });
       speak(data.answer);
       setStatus("");
     } catch (err) {
-      addMessage("bot", t("error") + err.message);
+      addMessage("bot", err.message === t("offline") ? err.message : t("error") + err.message);
       setStatus("");
     } finally {
       busy = false;
@@ -242,6 +251,7 @@
     });
   }
   applyLanguage(lang);
+  if (location.protocol === "file:") addMessage("bot", t("offline"));
   // Voices load asynchronously in some browsers; touching the list starts the load.
   if ("speechSynthesis" in window) speechSynthesis.getVoices();
 </script>
