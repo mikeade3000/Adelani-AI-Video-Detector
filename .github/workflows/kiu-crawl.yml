@@ -1,0 +1,53 @@
+# Reads kiu.ac.ug every Monday (and on demand) and saves the text to
+# kiu-voice-assistant/data/pages.jsonl, which the deploy workflow ships to Cloudflare.
+name: Crawl kiu.ac.ug
+
+on:
+  schedule:
+    - cron: "17 2 * * 1"   # Mondays 02:17 UTC (05:17 East Africa Time)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: crawl-kiu
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: kiu-voice-assistant
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install crawler packages
+        run: pip install requests beautifulsoup4 pypdf
+
+      - name: Crawl the website
+        run: python crawler.py --out data/pages.new.jsonl
+
+      - name: Keep the new copy only if the crawl looks complete
+        run: |
+          new=$(wc -l < data/pages.new.jsonl)
+          old=$([ -f data/pages.jsonl ] && wc -l < data/pages.jsonl || echo 0)
+          echo "Pages crawled: $new (previous copy: $old)"
+          if [ "$new" -lt 20 ] || [ "$new" -lt $((old / 2)) ]; then
+            echo "::error::The crawl returned only $new pages, so the previous copy was kept. The site may be down or blocking the crawler."
+            exit 1
+          fi
+          mv data/pages.new.jsonl data/pages.jsonl
+
+      - name: Commit the updated content
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/pages.jsonl
+          git diff --cached --quiet && { echo "No changes."; exit 0; }
+          git commit -m "Update kiu.ac.ug content ($(date -u +%Y-%m-%d))"
+          git push

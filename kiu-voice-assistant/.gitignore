@@ -1,4 +1,7 @@
-data/*.jsonl
+# data/pages.jsonl is committed (the GitHub crawl workflow updates it) so deployments include it.
+data/*.new.jsonl
 __pycache__/
 .pytest_cache/
 .venv/
+node_modules/
+.wrangler/

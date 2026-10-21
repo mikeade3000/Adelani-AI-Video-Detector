@@ -1,0 +1,14 @@
+{
+  "name": "dlano-kiu",
+  "private": true,
+  "description": "Cloudflare deployment for the Dlano KIU voice assistant",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "0.3.7"
+  },
+  "devDependencies": {
+    "wrangler": "4.151.3"
+  }
+}

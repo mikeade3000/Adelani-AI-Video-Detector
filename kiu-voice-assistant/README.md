@@ -102,6 +102,36 @@ Swahili questions take one extra Claude call (the translation), so they are slig
 - Answers are short, plain spoken sentences in English or Kiswahili (no URLs or markdown) so they sound natural aloud.
 - Source page links are shown under each answer so staff can verify.
 
+## Put it online with Cloudflare
+
+Dlano runs on **Cloudflare Containers** (the Python server in a Docker container, behind a
+Cloudflare Worker). GitHub does all the work, so no Python or Docker is needed on your computer:
+
+- **`Crawl kiu.ac.ug`** workflow: reads the website every Monday and saves `data/pages.jsonl`.
+- **`Deploy Dlano to Cloudflare`** workflow: runs the tests and deploys whenever the code
+  changes on `main` or a crawl finishes.
+
+One-time setup:
+
+1. **Merge this code into `main`** on GitHub (scheduled workflows only run from `main`).
+2. **Cloudflare account:** sign up at https://dash.cloudflare.com and subscribe to the
+   **Workers Paid** plan (Workers & Pages > Plans). Containers need it.
+3. **Cloudflare API token:** My Profile > API Tokens > Create Token > use the
+   **"Edit Cloudflare Workers"** template > Create. Copy the token.
+4. **Cloudflare Account ID:** shown on the right of the Workers & Pages overview page.
+5. **GitHub secrets:** in your repository, Settings > Secrets and variables > Actions >
+   New repository secret. Add three:
+   `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ANTHROPIC_API_KEY`.
+6. **First crawl:** Actions tab > **Crawl kiu.ac.ug** > Run workflow. It takes 20-30 minutes.
+   When it succeeds, **Deploy Dlano to Cloudflare** starts by itself.
+7. **Open Dlano:** the deploy log ends with the address, e.g.
+   `https://dlano-kiu.<your-subdomain>.workers.dev`. It's HTTPS, so the microphone works on
+   phones and computers. To use your own address (e.g. `dlano.kiu.ac.ug`), add a
+   Custom Domain under the Worker's Settings > Domains & Routes.
+
+After 15 quiet minutes the container sleeps to save money; the next visitor wakes it, which
+takes a few seconds.
+
 ## Configuration
 
 | Env var | Default | Purpose |
@@ -122,4 +152,3 @@ pytest -q tests
   Talking) whose speech webhook calls `/api/ask`, so callers get the same answers by phone.
 - **More languages:** add an entry to `TEXT` in `static/index.html` and to `LANGUAGES` in
   `assistant.py` (e.g. Luganda, if the browser supports its speech recognition).
-- **Deployment:** run behind HTTPS (required for microphone access on non-localhost sites).
