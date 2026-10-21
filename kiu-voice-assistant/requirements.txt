@@ -1,0 +1,7 @@
+anthropic>=1.17
+fastapi>=0.115
+uvicorn>=0.30
+requests>=2.31
+beautifulsoup4>=4.12
+pypdf>=4.0
+pytest>=8.0

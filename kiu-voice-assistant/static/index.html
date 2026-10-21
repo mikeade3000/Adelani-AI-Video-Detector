@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KIU Voice Assistant</title>
+  <style>
+    :root {
+      --bg: #f4f6fb; --card: #ffffff; --text: #1d2433; --muted: #5f6b80;
+      --brand: #0b3d91; --brand-soft: #e6edfa; --accent: #d62839; --border: #dde3ee;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #10141c; --card: #1a202b; --text: #e8ecf3; --muted: #9aa5b8;
+        --brand: #6f9cf0; --brand-soft: #22304a; --accent: #ff5c6c; --border: #2c3545;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      display: flex; justify-content: center; padding: 16px;
+    }
+    main { width: 100%; max-width: 720px; }
+    header { text-align: center; margin: 12px 0 20px; }
+    header h1 { margin: 0; font-size: 1.5rem; color: var(--brand); }
+    header p { margin: 6px 0 0; color: var(--muted); font-size: 0.95rem; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+    #log { min-height: 240px; max-height: 55vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .msg { padding: 10px 14px; border-radius: 12px; max-width: 85%; line-height: 1.45; white-space: pre-wrap; }
+    .user { align-self: flex-end; background: var(--brand); color: #fff; }
+    .bot { align-self: flex-start; background: var(--brand-soft); }
+    .sources { margin-top: 6px; font-size: 0.8rem; }
+    .sources a { color: var(--brand); display: block; overflow-wrap: anywhere; }
+    .hint { color: var(--muted); text-align: center; margin: auto; }
+    .controls { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 18px; }
+    #mic {
+      width: 84px; height: 84px; border-radius: 50%; border: none; cursor: pointer;
+      background: var(--brand); color: #fff; font-size: 2rem;
+      box-shadow: 0 4px 14px rgba(11, 61, 145, 0.35); transition: transform .15s;
+    }
+    #mic:hover { transform: scale(1.05); }
+    #mic.listening { background: var(--accent); animation: pulse 1.2s infinite; }
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(214,40,57,.5); } 50% { box-shadow: 0 0 0 16px rgba(214,40,57,0); } }
+    #status { color: var(--muted); font-size: 0.9rem; min-height: 1.2em; text-align: center; }
+    form { display: flex; gap: 8px; width: 100%; }
+    input[type=text] {
+      flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--card); color: var(--text); font-size: 1rem;
+    }
+    button.send { padding: 10px 16px; border-radius: 10px; border: none; background: var(--brand); color: #fff; cursor: pointer; }
+    label { color: var(--muted); font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>KIU Voice Assistant</h1>
+    <p>Ask anything about Kampala International University — admissions, fees, programmes, campuses.</p>
+  </header>
+
+  <section class="card">
+    <div id="log"><p class="hint" id="hint">Tap the microphone and ask a question.</p></div>
+  </section>
+
+  <div class="controls">
+    <button id="mic" title="Speak" aria-label="Speak your question">🎤</button>
+    <div id="status"></div>
+    <form id="textForm">
+      <input id="textInput" type="text" placeholder="…or type your question" autocomplete="off" />
+      <button class="send" type="submit">Ask</button>
+    </form>
+    <label><input type="checkbox" id="speak" checked /> Read answers aloud</label>
+  </div>
+</main>
+
+<script>
+  const log = document.getElementById("log");
+  const statusEl = document.getElementById("status");
+  const mic = document.getElementById("mic");
+  const speakToggle = document.getElementById("speak");
+  const history = [];
+  let busy = false;
+
+  function setStatus(text) { statusEl.textContent = text; }
+
+  function addMessage(role, text, sources) {
+    document.getElementById("hint")?.remove();
+    const div = document.createElement("div");
+    div.className = "msg " + (role === "user" ? "user" : "bot");
+    div.textContent = text;
+    if (sources && sources.length) {
+      const s = document.createElement("div");
+      s.className = "sources";
+      s.append("Sources:");
+      for (const src of sources) {
+        const a = document.createElement("a");
+        a.href = src.url; a.target = "_blank"; a.rel = "noopener";
+        a.textContent = src.title || src.url;
+        s.append(a);
+      }
+      div.append(s);
+    }
+    log.append(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function pickVoice() {
+    const voices = speechSynthesis.getVoices();
+    return voices.find(v => /en-(GB|UG|KE|ZA)/i.test(v.lang)) || voices.find(v => v.lang.startsWith("en"));
+  }
+
+  function speak(text) {
+    if (!speakToggle.checked || !("speechSynthesis" in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    const voice = pickVoice();
+    if (voice) u.voice = voice;
+    u.rate = 1.0;
+    speechSynthesis.speak(u);
+  }
+
+  async function ask(question) {
+    question = question.trim();
+    if (!question || busy) return;
+    busy = true;
+    addMessage("user", question);
+    setStatus("Thinking…");
+    try {
+      const res = await fetch("/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question, history }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "Request failed");
+      addMessage("bot", data.answer, data.sources);
+      history.push({ role: "user", content: question }, { role: "assistant", content: data.answer });
+      speak(data.answer);
+      setStatus("");
+    } catch (err) {
+      addMessage("bot", "Sorry, something went wrong: " + err.message);
+      setStatus("");
+    } finally {
+      busy = false;
+    }
+  }
+
+  // Speech recognition (Chrome, Edge, Safari). Other browsers fall back to typing.
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognizer = null, listening = false;
+  if (Recognition) {
+    recognizer = new Recognition();
+    recognizer.lang = "en-GB";
+    recognizer.interimResults = true;
+    recognizer.maxAlternatives = 1;
+    recognizer.onresult = (e) => {
+      const result = e.results[e.results.length - 1];
+      setStatus("“" + result[0].transcript + "”");
+      if (result.isFinal) ask(result[0].transcript);
+    };
+    recognizer.onerror = (e) => setStatus(e.error === "not-allowed" ? "Microphone access was blocked." : "Didn't catch that — try again.");
+    recognizer.onend = () => { listening = false; mic.classList.remove("listening"); };
+  } else {
+    mic.disabled = true;
+    mic.title = "Voice input isn't supported in this browser";
+    setStatus("Voice input isn't supported in this browser — type your question instead.");
+  }
+
+  mic.addEventListener("click", () => {
+    if (!recognizer) return;
+    if (listening) { recognizer.stop(); return; }
+    if ("speechSynthesis" in window) speechSynthesis.cancel();  // let the caller interrupt
+    recognizer.start();
+    listening = true;
+    mic.classList.add("listening");
+    setStatus("Listening…");
+  });
+
+  document.getElementById("textForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const input = document.getElementById("textInput");
+    ask(input.value);
+    input.value = "";
+  });
+
+  if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => {};
+</script>
+</body>
+</html>
