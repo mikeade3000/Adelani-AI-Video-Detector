@@ -52,9 +52,26 @@ if (-not (Test-Path (Join-Path $VenvDir "Scripts\python.exe"))) {
 }
 $VPy = Join-Path $VenvDir "Scripts\python.exe"
 Write-Host "Installing libraries (this takes a few minutes the first time)..."
-& $VPy -m pip install --upgrade pip --quiet
-& $VPy -m pip install -r (Join-Path $AppDir "requirements.txt")
-if ($LASTEXITCODE -ne 0) { Write-Host "Library installation failed. See the messages above." -ForegroundColor Red; exit 1 }
+& $VPy -m pip install --upgrade pip --quiet --retries 10 --timeout 120
+# Unstable connections often cut large downloads. Resume partial downloads many
+# times, and retry the whole step a few times. Libraries that already finished
+# are skipped, so each attempt only continues what is missing.
+$ok = $false
+for ($attempt = 1; $attempt -le 5; $attempt++) {
+    if ($attempt -gt 1) {
+        Write-Host "Network hiccup. Trying again in 10 seconds (attempt $attempt of 5)..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 10
+    }
+    & $VPy -m pip install -r (Join-Path $AppDir "requirements.txt") --retries 10 --timeout 120 --resume-retries 50
+    if ($LASTEXITCODE -eq 0) { $ok = $true; break }
+}
+if (-not $ok) {
+    Write-Host ""
+    Write-Host "Library installation failed because the internet connection kept dropping the download." -ForegroundColor Red
+    Write-Host "Try: turning off any VPN, pausing antivirus web scanning, or using a different network"
+    Write-Host "(e.g. a phone hotspot), then double-click install.bat again. Finished downloads are kept."
+    exit 1
+}
 
 # 4. API key for the cloud brain.
 Push-Location $AppDir
