@@ -6,6 +6,10 @@
 <title>Y2027 Promotion Eligibility List — Lagos State CSC</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <style>
   :root{
     --navy:#0F2C4C; --navy-deep:#081A2D; --slate:#2C4A6E;
@@ -221,6 +225,20 @@
   .vmap .tag{margin:0 3px 3px 0;display:inline-block;}
   .vtools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
   .vtools select,.vtools input{width:auto;min-width:200px;}
+  #verified-search{min-width:340px;}
+  .ml-table input[type=text]{width:100%;min-width:220px;font-size:12.5px;padding:6px 8px;}
+  .ml-table td{vertical-align:top;}
+  .ml-link{font-family:var(--mono);font-size:11px;word-break:break-all;color:var(--slate);}
+  .ml-actions{display:flex;flex-wrap:wrap;gap:6px;}
+  .ml-actions .btn{font-size:11.5px;padding:5px 10px;}
+  .ml-step{max-width:420px;margin:0 auto;}
+  #ml-send-ways a.btn{text-decoration:none;display:inline-flex;align-items:center;}
+  .slip-allbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#FBF7EE;border:1px solid var(--gold);border-radius:6px;padding:12px 14px;margin-top:6px;}
+  .slip-allbar b{color:var(--navy);font-size:14px;}
+  .mda-group-head .tools .btn-print{background:var(--gold);color:#2A1D00;border:none;}
+  .mda-group-head .tools .btn-ghost{color:#fff;border-color:#9FB2C8;}
+  .mda-group table{margin:0;border:none;}
+  .mda-group td .action-btns button{white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -242,7 +260,8 @@
     <button class="tabbtn" data-tab="single" id="tab-single" hidden>Single Entry</button>
     <button class="tabbtn" data-tab="bulk" id="tab-bulk" hidden>Bulk Upload</button>
     <button class="tabbtn" data-tab="review" id="tab-review" hidden>Form A Review</button>
-    <button class="tabbtn" data-tab="verify" id="tab-verify" hidden>Verification</button>
+    <button class="tabbtn" data-tab="verify" id="tab-verify" hidden>Verify &amp; Print Slips</button>
+    <button class="tabbtn" data-tab="mdalinks" id="tab-mdalinks" hidden>MDA Print Links</button>
     <button class="tabbtn" data-tab="reports" id="tab-reports" hidden>Reports</button>
     <button class="tabbtn" data-tab="admin" id="tab-admin" hidden>Admin Dashboard</button>
   </nav>
@@ -489,27 +508,32 @@
   <!-- =================== VERIFICATION (MDA checks online submissions against its Excel sheet) =================== -->
   <section class="panel" id="panel-verify">
     <div class="card">
-      <h2><span class="idx">01</span>Verify Officers' Online Submissions</h2>
-      <p class="hint">Upload the Excel sheet that holds your officers' official details (for example from your HR records or nominal roll). Every detail each officer submitted online is checked against that sheet, field by field. Officers are matched by <b>Oracle No</b>, then <b>CSC File No</b>, then <b>Name</b>. Anything that differs, or is missing on either side, is pointed out; officers that match on every field are stored in <b>Verified and Authentic Data</b>. Official email, WhatsApp number and disability are not compared. Only columns present in your sheet are compared, so you can use the verification template below or your own sheet with recognisable column headings.</p>
+      <h2><span class="idx">01</span>Upload Eligibility List</h2>
+      <p class="hint">Upload your MDA's eligibility list (the Y2027 Excel format, with the <b>ELIGIBILITY/SEAP NUMBER</b> column). <b>Every officer on the list is saved</b> below, ready for their slip to be printed, using the details on the list. Their Form A (if they submitted one) supplies the passport photograph; officers whose Form A differs from the list, or who have no Form A, are labelled so you can follow up.</p>
       <div id="verify-admin-mda" style="display:none;margin:0 0 12px;">
-        <label>Department/Ministry (MDA) to verify</label>
+        <label>Department/Ministry (MDA)</label>
         <select id="verify-mda-select" style="max-width:420px;"></select>
       </div>
       <div id="verify-user-mda" class="hint" style="display:none;"></div>
-      <label>Check the uploaded sheet against</label>
+      <!-- The check always runs against Form A; the source choice is kept hidden. -->
+      <div style="display:none;"><label>Check the uploaded sheet against</label>
       <div class="vsrc">
         <label><input type="radio" name="verify-source" value="briefs" checked><span><b>Form A — Brief on Candidate</b><br>Details submitted online by the eligible officers themselves.</span></label>
         <label><input type="radio" name="verify-source" value="eligibility"><span><b>Eligibility List records</b><br>Records entered through Single Entry / Bulk Upload.</span></label>
       </div>
+      </div>
       <label class="filebox" for="verify-file">
         <input type="file" id="verify-file" accept=".xlsx,.xls,.csv">
-        <div>📄 <strong>Click to choose the officers' details sheet</strong> (.xlsx, .xls, .csv)</div>
+        <div>📄 <strong>Click to choose the eligibility list</strong> (.xlsx, .xls, .csv)</div>
         <p id="verify-file-hint">The first sheet in the workbook is used. The heading row is detected automatically.</p>
       </label>
-      <div class="btnbar">
+      <div class="btnbar" style="display:none;">
         <button class="btn btn-ghost" id="verify-template">Download Verification Template (.xlsx)</button>
       </div>
       <div id="verify-msg" class="msgbox" style="margin-top:12px;"></div>
+      <div class="btnbar" id="verify-notsaved-bar" style="display:none;margin-top:0;">
+        <button class="btn btn-ghost" id="verify-notsaved">Download list of differences / missing Form A (.xlsx)</button>
+      </div>
     </div>
 
     <div class="card" id="verify-results-card" style="display:none;">
@@ -524,6 +548,7 @@
         <button class="btn btn-primary" id="verify-dl-all">Download All Individual Summaries (.doc)</button>
         <button class="btn btn-gold" id="verify-dl-xlsx">Download Results Workbook (.xlsx)</button>
         <button class="btn btn-ghost" id="verify-print-all">Print All Summaries</button>
+        <button class="btn btn-gold" id="verify-slips">Download Slips for Verified Officers (PDF)</button>
       </div>
       <div class="vtools">
         <select id="verify-filter">
@@ -541,15 +566,27 @@
 
     <div class="card" id="verified-card">
       <div class="staging-toolbar">
-        <h2 style="margin:0"><span class="idx">03</span>Verified and Authentic Data</h2>
+        <h2 style="margin:0"><span class="idx">02</span>Print Eligibility Slips — Verified and Authentic Data</h2>
         <div class="btnbar" style="margin:0">
           <button class="btn btn-ghost" id="verified-refresh">Refresh</button>
-          <button class="btn btn-gold" id="verified-download">Download (.xlsx)</button>
+          <button class="btn btn-ghost" id="verified-regroup" hidden title="Place every officer under the MDA written on their eligibility list">Fix MDA grouping</button>
+          <button class="btn btn-gold" id="verified-download">Download Data (.xlsx)</button>
         </div>
       </div>
-      <p class="hint">Officers whose eligibility-list row matched their Form A on <b>every</b> compared field are stored here automatically after each check, together with their eligibility-list values and Form A details. Re-checking an officer refreshes their entry; an officer whose latest check finds a discrepancy is removed until it is corrected. Official email, WhatsApp number and disability are not compared.</p>
+      <p class="hint">Every officer on the uploaded eligibility lists is stored here, with the list's details (including the Eligibility/SEAP Number) and, where they submitted one, their Form A details and photograph. Print a <b>Candidate Eligibility Slip</b> for <b>one officer</b> (buttons on each row), for <b>a whole MDA</b> (“Print MDA Slips” on each MDA heading) or for <b>all MDAs at once</b> (buttons below). <b>Print</b> opens the print window — choose your printer, or “Save as PDF”. Officers are listed under the MDA written on their eligibility list. Administrators can correct an officer's slip details or photograph with <b>✎ Edit</b>, and use <b>Fix MDA grouping</b> to move officers uploaded earlier to the MDA on their list. Official email, WhatsApp number and disability are not compared.</p>
+      <div class="slip-allbar">
+        <div><b id="verified-total">0 verified officer(s)</b><span class="hint" id="verified-scope" style="margin:0 0 0 8px;"></span></div>
+        <div class="btnbar" style="margin:0">
+          <button class="btn btn-primary" id="verified-print">🖨 Print All MDAs</button>
+          <button class="btn btn-ghost" id="verified-slips">Download All MDAs (PDF)</button>
+        </div>
+      </div>
+      <div class="vtools" style="margin-top:12px;">
+        <input type="text" id="verified-search" placeholder="Find an officer: name, SEAP No, Oracle No or File No…">
+        <span class="count-badge" id="verified-count"></span>
+      </div>
       <div id="verified-msg" class="msgbox"></div>
-      <div class="tablewrap"><table id="verified-table"><thead></thead><tbody></tbody></table></div>
+      <div id="verified-groups"></div>
     </div>
   </section>
 
@@ -609,16 +646,14 @@
         <p class="hint" style="margin-top:8px;">This link opens a read-only, live analysis dashboard (aggregate counts only — no personal data). Anyone with the link can view it without signing in.</p>
       </div>
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--paper-line);">
-        <h3 style="margin:0 0 8px;color:var(--navy);font-family:var(--serif);font-size:16px;">Secure per-MDA download link</h3>
-        <p class="hint" style="margin:0 0 8px;">Generate a private link for one MDA. The holder can download <b>only that MDA's</b> eligibility and Form A records (Excel), without signing in. The link is signed, so the MDA cannot be changed to reach another MDA's data.</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-          <select id="mdadl-select" style="min-width:280px;"></select>
-          <button class="btn btn-primary" id="mdadl-generate">Generate link</button>
-        </div>
-        <div id="mdadl-result" style="display:none;margin-top:10px;">
-          <input type="text" id="mdadl-link" readonly style="width:100%;font-family:var(--mono);font-size:12px;padding:8px;">
-          <div style="margin-top:6px;"><button class="btn btn-ghost" id="mdadl-copy">Copy link</button><span class="hint" id="mdadl-msg" style="margin-left:8px;"></span></div>
-        </div>
+        <h3 style="margin:0 0 8px;color:var(--navy);font-family:var(--serif);font-size:16px;">MDA links</h3>
+        <p class="hint" style="margin:0;">Private links for MDAs to print and download their slips are now in the <b>MDA Print Links</b> tab. They open only with a code emailed to the MDA's own address. The old per-MDA download links no longer work.</p>
+      </div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--paper-line);">
+        <h3 style="margin:0 0 8px;color:var(--navy);font-family:var(--serif);font-size:16px;">Full backup (super administrator)</h3>
+        <p class="hint" style="margin:0 0 8px;">Downloads <b>everything</b> — accounts, Form A submissions with photographs, eligibility records, the verification log and Verified and Authentic Data — as one <span class="tag">.json</span> file. Use it to move the portal to Cloudflare (see <span class="tag">CLOUDFLARE_MIGRATION.md</span>) or as a safety copy. It contains password hashes and personal data: keep it private.</p>
+        <button class="btn btn-primary" id="backup-download">Download Full Backup (.json)</button>
+        <div id="backup-msg" class="msgbox" style="margin-top:10px;"></div>
       </div>
     </div>
   </section>
@@ -642,24 +677,61 @@
     </div>
   </section>
 
-  <!-- =================== SECURE PER-MDA DOWNLOAD (?download=<mda>&key=<token>) =================== -->
-  <section class="panel" id="panel-mdadownload">
-    <div class="card" style="max-width:640px;margin:0 auto;">
-      <div style="text-align:center;border-bottom:2px solid var(--gold);padding-bottom:14px;margin-bottom:12px;">
+  <!-- =================== MDA PRINT LINKS (administrators) =================== -->
+  <section class="panel" id="panel-mdalinks">
+    <div class="card">
+      <div class="staging-toolbar">
+        <h2 style="margin:0"><span class="idx">🔗</span>MDA Print Links</h2>
+        <div class="btnbar" style="margin:0"><button class="btn btn-ghost" id="ml-refresh">Refresh</button></div>
+      </div>
+      <p class="hint">Each MDA in <b>Verify &amp; Print Slips</b> can have one private link. Type the MDA's email address, click <b>Create link</b>, then send it with <b>Email link</b> (it opens your own Gmail, Yahoo, Outlook or email program with the message ready). Whoever opens the link must type that email address — without it the link shows nothing, and 5 wrong addresses lock the link for 15 minutes. It opens <b>only that MDA's slips</b> for <b>1 hour</b>: print, download as PDF, or download the list in Excel — nothing else. <b>New link</b> replaces a link (the old one stops working at once); <b>Switch off</b> blocks it. Every sign-in, print and download is recorded in the log.</p>
+      <div id="ml-msg" class="msgbox"></div>
+      <input type="text" id="ml-search" placeholder="Find an MDA…" style="max-width:320px;margin:4px 0 10px;">
+      <div class="tablewrap"><table class="ml-table" id="ml-table"><thead><tr><th>MDA</th><th>Allowed email address(es)</th><th>Link</th><th>Status</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- =================== MDA PRINT LINK PAGE (?mdalink=<id>) — email code, then that MDA's slips =================== -->
+  <section class="panel" id="panel-mdalink">
+    <div class="card" style="max-width:980px;margin:0 auto;">
+      <div style="text-align:center;border-bottom:2px solid var(--gold);padding-bottom:14px;margin-bottom:14px;">
         <div style="font-family:var(--serif);font-weight:700;color:var(--navy);font-size:15px;">LAGOS STATE GOVERNMENT · CIVIL SERVICE COMMISSION<br>YEAR 2027 PROMOTION EXERCISE</div>
-        <div style="font-family:var(--serif);font-weight:700;color:var(--navy);font-size:19px;margin-top:8px;">Secure Data Download</div>
+        <div style="font-family:var(--serif);font-weight:700;color:var(--navy);font-size:19px;margin-top:8px;">Candidate Eligibility Slips</div>
+        <div id="mdl-mda" style="font-weight:700;color:var(--gold);margin-top:6px;"></div>
       </div>
-      <p class="hint" id="mdadl-page-sub">Verifying your secure link…</p>
-      <div id="mdadl-page-msg" class="msgbox"></div>
-      <div id="mdadl-page-body" style="display:none;">
-        <p style="font-size:14px;">Department/Ministry: <b id="mdadl-page-mda"></b></p>
-        <div class="kpi-row" id="mdadl-page-kpis" style="margin:12px 0;"></div>
-        <div class="btnbar">
-          <button class="btn btn-primary" id="mdadl-dl-eligibility">Download Eligibility Records (.xlsx)</button>
-          <button class="btn btn-gold" id="mdadl-dl-briefs">Download Form A Records (.xlsx)</button>
+      <div id="mdl-msg" class="msgbox"></div>
+      <div id="mdl-step-email" class="ml-step" style="display:none;">
+        <p class="hint">This private link opens your MDA's eligibility slips. Type the email address this link was sent to.</p>
+        <div class="field"><label for="mdl-email">Email address</label><input type="email" id="mdl-email" autocomplete="email" placeholder="name@lagosstate.gov.ng"></div>
+        <div class="btnbar"><button class="btn btn-primary" id="mdl-open">Open the slips</button></div>
+      </div>
+      <div id="mdl-step-slips" style="display:none;">
+        <div class="slip-allbar">
+          <div><b id="mdl-total">0 officer(s)</b><span class="hint" id="mdl-who" style="margin:0 0 0 8px;"></span></div>
+          <div class="btnbar" style="margin:0">
+            <button class="btn btn-primary" id="mdl-print-all">🖨 Print All Slips</button>
+            <button class="btn btn-ghost" id="mdl-pdf-all">Download All Slips (PDF)</button>
+            <button class="btn btn-gold" id="mdl-xlsx">Download List (Excel)</button>
+            <button class="btn btn-ghost" id="mdl-signout">Sign out</button>
+          </div>
         </div>
+        <input type="text" id="mdl-search" placeholder="Find an officer: name, SEAP No, Oracle No or File No" style="max-width:420px;margin:12px 0 8px;">
+        <div class="tablewrap"><table id="mdl-table"><thead><tr><th>#</th><th>SEAP No</th><th>Name</th><th>Oracle No</th><th>CSC File No</th><th>Present Post</th><th>Promotion Post</th><th>Slip</th></tr></thead><tbody></tbody></table></div>
       </div>
-      <p class="footnote" style="margin-top:20px;">This is a private link. Please do not share it — it grants access to this MDA's data.</p>
+      <p class="footnote" style="margin-top:20px;">This is a private link for one MDA. It opens only with the MDA's registered email address, and each sign-in lasts 1 hour.</p>
+    </div>
+  </section>
+
+  <!-- =================== SLIP VERIFICATION (QR code on a slip → ?verify=<code>) =================== -->
+  <section class="panel" id="panel-slipverify">
+    <div class="card" style="max-width:720px;margin:0 auto;">
+      <div style="text-align:center;border-bottom:2px solid var(--gold);padding-bottom:14px;margin-bottom:14px;">
+        <div style="font-family:var(--serif);font-weight:700;color:var(--navy);font-size:15px;">LAGOS STATE GOVERNMENT · CIVIL SERVICE COMMISSION<br>YEAR 2027 PROMOTION EXERCISE</div>
+        <div style="font-family:var(--serif);font-weight:700;color:var(--navy);font-size:19px;margin-top:8px;">Candidate Eligibility Slip — Verification</div>
+      </div>
+      <div id="sv-msg" class="msgbox show warn">Checking this slip…</div>
+      <div id="sv-body"></div>
+      <p class="footnote" style="margin-top:18px;">Compare the details and photograph above with the printed slip. They must be identical.</p>
     </div>
   </section>
 
@@ -667,7 +739,16 @@
   <section class="panel" id="panel-reports">
     <div class="card">
       <h2><span class="idx">📄</span>Reports</h2>
-      <p class="hint">Generate promotion-exercise reports from the current submitted data. Each report can be previewed, then downloaded as a Word document. Figures are computed live from the records in the system.</p>
+      <p class="hint">Generate promotion-exercise reports. Each report can be previewed, then downloaded as a Word document. Figures are computed live from the data you choose below.</p>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:6px 0 4px;">
+        <div class="field"><label for="reports-source">Report on</label>
+          <select id="reports-source">
+            <option value="verified">Verified and Authentic Data (uploaded eligibility lists)</option>
+            <option value="records">Eligibility List records (Single Entry / Bulk Upload)</option>
+          </select></div>
+        <div class="field"><label for="reports-mda">Department/Ministry (MDA)</label>
+          <select id="reports-mda"><option value="">All MDAs</option></select></div>
+      </div>
       <div id="reports-msg" class="msgbox"></div>
       <div class="report-cards">
         <div class="report-card">
@@ -706,6 +787,7 @@
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <span id="review-scope" class="hint" style="margin:0;"></span>
           <button class="btn btn-ghost" id="review-refresh">Refresh</button>
+          <button class="btn btn-gold" id="review-goto-slips">Upload Eligibility List &amp; Print Slips →</button>
         </div>
       </div>
       <p class="hint" id="review-intro">Form A submissions from eligible officers appear here. Review each one, edit if necessary, then Print / Save / Send it to the Commission. Sending records your authorisation.</p>
@@ -792,7 +874,8 @@ const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxKTcVbT3zHq
 // previous one-time setup on this browser.
 let SAVED_SCRIPT_URL = "";
 try{ SAVED_SCRIPT_URL = localStorage.getItem('csc_script_url') || ""; }catch(e){}
-let SCRIPT_URL = DEFAULT_SCRIPT_URL || SAVED_SCRIPT_URL;
+// When the page is served by the Cloudflare Worker, it sets window.PORTAL_API_URL ("/api").
+let SCRIPT_URL = window.PORTAL_API_URL || DEFAULT_SCRIPT_URL || SAVED_SCRIPT_URL;
 let CURRENT_USER = null;  // {email,name,mda,role}
 let AUTH_TOKEN = null;
 
@@ -1249,6 +1332,7 @@ document.getElementById('tabbar').addEventListener('click', e=>{
   if (btn.dataset.tab==='review') loadReviewData();
   if (btn.dataset.tab==='reports') loadReportsData();
   if (btn.dataset.tab==='verify') initVerifyPanel();
+  if (btn.dataset.tab==='mdalinks') loadMdaLinks();
 });
 
 /* =========================================================================
@@ -1262,6 +1346,7 @@ function updateAuthUI(){
   document.getElementById('tab-review').hidden = !loggedIn;
   document.getElementById('tab-verify').hidden = !loggedIn;
   document.getElementById('tab-reports').hidden = !(loggedIn && admin);
+  document.getElementById('tab-mdalinks').hidden = !(loggedIn && admin);
   document.getElementById('tab-admin').hidden = !(loggedIn && admin);
   document.getElementById('tab-login').hidden = loggedIn;
 
@@ -1599,6 +1684,38 @@ function downloadBriefDoc(d, photo){
 /* =========================================================================
    FORM A REVIEW — MDA user & administrator workflow
    ========================================================================= */
+// Passport photographs are fetched on demand (lists arrive without them on Cloudflare,
+// where loading every photo at once exceeds the database's memory limit).
+const PHOTO_CACHE = {};
+// MDA print link page state (?mdalink=…): its session token fetches photos instead of a login.
+const MDL = { link:'', email:'', token:'', mda:'', expiresAt:0, records:[], timer:null };
+function briefPhoto(b){ return !b ? '' : (b['Photo (data URL)'] || PHOTO_CACHE[b.id] || ''); }
+async function fetchPhotos(ids){
+  const need = [...new Set(ids.filter(id => id && !(id in PHOTO_CACHE)))];
+  for (let i = 0; i < need.length; i += 20){
+    const chunk = need.slice(i, i + 20);
+    try{
+      const res = await callScript(MDL.token ? {action:'mdaLinkPhotos', mdaToken:MDL.token, ids:chunk} : {action:'getPhotos', token:AUTH_TOKEN, ids:chunk});
+      if (res && res.success) chunk.forEach(id => { PHOTO_CACHE[id] = (res.photos||{})[id] || ''; });
+    }catch(e){ /* photo is optional on the documents: carry on without it */ }
+  }
+}
+// Brief objects that already carry their photo (Apps Script backend) need no fetch.
+function briefIdsNeedingPhotos(briefs){ return briefs.filter(b => b && !b['Photo (data URL)'] && b.has_photo !== false).map(b => b.id); }
+// Open the print window straight away (inside the click, so pop-up blockers allow it),
+// then fill it once the photographs have arrived.
+// Show the shared modal immediately with a loading note while a photograph is fetched.
+function showModalLoading(title){
+  document.getElementById('brief-modal-title').textContent = title;
+  document.getElementById('brief-modal-body').innerHTML = '<p class="hint" id="modal-loading">Loading…</p>';
+  document.getElementById('brief-modal-foot').innerHTML = '<button class="btn btn-ghost" onclick="closeBriefModal()">Close</button>';
+  document.getElementById('brief-modal').style.display = 'flex';
+}
+function openPrintWindow(title){
+  const w = window.open('', '_blank');
+  if (w) w.document.write(`<!DOCTYPE html><title>${title}</title><p style="font-family:Arial;padding:30px;color:#0F2C4C;">Preparing… please wait.</p>`);
+  return w;
+}
 let REVIEW_BRIEFS = [];      // last-loaded briefs
 let REVIEW_IS_ADMIN = false;
 const BRIEF_DISPLAY_FIELDS = [
@@ -1671,8 +1788,12 @@ function renderReview(){
 function briefById(id){ return REVIEW_BRIEFS.find(b=>String(b.id)===String(id)); }
 
 // Modal for view / edit / send.
-function openBriefModal(id, mode){
+async function openBriefModal(id, mode){
   const b = briefById(id); if (!b) return;
+  if (briefIdsNeedingPhotos([b]).length){
+    showModalLoading('Form A · ' + (b['Name (Surname first)']||''));
+    await fetchPhotos(briefIdsNeedingPhotos([b]));
+  }
   const title = document.getElementById('brief-modal-title');
   const body = document.getElementById('brief-modal-body');
   const foot = document.getElementById('brief-modal-foot');
@@ -1688,7 +1809,7 @@ function openBriefModal(id, mode){
     grid += `<div class="field"${wide}><label>${escapeHtml(k)}</label><input data-bk="${escapeHtml(k)}" value="${escapeHtml(val)}" ${dis}></div>`;
   });
   grid += '</div>';
-  const photo = b['Photo (data URL)'];
+  const photo = briefPhoto(b);
   const photoHtml = photo ? `<div style="text-align:center;margin-bottom:10px;"><img src="${photo}" style="width:110px;height:132px;object-fit:cover;border:2px solid var(--navy);border-radius:4px;"></div>` : '';
   body.innerHTML = photoHtml + grid + (mode==='send' ? authChecklistHTML(b) : '');
 
@@ -1744,7 +1865,7 @@ async function confirmSendBrief(id){
     const res = await callScript({action:'authorizeBrief', token:AUTH_TOKEN, id});
     if (res && res.success){
       // Also give the user the print-ready copy.
-      const b = briefById(id); if (b) downloadBriefDoc(b, b['Photo (data URL)']);
+      const b = briefById(id); if (b){ await fetchPhotos(briefIdsNeedingPhotos([b])); downloadBriefDoc(b, briefPhoto(b)); }
       closeBriefModal();
       showMsg('review-msg','ok','Form A authorised and sent to the Commission. A copy has been downloaded for your records.');
       loadReviewData();
@@ -1752,7 +1873,7 @@ async function confirmSendBrief(id){
   }catch(err){ showMsg('review-msg','err','Could not send Form A: '+err.message); }
 }
 
-function downloadOneBrief(id){ const b=briefById(id); if(b) downloadBriefDoc(b, b['Photo (data URL)']); }
+async function downloadOneBrief(id){ const b=briefById(id); if(!b) return; await fetchPhotos(briefIdsNeedingPhotos([b])); downloadBriefDoc(b, briefPhoto(b)); }
 function printOneBrief(id){ const b=briefById(id); if(b) printBriefs([b]); }
 function printMDA(mda){ printBriefs(REVIEW_BRIEFS.filter(b=>(b['Department/Ministry']||'')===mda)); }
 document.getElementById('review-print-all').addEventListener('click', ()=>printBriefs(REVIEW_BRIEFS));
@@ -1761,12 +1882,14 @@ document.getElementById('review-download-all').addEventListener('click', ()=>dow
 function downloadMDACsv(mda){ downloadBriefsCsv(REVIEW_BRIEFS.filter(b=>(b['Department/Ministry']||'')===mda), 'FormA_'+mda.replace(/[^A-Za-z0-9]+/g,'_')); }
 
 // Print one or more briefs (opens a print window with each Form A on its own page).
-function printBriefs(briefs){
+async function printBriefs(briefs){
   const msgId = document.getElementById('panel-brief').classList.contains('active') ? 'brief-msg' : 'review-msg';
   if (!briefs.length){ showMsg(msgId,'warn','Nothing to print.'); return; }
-  const pages = briefs.map(b=>briefPrintHTML(b)).join('<div style="page-break-after:always;"></div>');
-  const w = window.open('', '_blank');
+  const w = openPrintWindow('Form A — Print');
   if (!w){ if (msgId==='review-msg') showMsg(msgId,'err','Please allow pop-ups to print.'); return; }
+  await fetchPhotos(briefIdsNeedingPhotos(briefs));
+  const pages = briefs.map(b=>briefPrintHTML(b)).join('<div style="page-break-after:always;"></div>');
+  w.document.open();
   w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Form A — Print</title>
     <style>${briefPrintCSS()}</style></head><body>${pages}
     <script>window.onload=function(){window.print();}<\/script></body></html>`);
@@ -1788,7 +1911,7 @@ function briefPrintCSS(){
 }
 function briefPrintHTML(b){
   const row=(l,v)=>`<tr><td class="l">${escapeHtml(l)}</td><td>${escapeHtml(v==null?'':String(v))}</td></tr>`;
-  const photo = b['Photo (data URL)'];
+  const photo = briefPhoto(b);
   const ph = photo?`<img class="photo" src="${photo}">`:'';
   const sent = String(b.Status)==='Sent';
   const authBlock = sent ? `<div class="auth"><b>AUTHORISED &amp; SENT TO THE COMMISSION.</b><br>By: ${escapeHtml(b['Authorized By']||'')} · MDA: ${escapeHtml(b['Authorized MDA']||'')} · On: ${escapeHtml(String(b['Authorized At']||''))}<br>The assigned officer accepts responsibility for all details as sent.</div>` : '';
@@ -2310,91 +2433,134 @@ document.getElementById('admin-refresh').addEventListener('click', loadAdminData
    REPORTS — auto-filled from live submitted data
    ========================================================================= */
 let reportRecords = [];
+let reportSource = 'verified';
+const REPORT_SOURCE_LABEL = { verified:'Verified and Authentic Data', records:'Eligibility List records' };
 async function loadReportsData(){
   if (!CURRENT_USER || !isAdminRole()) return;
-  showMsg('reports-msg','warn','Loading data for reports…');
+  reportSource = document.getElementById('reports-source').value;
+  reportRecords = [];
+  showMsg('reports-msg','warn','Loading '+REPORT_SOURCE_LABEL[reportSource]+' for reports…');
   try{
-    const res = await callScript({action:'getAllRecords', token:AUTH_TOKEN});
-    if (res.success){ reportRecords = res.records||[]; document.getElementById('reports-msg').className='msgbox'; }
-    else showMsg('reports-msg','err','Could not load data: '+(res.message||'unknown'));
+    const res = reportSource==='verified'
+      ? await callScript({action:'listVerifiedData', token:AUTH_TOKEN, mda:''})
+      : await callScript({action:'getAllRecords', token:AUTH_TOKEN});
+    if (!res.success){ showMsg('reports-msg','err','Could not load data: '+(res.message||'unknown')); return; }
+    reportRecords = res.records||[];
+    const sel = document.getElementById('reports-mda'), keep = sel.value;
+    const mdas = Array.from(new Set(reportRecords.map(r=>String(r.mda||'').trim()).filter(Boolean))).sort((x,y)=>x.localeCompare(y));
+    sel.innerHTML = '<option value="">All MDAs</option>' + mdas.map(m=>`<option>${escapeHtml(m)}</option>`).join('');
+    if (mdas.includes(keep)) sel.value = keep;
+    const mdaCount = mdas.length;
+    showMsg('reports-msg','ok',`${reportRecords.length} officer(s) in ${mdaCount} MDA(s) loaded from ${REPORT_SOURCE_LABEL[reportSource]}.`);
+    refreshReportPreview();
   }catch(err){ showMsg('reports-msg','err','Could not load data: '+err.message); }
 }
-// Compute all the figures the three reports need, from the loaded records.
+document.getElementById('reports-source').addEventListener('change', loadReportsData);
+document.getElementById('reports-mda').addEventListener('change', refreshReportPreview);
+let reportPreviewType = '';
+function refreshReportPreview(){ if (reportPreviewType && document.getElementById('report-preview').style.display!=='none') previewReport(reportPreviewType); }
+function reportScope(){ return document.getElementById('reports-mda').value; }
+// Grade brackets follow the officer's PRESENT grade level (GL06–10 / GL12–16; there is no GL11).
+function gradeBracket(r){
+  const gi = parseInt(normalizeGrade(r.grade_present),10);
+  if (isNaN(gi)) return 'other';
+  return (gi>=6&&gi<=10) ? 'low' : (gi>=12&&gi<=16) ? 'high' : 'other';
+}
+function formACheckOf(r){ const c = String(r.form_a_check||''); return c==='No Form A' ? 'none' : c==='Differs from Form A' ? 'differs' : 'matches'; }
+// Compute all the figures the three reports need, from the loaded records (limited to the chosen MDA).
 function computeReportStats(){
-  const recs = reportRecords;
+  const scope = reportScope();
+  const recs = scope ? reportRecords.filter(r=>String(r.mda||'').trim()===scope) : reportRecords;
+  const verified = reportSource==='verified';
   const total = recs.length;
   const notional = {jan:0, jul:0, other:0};
   const byGrade = {};      // promotion grade -> count
-  const byMda = {};        // mda -> count
-  const bracket = {low:0, high:0, other:0}; // GL06-10, GL12-16
+  const byMda = {};        // mda -> {total, low, high, other, matches, differs, none}
+  const bracket = {low:0, high:0, other:0}; // present grade GL06-10, GL12-16
+  const formA = {matches:0, differs:0, none:0};
   recs.forEach(r=>{
     const d = parseFlexibleDate(r.proposed_notional_date);
     const m = d? d.getUTCMonth() : -1;
     if (m===0) notional.jan++; else if (m===6) notional.jul++; else notional.other++;
     const g = normalizeGrade(r.grade_promotion);
     if (g) byGrade[g] = (byGrade[g]||0)+1;
-    const gi = parseInt(g,10);
-    if (!isNaN(gi)){ if(gi>=6&&gi<=10) bracket.low++; else if(gi>=12&&gi<=16) bracket.high++; else bracket.other++; } else bracket.other++;
-    const mda = (r.mda||'(Unspecified)').trim();
-    byMda[mda] = (byMda[mda]||0)+1;
+    const b = gradeBracket(r); bracket[b]++;
+    const mda = (String(r.mda||'').trim()||'(Unspecified)');
+    const row = byMda[mda] || (byMda[mda] = {total:0, low:0, high:0, other:0, matches:0, differs:0, none:0});
+    row.total++; row[b]++;
+    if (verified){ const c = formACheckOf(r); formA[c]++; row[c]++; }
   });
-  return {total, notional, byGrade, byMda, bracket};
+  return {total, notional, byGrade, byMda, bracket, formA, verified, scope};
 }
 function buildReportHTML(type){
   const s = computeReportStats();
   const today = fmtDate(new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())));
+  const src = s.verified ? 'Verified and Authentic Data (officers on the eligibility lists uploaded by MDAs)' : 'Eligibility List records submitted through Single Entry / Bulk Upload';
   const header = `<div class="rpt"><div style="text-align:center;margin-bottom:10px;">
     <div style="font-weight:700;color:#0F2C4C;">LAGOS STATE GOVERNMENT · CIVIL SERVICE COMMISSION</div>
-    <div style="font-weight:700;color:#0F2C4C;">YEAR 2027 PROMOTION EXERCISE</div></div>`;
+    <div style="font-weight:700;color:#0F2C4C;">YEAR 2027 PROMOTION EXERCISE</div>
+    ${s.scope?`<div style="font-weight:700;color:#B9892E;margin-top:4px;">${escapeHtml(s.scope)}</div>`:''}</div>`;
+  const sub = `<p style="text-align:center;font-size:12px;">Generated ${today} · Source: ${src}</p>`;
+  const otherBracket = s.bracket.other ? `<tr><td>Other / not stated</td><td>${s.bracket.other}</td>${type==='rstp'?`<td>${s.total?Math.round(s.bracket.other/s.total*1000)/10:0}%</td>`:''}</tr>` : '';
+  const formATable = !s.verified ? '' : `<table><tr><th>Form A check</th><th>Officers</th></tr>
+        <tr><td>Matches Form A</td><td>${s.formA.matches}</td></tr>
+        <tr><td>Differs from Form A (eligibility list details used)</td><td>${s.formA.differs}</td></tr>
+        <tr><td>No Form A submitted</td><td>${s.formA.none}</td></tr>
+        <tr><th>TOTAL</th><th>${s.total}</th></tr></table>`;
   if (type==='summary'){
-    const gl = Object.keys(s.byGrade).sort();
+    const gl = Object.keys(s.byGrade).sort((a,b)=>a-b);
     const gradeRows = gl.map(g=>`<tr><td>GL${g}</td><td>${s.byGrade[g]}</td></tr>`).join('') || '<tr><td colspan="2">No records</td></tr>';
-    return header + `<h1>Overall Summary Report</h1>
-      <p style="text-align:center;font-size:12px;">Generated ${today}</p>
+    return header + `<h1>Overall Summary Report</h1>${sub}
       <h2>1. Notional Date Summary</h2>
       <table><tr><th>Cycle</th><th>Officers</th></tr>
         <tr><td>January (01/01/2027)</td><td>${s.notional.jan}</td></tr>
         <tr><td>July (01/07/2027)</td><td>${s.notional.jul}</td></tr>
-        ${s.notional.other?`<tr><td>Other / unrecognised</td><td>${s.notional.other}</td></tr>`:''}
+        ${s.notional.other?`<tr><td>Other / not stated</td><td>${s.notional.other}</td></tr>`:''}
         <tr><th>GRAND TOTAL</th><th>${s.total}</th></tr></table>
       <h2>2. By Promotion Grade Level</h2>
-      <table><tr><th>Grade Level</th><th>No. of Officers</th></tr>${gradeRows}
+      <table><tr><th>Grade Level (promoted to)</th><th>No. of Officers</th></tr>${gradeRows}
         <tr><th>TOTAL</th><th>${s.total}</th></tr></table>
-      <h2>3. By Promotion Bracket</h2>
+      <h2>3. By Grade Bracket (present grade level)</h2>
       <table><tr><th>Bracket</th><th>Officers</th></tr>
         <tr><td>GL06 – GL10</td><td>${s.bracket.low}</td></tr>
         <tr><td>GL12 – GL16</td><td>${s.bracket.high}</td></tr>
-        ${s.bracket.other?`<tr><td>Outside brackets</td><td>${s.bracket.other}</td></tr>`:''}</table>
+        ${otherBracket}<tr><th>TOTAL</th><th>${s.total}</th></tr></table>
+      ${s.verified?`<h2>4. Form A Check</h2>${formATable}`:''}
       </div>`;
   }
   if (type==='defence'){
-    const mdas = Object.keys(s.byMda).sort();
-    const rows = mdas.map((m,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(m)}</td><td>${s.byMda[m]}</td></tr>`).join('') || '<tr><td colspan="3">No records</td></tr>';
-    return header + `<h1>Promotion Defence Report</h1>
-      <p style="text-align:center;font-size:12px;">Generated ${today}</p>
+    const mdas = Object.keys(s.byMda).sort((a,b)=>a.localeCompare(b));
+    const T = {low:0, high:0, matches:0, differs:0, none:0}; mdas.forEach(m=>Object.keys(T).forEach(k=>{ T[k]+=s.byMda[m][k]; }));
+    const fa = s.verified;
+    const head = `<tr><th>S/N</th><th>Department/Ministry (MDA)</th><th>GL06–10</th><th>GL12–16</th>${fa?'<th>Matches Form A</th><th>Differs from Form A</th><th>No Form A</th>':''}<th>Total No. of Officers Presented</th></tr>`;
+    const rows = mdas.map((m,i)=>{ const r=s.byMda[m]; return `<tr><td>${i+1}</td><td>${escapeHtml(m)}</td><td>${r.low}</td><td>${r.high}</td>${fa?`<td>${r.matches}</td><td>${r.differs}</td><td>${r.none}</td>`:''}<td><b>${r.total}</b></td></tr>`; }).join('')
+      || `<tr><td colspan="${fa?8:5}">No records</td></tr>`;
+    return header + `<h1>Promotion Defence Report</h1>${sub}
       <h2>Officers Presented by MDA</h2>
-      <table><tr><th>S/N</th><th>Department/Ministry (MDA)</th><th>Total No. of Officers Presented</th></tr>
-        ${rows}
-        <tr><th colspan="2">GRAND TOTAL</th><th>${s.total}</th></tr></table>
-      <p style="font-size:12px;margin-top:10px;">This report lists the total number of officers presented by each MDA in the Year 2027 Promotion Exercise, generated from records submitted to the portal.</p>
+      <table>${head}${rows}
+        <tr><th colspan="2">GRAND TOTAL</th><th>${T.low}</th><th>${T.high}</th>${fa?`<th>${T.matches}</th><th>${T.differs}</th><th>${T.none}</th>`:''}<th>${s.total}</th></tr></table>
+      <p style="font-size:12px;margin-top:10px;">This report lists the total number of officers presented by each MDA in the Year 2027 Promotion Exercise, by present grade bracket${fa?' and Form A check':''}, generated from ${s.verified?'the verified eligibility lists uploaded to the portal':'records submitted to the portal'}.${s.bracket.other?` ${s.bracket.other} officer(s) have a present grade level outside GL06–GL16 or none stated, so the bracket columns do not add up to the total.`:''}</p>
       </div>`;
   }
   if (type==='rstp'){
     const low = s.bracket.low, high = s.bracket.high;
     const pct = n => s.total? Math.round((n/s.total)*1000)/10 : 0;
-    return header + `<h1>Report on Year 2027 Promotion Exercise</h1>
-      <p style="text-align:center;font-size:12px;">Generated ${today}</p>
+    return header + `<h1>Report on Year 2027 Promotion Exercise</h1>${sub}
       <h2>1. Overview</h2>
-      <p style="font-size:12px;">This report provides an overview of the Year 2027 Promotion Exercise for the Lagos State Civil Service Commission, summarising eligible officers submitted through the portal across grade levels GL06–GL16.</p>
+      <p style="font-size:12px;">This report provides an overview of the Year 2027 Promotion Exercise for the Lagos State Civil Service Commission, summarising ${s.verified?'the eligible officers on the eligibility lists uploaded and verified by MDAs':'eligible officers submitted through the portal'} across grade levels GL06–GL16${s.scope?`, for ${escapeHtml(s.scope)}`:` (${Object.keys(s.byMda).length} MDAs)`}.</p>
       <h2>2. Overall Summary</h2>
       <table><tr><th>Criteria</th><th>Total</th></tr>
-        <tr><td>Total officers submitted</td><td>${s.total}</td></tr>
+        <tr><td>Total officers ${s.verified?'verified':'submitted'}</td><td>${s.total}</td></tr>
         <tr><td>January notional</td><td>${s.notional.jan}</td></tr>
-        <tr><td>July notional</td><td>${s.notional.jul}</td></tr></table>
-      <h2>3. By Grade Bracket</h2>
+        <tr><td>July notional</td><td>${s.notional.jul}</td></tr>
+        ${s.verified?`<tr><td>Form A matches the eligibility list</td><td>${s.formA.matches}</td></tr>
+        <tr><td>Form A differs from the eligibility list</td><td>${s.formA.differs}</td></tr>
+        <tr><td>No Form A submitted</td><td>${s.formA.none}</td></tr>`:''}</table>
+      <h2>3. By Grade Bracket (present grade level)</h2>
       <table><tr><th>Grade Bracket</th><th>No. of Officers</th><th>% of Total</th></tr>
         <tr><td>GL06 – GL10</td><td>${low}</td><td>${pct(low)}%</td></tr>
-        <tr><td>GL12 – GL16</td><td>${high}</td><td>${pct(high)}%</td></tr></table>
+        <tr><td>GL12 – GL16</td><td>${high}</td><td>${pct(high)}%</td></tr>
+        ${otherBracket}</table>
       <p style="font-size:12px;margin-top:12px;">Submitted please,<br><br>_______________________<br>For: Civil Service Commission</p>
       </div>`;
   }
@@ -2402,7 +2568,8 @@ function buildReportHTML(type){
 }
 const REPORT_TITLES = { summary:'Overall_Summary_Report', defence:'Promotion_Defence_Report', rstp:'Promotion_Exercise_Report' };
 function previewReport(type){
-  if (!reportRecords.length){ showMsg('reports-msg','warn','No submitted records loaded yet. Try Refresh, or ensure records exist.'); }
+  reportPreviewType = type;
+  if (!reportRecords.length){ showMsg('reports-msg','warn','No '+REPORT_SOURCE_LABEL[reportSource]+' loaded yet. Open the tab again, or check that data exists.'); }
   const el = document.getElementById('report-preview');
   el.innerHTML = buildReportHTML(type);
   el.style.display='';
@@ -2416,7 +2583,7 @@ function generateReport(type){
     table{width:100%;border-collapse:collapse;margin:8px 0;} th{background:#0F2C4C;color:#fff;font-size:12px;padding:6px 9px;text-align:left;}
     td{border:1px solid #C9CFD8;font-size:12px;padding:5px 9px;}</style></head><body>${inner}</body></html>`;
   const blob = new Blob([doc], {type:'application/msword'});
-  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=REPORT_TITLES[type]+'.doc';
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=REPORT_TITLES[type]+(reportSource==='verified'?'_Verified':'')+(reportScope()?'_'+safeFileName(reportScope()):'')+'.doc';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   showMsg('reports-msg','ok','Report generated and downloaded.');
 }
@@ -2590,11 +2757,25 @@ document.getElementById('chart-bracket').addEventListener('click', ()=>{
     showPanel('analysis');
     return;
   }
-  // Secure per-MDA download link: no login, token-verified, one MDA only.
+  // Slip verification (QR code on a Candidate Eligibility Slip): no login.
+  if (params.get('verify')){
+    document.getElementById('tabbar').style.display='none';
+    showPanel('slipverify');
+    verifySlipPage(params.get('verify'));
+    return;
+  }
+  // MDA print link: no password — an emailed code opens one MDA's slips for 1 hour.
+  if (params.get('mdalink')){
+    document.getElementById('tabbar').style.display='none';
+    showPanel('mdalink');
+    startMdaLinkPage(params.get('mdalink'));
+    return;
+  }
+  // The old per-MDA download links were replaced by MDA print links.
   if (params.get('download') && params.get('key')){
     document.getElementById('tabbar').style.display='none';
-    showPanel('mdadownload');
-    loadMdaDownloadPage(params.get('download'), params.get('key'));
+    showPanel('mdalink');
+    showMsg('mdl-msg','err','This download link has been replaced. Please ask the Civil Service Commission for your MDA\u2019s new print link.');
     return;
   }
   // Populate the admin "Create Account" MDA picker once.
@@ -2649,73 +2830,207 @@ document.getElementById('copy-analysis-link')?.addEventListener('click', ()=>{
 });
 
 /* =========================================================================
-   SECURE PER-MDA DOWNLOAD LINKS
+   MDA PRINT LINKS
+   Administrators: one private link per MDA in Verified and Authentic Data,
+   tied to the MDA's email address(es). The link page asks for one of those
+   addresses and opens only that MDA's slips (print, PDF, Excel) for 1 hour.
    ========================================================================= */
-// Admin: populate the MDA picker + generate a signed download link.
-(function initMdaDownloadAdmin(){
-  const sel = document.getElementById('mdadl-select');
-  if (sel) sel.innerHTML = mdaOptionsHTML('');
-  const gen = document.getElementById('mdadl-generate');
-  if (gen) gen.addEventListener('click', async ()=>{
-    const mda = document.getElementById('mdadl-select').value;
-    if (!mda){ alert('Choose an MDA first.'); return; }
-    gen.disabled = true; gen.textContent = 'Generating…';
-    try{
-      const res = await callScript({action:'getMdaDownloadToken', token:AUTH_TOKEN, mda});
-      if (res && res.success){
-        const link = location.origin + location.pathname + '?download=' + encodeURIComponent(res.mda) + '&key=' + encodeURIComponent(res.mdaToken);
-        document.getElementById('mdadl-link').value = link;
-        document.getElementById('mdadl-result').style.display = '';
-        document.getElementById('mdadl-msg').textContent = '';
-      } else alert((res && res.message) || 'Could not generate link.');
-    }catch(err){ alert('Could not generate link: '+err.message); }
-    gen.disabled = false; gen.textContent = 'Generate link';
-  });
-  const copy = document.getElementById('mdadl-copy');
-  if (copy) copy.addEventListener('click', ()=>{
-    const link = document.getElementById('mdadl-link').value;
-    const done = ()=>{ document.getElementById('mdadl-msg').textContent = 'Copied ✓'; };
-    if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(link).then(done).catch(()=>{ document.getElementById('mdadl-link').select(); }); }
-    else { document.getElementById('mdadl-link').select(); }
-  });
-})();
-
-// Public download page: loads one MDA's data via the signed link, offers Excel downloads.
-let MDADL_DATA = null;
-async function loadMdaDownloadPage(mda, key){
-  const sub = document.getElementById('mdadl-page-sub');
+let ML_DATA = [];
+function mdaLinkUrl(id){ return location.origin + location.pathname + '?mdalink=' + id; }
+async function loadMdaLinks(){
+  if (!CURRENT_USER || !isAdminRole()) return;
+  showMsg('ml-msg','warn','Loading MDA links…');
   try{
-    const res = await callScript({action:'mdaDownload', mda, mdaToken:key});
-    if (!res || !res.success){
-      sub.textContent = '';
-      showMsg('mdadl-page-msg','err', (res && res.message) || 'This download link is invalid.');
-      return;
-    }
-    MDADL_DATA = res;
-    document.getElementById('mdadl-page-mda').textContent = res.mda;
-    document.getElementById('mdadl-page-kpis').innerHTML =
-      `<div class="kpi"><div class="n">${res.eligibility.length}</div><div class="l">Eligibility Records</div></div>`
-    + `<div class="kpi"><div class="n">${res.briefs.length}</div><div class="l">Form A Records</div></div>`;
-    sub.textContent = 'Your secure link is verified. Download this MDA\u2019s data below.';
-    document.getElementById('mdadl-page-body').style.display = '';
-  }catch(err){ sub.textContent=''; showMsg('mdadl-page-msg','err','Could not load data: '+err.message); }
+    const res = await callScript({action:'listMdaLinks', token:AUTH_TOKEN});
+    if (!res || !res.success){ showMsg('ml-msg','err',(res&&res.message)||'Could not load the MDA links.'); return; }
+    ML_DATA = res.links || [];
+    document.getElementById('ml-msg').className = 'msgbox';
+    renderMdaLinks();
+  }catch(err){ showMsg('ml-msg','err','Could not load the MDA links: '+err.message); }
 }
-function mdaDownloadXlsx(kind){
-  if (!MDADL_DATA) return;
-  const safe = (MDADL_DATA.mda||'MDA').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
-  if (kind==='eligibility'){
-    const rows = MDADL_DATA.eligibility.map(r=>{ const o={}; FIELDS.forEach(f=>o[f.col]=displayCell(f.key, r[f.key])); o['Submitted']=r.timestamp||''; o['Submitted By']=r.submitted_by||''; return o; });
-    const ws = XLSX.utils.json_to_sheet(rows.length?rows:[{Note:'No eligibility records for this MDA'}]);
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Eligibility');
-    XLSX.writeFile(wb, 'Eligibility_'+safe+'.xlsx');
-  } else {
-    const ws = XLSX.utils.json_to_sheet(MDADL_DATA.briefs.length?MDADL_DATA.briefs:[{Note:'No Form A records for this MDA'}]);
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Form A');
-    XLSX.writeFile(wb, 'FormA_'+safe+'.xlsx');
+function renderMdaLinks(){
+  const q = document.getElementById('ml-search').value.trim().toLowerCase();
+  const rows = ML_DATA.map((m,i)=>({m,i})).filter(({m}) => !q || m.mda.toLowerCase().includes(q) || m.emails.join(' ').includes(q));
+  const tbody = document.querySelector('#ml-table tbody');
+  if (!ML_DATA.length){ tbody.innerHTML = '<tr><td colspan="5" class="hint">No MDAs yet. Upload eligibility lists in Verify &amp; Print Slips first — each MDA there gets a row here.</td></tr>'; return; }
+  tbody.innerHTML = rows.map(({m,i}) => {
+    const status = !m.link ? '<span class="pill" style="background:#EEF1F5;color:var(--slate);">No link yet</span>'
+      : m.active ? '<span class="pill ok">Active</span>' : '<span class="pill err">Switched off</span>';
+    const sugg = m.suggested.filter(e => !m.emails.includes(e));
+    return `<tr data-ml="${i}">
+      <td><b>${escapeHtml(m.mda)}</b><div class="hint" style="margin:0;">${m.officers} officer(s)</div></td>
+      <td><input type="text" data-ml-emails="${i}" value="${escapeHtml(m.emails.join(', '))}" placeholder="email@lagosstate.gov.ng, another@…">
+        ${sugg.length?`<div class="hint" style="margin:4px 0 0;">MDA account: ${sugg.map(e=>`<a href="#" data-ml-add="${i}" data-email="${escapeHtml(e)}">${escapeHtml(e)}</a>`).join(', ')}</div>`:''}</td>
+      <td>${m.link?`<div class="ml-link">${escapeHtml(mdaLinkUrl(m.link))}</div>`:'<span class="hint" style="margin:0;">—</span>'}</td>
+      <td>${status}${m.lastUsed?`<div class="hint" style="margin:4px 0 0;">Last used ${escapeHtml(m.lastUsed)}</div>`:''}${m.createdAt?`<div class="hint" style="margin:2px 0 0;">Created ${escapeHtml(m.createdAt)}</div>`:''}</td>
+      <td><div class="ml-actions">
+        <button class="btn btn-primary" data-ml-act="save" data-i="${i}">${m.link?'Save emails':'Create link'}</button>
+        ${m.link?`<button class="btn btn-ghost" data-ml-act="copy" data-i="${i}">Copy link</button>
+        <button class="btn btn-ghost" data-ml-act="send" data-i="${i}">Email link</button>
+        <button class="btn btn-ghost" data-ml-act="new" data-i="${i}">New link</button>
+        <button class="btn btn-ghost" data-ml-act="${m.active?'off':'on'}" data-i="${i}">${m.active?'Switch off':'Switch on'}</button>`:''}
+      </div></td></tr>`;
+  }).join('') || '<tr><td colspan="5" class="hint">No MDA matches your search.</td></tr>';
+}
+document.getElementById('ml-search').addEventListener('input', renderMdaLinks);
+document.getElementById('ml-refresh').addEventListener('click', loadMdaLinks);
+document.getElementById('ml-table').addEventListener('click', async e => {
+  const add = e.target.closest('[data-ml-add]');
+  if (add){ e.preventDefault(); const inp = document.querySelector(`[data-ml-emails="${add.dataset.mlAdd}"]`); inp.value = [inp.value.trim(), add.dataset.email].filter(Boolean).join(', '); return; }
+  const btn = e.target.closest('button[data-ml-act]'); if (!btn) return;
+  const m = ML_DATA[+btn.dataset.i]; if (!m) return;
+  const act = btn.dataset.mlAct, emails = document.querySelector(`[data-ml-emails="${btn.dataset.i}"]`).value;
+  if (act === 'copy'){
+    const link = mdaLinkUrl(m.link);
+    const done = () => showMsg('ml-msg','ok',`Link for ${m.mda} copied. It opens only with a code emailed to: ${m.emails.join(', ')}.`);
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done).catch(()=>prompt('Copy this link:', link));
+    else prompt('Copy this link:', link);
+    return;
   }
+  if (act === 'send'){ openMdaLinkSend(m); return; }
+  if (act === 'new' && !confirm(`Replace the link for ${m.mda}? The current link will stop working immediately and anyone signed in with it is signed out.`)) return;
+  if (act === 'off' && !confirm(`Switch off the link for ${m.mda}? It will stop working until you switch it on again.`)) return;
+  btn.disabled = true;
+  try{
+    let res;
+    if (act === 'save' || act === 'new') res = await callScript({action:'saveMdaLink', token:AUTH_TOKEN, mda:m.mda, emails, newLink: act==='new'});
+    else if (act === 'on' || act === 'off') res = await callScript({action:'setMdaLinkActive', token:AUTH_TOKEN, mda:m.mda, active: act==='on'});
+    if (!res || !res.success){ showMsg('ml-msg','err',(res&&res.message)||'Could not complete that.'); btn.disabled = false; return; }
+    const note = act === 'save' ? (m.link ? `Email addresses saved for ${m.mda}.` : `Link created for ${m.mda}. Send it with “Email link”.`)
+      : act === 'new' ? `New link created for ${m.mda}. The old link no longer works.`
+      : act === 'on' ? `Link for ${m.mda} switched on.` : `Link for ${m.mda} switched off.`;
+    await loadMdaLinks(); showMsg('ml-msg','ok',note);
+    // A new link goes straight to "send it to the MDA".
+    if (act === 'new' || (act === 'save' && !m.link)){ const fresh = ML_DATA.find(x => x.mda === m.mda); if (fresh && fresh.link) openMdaLinkSend(fresh); }
+  }catch(err){ showMsg('ml-msg','err',err.message); btn.disabled = false; }
+});
+// Sending needs no email service: it opens the administrator's own mailbox with the message ready.
+function mdaLinkMessage(m){
+  const subject = `Y2027 Candidate Eligibility Slips — ${m.mda}`;
+  const body = `Dear Sir/Madam,\n\nThis is the private link for ${m.mda} to print and download the Y2027 Candidate Eligibility Slips:\n\n${mdaLinkUrl(m.link)}\n\nOpen the link and type this email address (${m.emails.join(' or ')}) to see your MDA's slips. Each sign-in lasts 1 hour. You can print each officer's slip or all of them, download them as PDF, or download the list in Excel.\n\nPlease keep this link private.\n\nLagos State Civil Service Commission\nY2027 Promotion Exercise`;
+  return { to: m.emails.join(','), subject, body };
 }
-document.getElementById('mdadl-dl-eligibility')?.addEventListener('click', ()=>mdaDownloadXlsx('eligibility'));
-document.getElementById('mdadl-dl-briefs')?.addEventListener('click', ()=>mdaDownloadXlsx('briefs'));
+function openMdaLinkSend(m){
+  const msg = mdaLinkMessage(m), e = encodeURIComponent;
+  const ways = [
+    ['Gmail', `https://mail.google.com/mail/?view=cm&fs=1&to=${e(msg.to)}&su=${e(msg.subject)}&body=${e(msg.body)}`],
+    ['Yahoo Mail', `https://compose.mail.yahoo.com/?to=${e(msg.to)}&subject=${e(msg.subject)}&body=${e(msg.body)}`],
+    ['Outlook.com', `https://outlook.live.com/mail/0/deeplink/compose?to=${e(msg.to)}&subject=${e(msg.subject)}&body=${e(msg.body)}`],
+    ['Email program (Outlook / Mail)', `mailto:${msg.to}?subject=${e(msg.subject)}&body=${e(msg.body)}`]];
+  document.getElementById('brief-modal-title').textContent = 'Send the link · ' + m.mda;
+  document.getElementById('brief-modal-body').innerHTML = `
+    <p class="hint" style="margin-top:0;">Choose the email you use. It opens with the message below already written to <b>${escapeHtml(m.emails.join(', '))}</b> — just click <b>Send</b> there.</p>
+    <div class="btnbar" id="ml-send-ways">${ways.map(([label, href]) => `<a class="btn ${label==='Gmail'?'btn-primary':'btn-ghost'}" target="_blank" rel="noopener" href="${escapeHtml(href)}">${escapeHtml(label)}</a>`).join('')}</div>
+    <div class="field" style="margin-top:12px;"><label>Message</label><textarea id="ml-send-text" readonly rows="11" style="width:100%;font-size:12.5px;">${escapeHtml('To: ' + m.emails.join(', ') + '\nSubject: ' + msg.subject + '\n\n' + msg.body)}</textarea></div>
+    <div id="ml-send-msg" class="msgbox"></div>`;
+  document.getElementById('brief-modal-foot').innerHTML = `<button class="btn btn-ghost" id="ml-send-copy">Copy message</button><button class="btn btn-ghost" onclick="closeBriefModal()">Close</button>`;
+  document.getElementById('ml-send-copy').onclick = () => {
+    const ta = document.getElementById('ml-send-text'), done = () => showMsg('ml-send-msg','ok','Message copied — paste it into an email or WhatsApp.');
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(msg.body).then(done).catch(()=>{ ta.select(); });
+    else { ta.select(); document.execCommand('copy'); done(); }
+  };
+  document.getElementById('brief-modal').style.display = 'flex';
+}
+
+// ---- The link page (no password): the MDA's email → that MDA's slips for 1 hour ----
+function mdlKey(){ return 'mdl_' + MDL.link; }
+function mdlStep(step){ ['email','slips'].forEach(s => { document.getElementById('mdl-step-'+s).style.display = s===step ? '' : 'none'; }); }
+async function startMdaLinkPage(link){
+  MDL.link = String(link||'');
+  showMsg('mdl-msg','warn','Checking your link…');
+  try{
+    // A sign-in from the last hour in this browser tab carries on.
+    let saved = null; try{ saved = JSON.parse(sessionStorage.getItem(mdlKey())||'null'); }catch(e){}
+    if (saved && saved.token && saved.expiresAt > Date.now()){ MDL.token = saved.token; MDL.email = saved.email; if (await loadMdaLinkSlips()) return; }
+    const res = await callScript({action:'mdaLinkStart', link:MDL.link});
+    if (!res || !res.success){ showMsg('mdl-msg','err',(res&&res.message)||'This link is not valid.'); return; }
+    MDL.mda = res.mda; document.getElementById('mdl-mda').textContent = res.mda;
+    document.getElementById('mdl-msg').className = 'msgbox';
+    mdlStep('email'); document.getElementById('mdl-email').focus();
+  }catch(err){ showMsg('mdl-msg','err','Could not open the link: '+err.message); }
+}
+async function mdlOpen(){
+  const email = document.getElementById('mdl-email').value.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showMsg('mdl-msg','err','Enter a valid email address.'); return; }
+  const btn = document.getElementById('mdl-open'); btn.disabled = true;
+  try{
+    const res = await callScript({action:'mdaLinkOpen', link:MDL.link, email});
+    if (!res || !res.success){ showMsg('mdl-msg','err',(res&&res.message)||'This email address is not registered for this link.'); return; }
+    MDL.token = res.mdaToken; MDL.expiresAt = res.expiresAt;
+    try{ sessionStorage.setItem(mdlKey(), JSON.stringify({token:res.mdaToken, email:res.email, expiresAt:res.expiresAt})); }catch(e){}
+    await loadMdaLinkSlips();
+  }catch(err){ showMsg('mdl-msg','err','Could not open the slips: '+err.message); }
+  finally{ btn.disabled = false; }
+}
+function mdlEnded(message){
+  MDL.token = ''; MDL.records = []; if (MDL.timer){ clearInterval(MDL.timer); MDL.timer = null; }
+  try{ sessionStorage.removeItem(mdlKey()); }catch(e){}
+  document.querySelector('#mdl-table tbody').innerHTML = '';
+  mdlStep('email'); document.getElementById('mdl-email').value = ''; showMsg('mdl-msg','warn', message);
+}
+async function loadMdaLinkSlips(){
+  const res = await callScript({action:'mdaLinkData', mdaToken:MDL.token});
+  if (!res || !res.success){ mdlEnded((res&&res.message)||'Please sign in again.'); return false; }
+  MDL.mda = res.mda; MDL.email = res.email; MDL.expiresAt = res.expiresAt;
+  MDL.records = verifiedGroups(res.records).flatMap(g => g.rows);
+  MDL.records.forEach((r,i) => { r._m = i; });
+  document.getElementById('mdl-mda').textContent = res.mda;
+  document.getElementById('mdl-msg').className = 'msgbox';
+  const until = new Date(res.expiresAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('mdl-who').textContent = `· signed in as ${res.email} until ${until}`;
+  if (MDL.timer) clearInterval(MDL.timer);
+  MDL.timer = setInterval(() => { if (Date.now() >= MDL.expiresAt) mdlEnded('Your 1-hour session has ended — type your email address again to continue.'); }, 15000);
+  mdlStep('slips'); renderMdaLinkSlips();
+  return true;
+}
+function mdlFiltered(){
+  const q = document.getElementById('mdl-search').value.trim().toLowerCase();
+  return !q ? MDL.records : MDL.records.filter(r => ['seap_no','surname_first','oracle_no','csc_file_no'].some(k => String(r[k]||'').toLowerCase().includes(q)));
+}
+function renderMdaLinkSlips(){
+  const list = mdlFiltered();
+  document.getElementById('mdl-total').textContent = `${MDL.records.length} officer(s)`;
+  const gl = v => { const g = normalizeGrade(v); return g ? ` <span class="pill admin">GL ${g}</span>` : ''; };
+  document.querySelector('#mdl-table tbody').innerHTML = list.map((r,i)=>`<tr><td>${i+1}</td><td style="font-family:var(--mono);white-space:nowrap;">${escapeHtml(r.seap_no||'—')}</td><td><b>${escapeHtml(r.surname_first||'')}</b></td>
+    <td>${escapeHtml(r.oracle_no||'')}</td><td>${escapeHtml(r.csc_file_no||'')}</td><td>${escapeHtml(r.present_post||'')}${gl(r.grade_present)}</td><td>${escapeHtml(r.promotion_post||'')}${gl(r.grade_promotion)}</td>
+    <td><span class="action-btns"><button class="btn btn-primary" data-mdl="print" data-m="${r._m}">🖨 Print</button><button class="btn btn-ghost" data-mdl="pdf" data-m="${r._m}">PDF</button></span></td></tr>`).join('')
+    || `<tr><td colspan="8" class="hint">${MDL.records.length ? 'No officer matches your search.' : 'No officers are listed for this MDA yet.'}</td></tr>`;
+  ['mdl-print-all','mdl-pdf-all','mdl-xlsx'].forEach(id => { document.getElementById(id).disabled = !MDL.records.length; });
+}
+// Every print or download is first recorded by the server, which also confirms the session is
+// still valid — so a link switched off or replaced, or an ended hour, stops it at once.
+async function mdlAllowed(event, records){
+  if (!MDL.token || Date.now() >= MDL.expiresAt){ mdlEnded('Your 1-hour session has ended — type your email address again to continue.'); return false; }
+  try{
+    const res = await callScript({action:'mdaLinkLog', mdaToken:MDL.token, event, count:records.length, detail: records.length===1 ? (records[0].seap_no || records[0].surname_first || '') : ''});
+    if (!res || !res.success){ mdlEnded((res&&res.message)||'Please sign in again.'); return false; }
+    return true;
+  }catch(err){ showMsg('mdl-msg','err','Could not reach the portal: '+err.message); return false; }
+}
+async function mdlPrint(records){ if (await mdlAllowed('print', records)) printSlips(records, 'mdl-msg'); }
+async function mdlPdf(records, name){ if (await mdlAllowed('pdf', records)) downloadSlipsPdf(records, name, 'mdl-msg'); }
+async function mdlExcel(){
+  if (!(await mdlAllowed('xlsx', MDL.records))) return;
+  const rows = MDL.records.map((r,i)=>({ 'S/N': i+1, 'Eligibility/SEAP Number': r.seap_no||'', 'Names (Surname First)': r.surname_first||'', 'MDA': r.mda||'',
+    'CSC File No': r.csc_file_no||'', 'Oracle No': r.oracle_no||'', 'Post of 1st Appt': r.post_1st_appt||'', 'Grade Level (1st Appt)': normalizeGrade(r.grade_1st),
+    'Date of 1st Appt': r.date_1st_appt||'', 'Date of Confirmation': r.date_confirmation||'', 'Present Post/Cadre': r.present_post||'', 'Grade Level (Present)': normalizeGrade(r.grade_present),
+    'Date of Present Appt': r.date_present_appt||'', 'Promotion Post/Cadre': r.promotion_post||'', 'Grade Level (Promotion)': normalizeGrade(r.grade_promotion) }));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Eligibility Slips');
+  XLSX.writeFile(wb, `Eligibility_List_${safeFileName(MDL.mda)}.xlsx`);
+  showMsg('mdl-msg','ok',`List of ${rows.length} officer(s) downloaded.`);
+}
+document.getElementById('mdl-open').addEventListener('click', mdlOpen);
+document.getElementById('mdl-email').addEventListener('keydown', e => { if (e.key==='Enter') mdlOpen(); });
+document.getElementById('mdl-search').addEventListener('input', renderMdaLinkSlips);
+document.getElementById('mdl-print-all').addEventListener('click', () => mdlPrint(MDL.records));
+document.getElementById('mdl-pdf-all').addEventListener('click', () => mdlPdf(MDL.records, `Eligibility_Slips_${safeFileName(MDL.mda)}.pdf`));
+document.getElementById('mdl-xlsx').addEventListener('click', mdlExcel);
+document.getElementById('mdl-signout').addEventListener('click', () => { callScript({action:'mdaLinkSignOut', mdaToken:MDL.token}).catch(()=>{}); mdlEnded('You have signed out.'); });
+document.getElementById('mdl-table').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-mdl]'); if (!btn) return;
+  const r = MDL.records[+btn.dataset.m]; if (!r) return;
+  if (btn.dataset.mdl === 'print') mdlPrint([r]); else mdlPdf([r], `Slip_${slipFileStem(r)}.pdf`);
+});
 /* =========================================================================
    VERIFICATION — the MDA uploads an Excel sheet of its officers' details and
    every detail the officers submitted online is checked against it. The
@@ -2781,7 +3096,8 @@ const VERIFY_IGNORED = [
 ];
 // Everything read from an uploaded eligibility list for storage (compared or not).
 const VERIFY_STORE_FIELDS = VERIFY_SOURCES.eligibility.fields.concat(VERIFY_IGNORED)
-  .concat([{ key:'remarks', label:'Remarks', type:'text', aliases:['remarks','remark','comments'] }]);
+  .concat([{ key:'remarks', label:'Remarks', type:'text', aliases:['remarks','remark','comments'] },
+           { key:'seap_no', label:'Eligibility/SEAP Number', type:'text', aliases:['eligibility seap number','eligibility seap no','seap number','seap no','seap','eligibility number','eligibility no'] }]);
 const VERIFY_STATUS = {
   matched:      { label:'Verified — all match', short:'Matched' },
   discrepancy:  { label:'Discrepancies found', short:'Discrepancy' },
@@ -3041,7 +3357,7 @@ document.getElementById('verify-file').addEventListener('change', async e=>{
     VERIFY.checkedAt = new Date();
     const online = VERIFY.source==='briefs' ? res.briefs : res.eligibility;
     if (!online.length) showMsg('verify-msg','warn',`No ${VERIFY_SOURCES[VERIFY.source].label} have been submitted online${VERIFY.mda?' for '+VERIFY.mda:''} yet — every row in the sheet is shown as “not submitted online”.`);
-    else showMsg('verify-msg','ok',`Checked ${parsed.rows.length} officer row(s) in “${file.name}” against ${online.length} online submission(s). Results are below — download individual summaries from each row.`);
+    else showMsg('verify-msg','warn',`Checked ${parsed.rows.length} officer row(s) in “${file.name}” against ${online.length} Form A submission(s) — saving…`);
     document.getElementById('verify-filter').value=''; document.getElementById('verify-search').value='';
     VERIFY.stored = null;
     renderVerifyResults();
@@ -3055,7 +3371,7 @@ function verifyCounts(){
   return c;
 }
 function renderVerifyResults(){
-  document.getElementById('verify-results-card').style.display='block';
+  // The detailed results card is no longer shown (upload → save → print slips).
   const c = verifyCounts();
   const checked = c.matched + c.discrepancy;
   const stamp = document.getElementById('verify-stamp');
@@ -3103,7 +3419,7 @@ function renderVerifyTable(){
       <td>${r.status==='matched'||r.status==='discrepancy' ? `${r.matched}/${r.compared} match` : '—'}</td>
       <td>${issues.length ? `<ul class="err-list">${issues.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>` : (r.status==='matched'?'<span class="ok-badge">None</span>':'—')}</td>
       <td><span class="vstat ${r.status}">${VERIFY_STATUS[r.status].short}</span>${r.storedVerified?'<div class="ok-badge" style="margin-top:4px;font-size:11px;">✓ Stored as verified</div>':''}</td>
-      <td class="action-btns"><button class="btn btn-ghost" onclick="openVerifyModal(${r.idx})">View</button><button class="btn btn-primary" onclick="downloadVerifySummary(${r.idx})">Download Summary</button></td>
+      <td class="action-btns"><button class="btn btn-ghost" onclick="openVerifyModal(${r.idx})">View</button><button class="btn btn-primary" onclick="downloadVerifySummary(${r.idx})">Download Summary</button>${r.storedVerified?`<button class="btn btn-gold" onclick="slipForBrief('${escapeHtml(String(r.online.id))}')">Slip (PDF)</button>`:''}</td>
     </tr>`;
   }).join('') : '<tr><td colspan="10" class="hint">No officers match this filter.</td></tr>';
   document.getElementById('verify-count').textContent = `${rows.length} of ${VERIFY.results.length} officer(s)`;
@@ -3136,10 +3452,14 @@ function verifyStatusSentence(r){
   if (r.status==='not_in_sheet') return 'This officer submitted online, but no matching row (by Oracle No, CSC File No or Name) was found in the uploaded MDA sheet.';
   return 'This officer is in the uploaded MDA sheet, but no matching online submission was found.';
 }
-function openVerifyModal(i){
+async function openVerifyModal(i){
   const r = verifyResultByIdx(i); if (!r) return;
+  if (VERIFY.source==='briefs' && r.online && briefIdsNeedingPhotos([r.online]).length){
+    showModalLoading('Verification · ' + (verifyName(r)||'(no name)'));
+    await fetchPhotos(briefIdsNeedingPhotos([r.online]));
+  }
   document.getElementById('brief-modal-title').textContent = 'Verification · ' + (verifyName(r)||'(no name)');
-  const photo = VERIFY.source==='briefs' && r.online ? r.online['Photo (data URL)'] : '';
+  const photo = VERIFY.source==='briefs' && r.online ? briefPhoto(r.online) : '';
   document.getElementById('brief-modal-body').innerHTML =
     (photo ? `<div style="float:right;margin:0 0 10px 12px;"><img src="${photo}" style="width:96px;height:116px;object-fit:cover;border:2px solid var(--navy);border-radius:4px;"></div>` : '')
     + `<p><span class="vstat ${r.status}">${VERIFY_STATUS[r.status].label}</span></p><p style="font-size:13px;">${escapeHtml(verifyStatusSentence(r))}</p>`
@@ -3178,7 +3498,7 @@ function verifySummaryCSS(){
 }
 function verifySummaryHTML(r){
   const who = CURRENT_USER ? `${CURRENT_USER.name} (${CURRENT_USER.email})` : '';
-  const photo = VERIFY.source==='briefs' && r.online ? r.online['Photo (data URL)'] : '';
+  const photo = VERIFY.source==='briefs' && r.online ? briefPhoto(r.online) : '';
   const row = (l,v)=>`<tr><td class="l">${escapeHtml(l)}</td><td>${escapeHtml(v==null?'':String(v))}</td></tr>`;
   const issues = r.fields.filter(f=>f.result==='mismatch');
   const onlineWhen = r.online ? (r.online.timestamp || '') : '';
@@ -3209,8 +3529,9 @@ function downloadBlob(content, type, filename){
   setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
 }
 function safeFileName(s){ return String(s||'').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'officer'; }
-function downloadVerifySummary(i){
+async function downloadVerifySummary(i){
   const r = verifyResultByIdx(i); if (!r) return;
+  await photosForResults([r]);
   const name = safeFileName(verifyName(r) || verifyVal(r,'idnum'));
   downloadBlob(verifyDocWrap('Verification Summary — '+verifyName(r), verifySummaryHTML(r)), 'application/msword', `Verification_${name}.doc`);
 }
@@ -3224,17 +3545,26 @@ function verifyCoverHTML(list){
     <h3>Officers</h3><table><tr><th>#</th><th>Name</th><th>Oracle No</th><th>Result</th><th>Discrepancies</th></tr>
     ${list.map((r,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(verifyName(r))}</td><td>${escapeHtml(verifyVal(r,'idnum'))}</td><td>${escapeHtml(VERIFY_STATUS[r.status].label)}</td><td>${escapeHtml(r.fields.filter(f=>f.result==='mismatch').map(f=>f.label).join(', '))}</td></tr>`).join('')}</table></div>`;
 }
-document.getElementById('verify-dl-all').addEventListener('click', ()=>{
+function photosForResults(list){
+  return VERIFY.source==='briefs' ? fetchPhotos(briefIdsNeedingPhotos(list.map(r=>r.online).filter(Boolean))) : Promise.resolve();
+}
+document.getElementById('verify-dl-all').addEventListener('click', async ()=>{
   const list = filteredVerifyResults();
   if (!list.length){ showMsg('verify-msg','warn','No officers in the current filter.'); return; }
+  // Progress on the button itself, so the check's confirmation message stays visible.
+  const btn = document.getElementById('verify-dl-all'), label = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Preparing…';
+  try{ await photosForResults(list); } finally { btn.disabled = false; btn.textContent = label; }
   const inner = verifyCoverHTML(list) + '<div class="pb"></div>' + list.map(verifySummaryHTML).join('<div class="pb"></div>');
   downloadBlob(verifyDocWrap('Verification Summaries', inner), 'application/msword', `Verification_Summaries_${safeFileName(VERIFY.mda||'All_MDAs')}.doc`);
 });
-function printVerifySummaries(idxs){
+async function printVerifySummaries(idxs){
   const list = idxs.map(verifyResultByIdx).filter(Boolean);
   if (!list.length) return;
-  const w = window.open('', '_blank');
+  const w = openPrintWindow('Verification Summaries');
   if (!w){ showMsg('verify-msg','err','Please allow pop-ups to print.'); return; }
+  await photosForResults(list);
+  w.document.open();
   const inner = (list.length>1 ? verifyCoverHTML(list)+'<div class="pb"></div>' : '') + list.map(verifySummaryHTML).join('<div class="pb"></div>');
   w.document.write(verifyDocWrap('Verification Summaries', inner).replace('</body>','<script>window.onload=function(){window.print();}<\/script></body>'));
   w.document.close();
@@ -3276,58 +3606,512 @@ function storeValue(f, v){
   if (f.type==='date' || f.type==='phone') return vDisplay(f.type, v);
   return String(v instanceof Date ? fmtDate(parseFlexibleDate(v)) : v).trim();
 }
+// Every officer on the uploaded list is saved for printing — whether their Form A matches,
+// differs, or is missing. The slip uses the list's details; Form A supplies the photograph.
+const FORM_A_CHECK_OF = { matched:'Matches Form A', discrepancy:'Differs from Form A', not_online:'No Form A' };
 async function saveVerifiedData(){
-  const verified = VERIFY.results.filter(r=>r.status==='matched' && r.online && r.online.id).map(r=>{
-    const out = { brief_id: r.online.id, fields_compared: r.fields.filter(f=>f.result==='match').map(f=>f.label).join(', ') };
+  const sheetMdaKey = VERIFY.source==='briefs' ? 'Department/Ministry' : 'mda';
+  const records = VERIFY.results.filter(r => r.sheet && FORM_A_CHECK_OF[r.status]).map(r => {
+    const out = { brief_id: r.online ? r.online.id : '', form_a_check: FORM_A_CHECK_OF[r.status],
+      fields_compared: r.fields.filter(f=>f.result==='match').map(f=>f.label).join(', '),
+      mda: String((r.sheet && r.sheet[sheetMdaKey]) || VERIFY.sheetMDA || VERIFY.mda || '').trim() };
     VERIFY_STORE_FIELDS.forEach(f=>{ if (f.key!=='mda') out[f.key] = storeValue(f, (r.sheet._store||{})[f.key]); });
     return out;
   });
-  const revoke = VERIFY.results.filter(r=>r.status==='discrepancy' && r.online && r.online.id).map(r=>r.online.id);
-  if (!verified.length && !revoke.length){ VERIFY.stored = {stored:0, revoked:0, rejected:[]}; renderVerifiedNote(); return; }
+  const total = { stored:0, withFormA:0, withoutFormA:0, rejected:[], storedIds:[] };
+  if (!records.length){ VERIFY.stored = total; renderVerifiedNote(); return; }
   try{
-    const res = await callScript({action:'saveVerifiedData', token:AUTH_TOKEN, fileName:VERIFY.fileName, verified, revoke});
-    if (!res || !res.success) throw new Error((res&&res.message)||'not saved');
-    VERIFY.stored = res;
-    const storedIds = new Set((res.storedIds||[]).map(String));
-    VERIFY.results.forEach(r=>{ r.storedVerified = !!(r.online && storedIds.has(String(r.online.id))); });
+    for (let i = 0; i < records.length; i += 200){   // batches keep each request small
+      if (records.length > 200) showMsg('verify-msg','warn',`Saving officers ${i+1}–${Math.min(i+200, records.length)} of ${records.length}…`);
+      const res = await callScript({action:'saveVerifiedData', token:AUTH_TOKEN, fileName:VERIFY.fileName, verified:records.slice(i, i+200), revoke:[]});
+      if (!res || !res.success) throw new Error((res&&res.message)||'not saved');
+      total.stored += res.stored||0; total.withFormA += res.withFormA||0; total.withoutFormA += res.withoutFormA||0;
+      total.rejected.push(...(res.rejected||[])); total.storedIds.push(...(res.storedIds||[]));
+    }
+    VERIFY.stored = total;
   }catch(err){
-    VERIFY.stored = {error: err.message};
+    VERIFY.stored = { ...total, error: err.message };
   }
-  renderVerifiedNote(); renderVerifyTable(); loadVerifiedData();
+  await loadVerifiedData();
+  renderVerifiedNote(); renderVerifyTable();
 }
 function renderVerifiedNote(){
   const st = VERIFY.stored; if (!st) return;
-  if (st.error){ showMsg('verify-msg','err','The check finished, but the verified officers could not be stored in “Verified and Authentic Data”: '+st.error+'. Run the check again.'); return; }
   const c = verifyCounts();
-  const bits = [`✓ Check complete. ${st.stored} fully matched officer(s) stored in “Verified and Authentic Data”.`];
-  if (st.revoked) bits.push(`${st.revoked} previously verified officer(s) removed because their latest check found a discrepancy.`);
-  if (c.discrepancy || c.not_in_sheet || c.not_online) bits.push(`${c.discrepancy} with discrepancies, ${c.not_online} in the sheet with no Form A and ${c.not_in_sheet} Form A(s) not in the sheet were NOT stored — see the list below.`);
-  if (st.rejected && st.rejected.length) bits.push('Not stored: '+st.rejected.join('; ')+'.');
-  showMsg('verify-msg', (c.discrepancy||c.not_in_sheet||c.not_online||(st.rejected&&st.rejected.length)) ? 'warn' : 'ok', bits.join(' '));
+  if (st.error){ showMsg('verify-msg','err', (st.stored ? `${st.stored} officer(s) were saved, but saving then stopped: ` : 'The list could not be saved: ') + st.error + '. Please upload the list again (officers already saved are not duplicated).'); return; }
+  const bits = [`✓ Upload complete — ${st.stored} officer(s) from the list saved, ready to print below.`];
+  const parts = [];
+  if (c.matched) parts.push(`${c.matched} match their Form A`);
+  if (c.discrepancy) parts.push(`${c.discrepancy} differ from their Form A (the list's details are used)`);
+  if (c.not_online) parts.push(`${c.not_online} have no Form A (no photograph on the slip until one is added with ✎ Edit)`);
+  if (parts.length) bits.push('Of these: ' + parts.join('; ') + '.');
+  if (st.rejected && st.rejected.length) bits.push('Not saved: ' + st.rejected.join('; ') + '.');
+  showMsg('verify-msg', (st.rejected && st.rejected.length) ? 'warn' : 'ok', bits.join(' '));
+  document.getElementById('verify-notsaved-bar').style.display = (c.discrepancy || c.not_online) ? '' : 'none';
 }
+// Excel list of officers whose Form A differs from the list, or who have no Form A (for follow-up).
+document.getElementById('verify-notsaved').addEventListener('click', ()=>{
+  const why = r => r.status==='discrepancy' ? 'Details differ from Form A' : 'No Form A submitted';
+  const rows = VERIFY.results.filter(r=>r.status==='discrepancy' || r.status==='not_online').map((r,i)=>({
+    'S/N': i+1, 'Name (Surname First)': verifyName(r), 'Oracle No': verifyVal(r,'idnum'), 'CSC File No': verifyVal(r,'fileno'), 'Row on list': r.sheetRowNum || '',
+    'Form A check': why(r), 'What differs': r.fields.filter(f=>f.result==='mismatch').map(f=>`${f.label}: Form A "${f.online||'(blank)'}" vs list "${f.sheet||'(blank)'}"`).join('; ') }));
+  if (!rows.length){ showMsg('verify-msg','ok','Every officer matches their Form A.'); return; }
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Differences');
+  XLSX.writeFile(wb, `Form_A_Differences_${safeFileName(VERIFY.mda||'All_MDAs')}.xlsx`);
+});
 let VERIFIED_DATA = [];
-const VERIFIED_VIEW_COLS = [['surname_first','Name'],['oracle_no','Oracle No'],['csc_file_no','CSC File No'],['mda','MDA'],['present_post','Present Post'],['grade_present','GL'],['promotion_post','Promotion Post'],['grade_promotion','GL (Promo)'],['verified_at','Verified'],['verified_by','Verified By']];
 async function loadVerifiedData(){
-  const table = document.getElementById('verified-table');
   try{
     const mda = isAdminRole() ? document.getElementById('verify-mda-select').value : '';
     const res = await callScript({action:'listVerifiedData', token:AUTH_TOKEN, mda});
     if (!res || !res.success){ showMsg('verified-msg','err',(res&&res.message)||'Could not load verified data.'); return; }
     VERIFIED_DATA = res.records || [];
+    VERIFIED_DATA.forEach((r,i)=>{ r._i = i; });
+    document.getElementById('verified-regroup').hidden = !isAdminRole();
     document.getElementById('verified-msg').className = 'msgbox';
-    table.querySelector('thead').innerHTML = '<tr><th>#</th>'+VERIFIED_VIEW_COLS.map(c=>`<th>${c[1]}</th>`).join('')+'</tr>';
-    table.querySelector('tbody').innerHTML = VERIFIED_DATA.length
-      ? VERIFIED_DATA.map((r,i)=>`<tr><td>${i+1}</td>${VERIFIED_VIEW_COLS.map(c=>`<td>${escapeHtml(String(r[c[0]]==null?'':r[c[0]]))}</td>`).join('')}</tr>`).join('')
-      : `<tr><td colspan="${VERIFIED_VIEW_COLS.length+1}" class="hint">No verified officers yet${res.mda?' for '+escapeHtml(res.mda):''}. Run a check above.</td></tr>`;
+    const allMdas = isAdminRole() && !res.mda;
+    document.getElementById('verified-print').textContent = allMdas ? '🖨 Print All MDAs' : '🖨 Print All Slips (this MDA)';
+    document.getElementById('verified-slips').textContent = allMdas ? 'Download All MDAs (PDF)' : 'Download All Slips (PDF)';
+    document.getElementById('verified-scope').textContent = res.mda ? '· ' + res.mda : (isAdminRole() ? '· all MDAs' : '');
+    renderVerifiedGroups();
   }catch(err){ showMsg('verified-msg','err','Could not load verified data: '+err.message); }
 }
+function verifiedFiltered(){
+  const q = (document.getElementById('verified-search').value||'').trim().toLowerCase();
+  if (!q) return VERIFIED_DATA;
+  return VERIFIED_DATA.filter(r => [r.surname_first, r.seap_no, r.oracle_no, r.csc_file_no].join(' ').toLowerCase().indexOf(q) !== -1);
+}
+function verifiedGroups(list){
+  const groups = {};
+  list.forEach(r => { const m = String(r.mda||'').trim() || '(Unspecified MDA)'; (groups[m] = groups[m] || []).push(r); });
+  return Object.keys(groups).sort((a,b)=>a.localeCompare(b)).map(m => ({ mda:m, rows: groups[m].slice().sort((a,b)=>String(a.seap_no||a.surname_first).localeCompare(String(b.seap_no||b.surname_first))) }));
+}
+function renderVerifiedGroups(){
+  const list = verifiedFiltered(), groups = verifiedGroups(list), wrap = document.getElementById('verified-groups');
+  document.getElementById('verified-total').textContent = `${VERIFIED_DATA.length} verified officer(s)` + (isAdminRole() ? ` in ${verifiedGroups(VERIFIED_DATA).length} MDA(s)` : '');
+  document.getElementById('verified-count').textContent = list.length === VERIFIED_DATA.length ? '' : `${list.length} match(es)`;
+  ['verified-print','verified-slips'].forEach(id => { document.getElementById(id).disabled = !VERIFIED_DATA.length; });
+  if (!VERIFIED_DATA.length){ wrap.innerHTML = '<p class="hint" style="margin-top:12px;">No verified officers yet. Upload the eligibility list in step 01 above — every officer on the list appears here, ready to print.</p>'; return; }
+  if (!list.length){ wrap.innerHTML = '<p class="hint" style="margin-top:12px;">No officer matches your search.</p>'; return; }
+  const gl = v => { const g = normalizeGrade(v); return g ? ` <span class="pill admin">GL ${g}</span>` : ''; };
+  wrap.innerHTML = groups.map((g,gi) => `<div class="mda-group">
+      <div class="mda-group-head"><span>${escapeHtml(g.mda)} · ${g.rows.length} officer(s)</span>
+        <span class="tools"><button class="btn btn-print" data-slip="mda" data-g="${gi}">🖨 Print MDA Slips</button><button class="btn btn-ghost" data-slip="mda-pdf" data-g="${gi}">PDF</button>${isAdminRole()?`<button class="btn btn-ghost" data-slip="mda-link" data-g="${gi}" title="Private print link for this MDA">🔗 MDA link</button>`:''}</span></div>
+      <table><thead><tr><th>#</th><th>SEAP No</th><th>Name</th><th>Oracle No</th><th>CSC File No</th><th>Present Post</th><th>Promotion Post</th><th>Slip</th></tr></thead><tbody>
+      ${g.rows.map((r,i)=>`<tr><td>${i+1}</td><td style="font-family:var(--mono);white-space:nowrap;">${escapeHtml(r.seap_no||'—')}</td><td><b>${escapeHtml(r.surname_first||'')}</b>${r.form_a_check==='No Form A'?' <span class="pill" style="background:#EEF1F5;color:var(--slate);">No Form A</span>':(r.form_a_check==='Differs from Form A'?' <span class="pill" style="background:var(--warn-bg);color:var(--warn);">Differs from Form A</span>':'')}</td>
+        <td>${escapeHtml(r.oracle_no||'')}</td><td>${escapeHtml(r.csc_file_no||'')}</td><td>${escapeHtml(r.present_post||'')}${gl(r.grade_present)}</td><td>${escapeHtml(r.promotion_post||'')}${gl(r.grade_promotion)}</td>
+        <td><span class="action-btns"><button class="btn btn-primary" data-slip="one" data-i="${r._i}">🖨 Print</button><button class="btn btn-ghost" data-slip="one-pdf" data-i="${r._i}">PDF</button>${isAdminRole()?`<button class="btn btn-ghost" data-slip="edit" data-i="${r._i}">✎ Edit</button>`:''}</span></td></tr>`).join('')}
+      </tbody></table></div>`).join('');
+  wrap._groups = groups;
+}
+// One delegated handler for every Print / PDF button (MDA names never go into inline JS).
+document.getElementById('verified-groups').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-slip]'); if (!btn) return;
+  const kind = btn.dataset.slip, wrap = document.getElementById('verified-groups');
+  if (kind === 'edit'){ const r = VERIFIED_DATA[+btn.dataset.i]; if (r) openSlipEdit(r); return; }
+  if (kind === 'one' || kind === 'one-pdf'){
+    const r = VERIFIED_DATA[+btn.dataset.i]; if (!r) return;
+    if (kind === 'one') printSlips([r]); else downloadSlipsPdf([r], `Slip_${slipFileStem(r)}.pdf`, 'verified-msg');
+  } else {
+    const g = (wrap._groups||[])[+btn.dataset.g]; if (!g) return;
+    if (kind === 'mda-link'){ document.getElementById('ml-search').value = g.mda; document.getElementById('tab-mdalinks').click(); window.scrollTo(0,0); return; }
+    if (kind === 'mda') printSlips(g.rows); else downloadSlipsPdf(g.rows, `Eligibility_Slips_${safeFileName(g.mda)}.pdf`, 'verified-msg');
+  }
+});
+document.getElementById('verified-search').addEventListener('input', renderVerifiedGroups);
+document.getElementById('review-goto-slips').addEventListener('click', ()=>{ document.getElementById('tab-verify').click(); window.scrollTo(0,0); });
+// "All" = every officer listed (all MDAs for the super admin; the user's own MDA otherwise), in MDA order.
+function allVerifiedInOrder(){ return verifiedGroups(VERIFIED_DATA).flatMap(g => g.rows); }
 document.getElementById('verified-refresh').addEventListener('click', loadVerifiedData);
 document.getElementById('verified-download').addEventListener('click', ()=>{
   if (!VERIFIED_DATA.length){ showMsg('verified-msg','warn','There are no verified officers to download yet.'); return; }
-  const ws = XLSX.utils.json_to_sheet(VERIFIED_DATA);
+  const ws = XLSX.utils.json_to_sheet(VERIFIED_DATA.map(({photo, ...r})=>r));
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Verified and Authentic Data');
   const mda = isAdminRole() ? document.getElementById('verify-mda-select').value : (CURRENT_USER?CURRENT_USER.mda:'');
   XLSX.writeFile(wb, `Verified_and_Authentic_Data_${safeFileName(mda||'All_MDAs')}.xlsx`);
+});
+/* =========================================================================
+   CANDIDATE ELIGIBILITY SLIP — one A4 page per verified officer. Built from
+   "Verified and Authentic Data": Form A (name, file numbers, photo, dates) +
+   the MDA's eligibility list (SEAP number, grade levels, promotion post).
+   ========================================================================= */
+const SLIP_SIGNATORY = { name:'Mr. Babatunde Aragbanda', title:'Director, CMD' };
+function slipSignatureImg(){ return SLIP_SIGNATURE_IMG_DATA; } // defined further down with the other images
+const SLIP_VENUE = 'PSSDC, Magodo';   // venue of the assessment, printed on every slip
+function slipDate(v){
+  const d = parseFlexibleDate(String(v==null?'':v).trim().replace(/\s+\d{1,2}:\d{2}(:\d{2})?$/,''));
+  if (!d) return String(v||'').trim() || '—';
+  return `${String(d.getUTCDate()).padStart(2,'0')}-${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()]}-${d.getUTCFullYear()}`;
+}
+function slipGL(v){ const g = normalizeGrade(v); return g ? `<span class="gl">GL ${g}</span>` : '—'; }
+function slipCSS(){
+  return `
+  .slip-page{width:794px;height:1123px;box-sizing:border-box;padding:30px;background:#fff;position:relative;font-family:Georgia,'Times New Roman',serif;color:#1B2430;overflow:hidden;}
+  .slip-page *{box-sizing:border-box;}
+  .slip-frame{position:relative;height:100%;border:2px solid #B9892E;padding:6px;}
+  .slip-inner{position:relative;height:100%;border:1px solid #0F2C4C;overflow:hidden;display:flex;flex-direction:column;}
+  .slip-wm{position:absolute;left:50%;top:60%;width:580px;transform:translate(-50%,-50%);opacity:.085;pointer-events:none;}
+  .slip-banner{position:relative;background:linear-gradient(180deg,#0F2C4C 0%,#081A2D 100%);padding:18px 24px 20px;display:flex;align-items:center;gap:18px;}
+  .slip-stripe{position:absolute;left:0;right:0;bottom:0;height:5px;display:flex;gap:8px;overflow:hidden;}
+  .slip-stripe i{flex:none;width:18px;height:5px;background:#B9892E;}
+  .slip-logo{background:#fff;border-radius:8px;padding:7px 12px;flex:none;box-shadow:0 1px 4px rgba(0,0,0,.3);}
+  .slip-logo img{height:58px;display:block;}
+  .slip-banner .t1{font-family:Arial,Helvetica,sans-serif;font-size:10.5px;letter-spacing:2.2px;text-transform:uppercase;color:#E9D9B6;}
+  .slip-banner .t2{font-size:24px;font-weight:700;color:#fff;margin-top:4px;line-height:1.2;}
+  .slip-banner .t3{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#C9D5E3;margin-top:3px;letter-spacing:.4px;}
+  .slip-body{position:relative;flex:1;padding:34px 38px 0;display:flex;flex-direction:column;}
+  .slip-title{text-align:center;margin:0 0 34px;}
+  .slip-title .orn{display:flex;align-items:center;justify-content:center;gap:14px;color:#B9892E;}
+  .slip-title .orn i{display:block;height:0;width:120px;border-top:1.5px solid #B9892E;opacity:.75;} /* solid line: gradients this thin break the PDF when the browser is zoomed out */
+  .slip-title h1{margin:0;font-size:25px;letter-spacing:5px;color:#0F2C4C;font-weight:700;}
+  .slip-head{display:flex;gap:26px;align-items:flex-start;}
+  .slip-id{flex:1;}
+  .slip-seapwrap{display:flex;}
+  .slip-seap{display:block;background:#0F2C4C;color:#E9D9B6;font-family:'Courier New',monospace;font-weight:700;font-size:15px;letter-spacing:1px;padding:8px 14px;border-radius:4px;border-left:4px solid #B9892E;}
+  .slip-seap .lbl{font-family:Arial,Helvetica,sans-serif;font-size:9px;letter-spacing:2px;color:#AEC0D3;font-weight:700;margin-bottom:3px;}
+  .slip-name{font-size:29px;font-weight:700;color:#0F2C4C;margin:20px 0 6px;line-height:1.2;}
+  .slip-mda{font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#2C4A6E;}
+  .slip-nums{display:flex;gap:12px;margin-top:22px;}
+  .slip-nums div{flex:1;border:1px solid #E2DFD5;border-top:3px solid #B9892E;background:rgba(246,245,241,.85);padding:8px 12px;}
+  .slip-nums b{display:block;font-family:Arial,Helvetica,sans-serif;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:#5B6572;margin-bottom:3px;}
+  .slip-nums span{font-family:'Courier New',monospace;font-size:16px;font-weight:700;color:#1B2430;}
+  .slip-photo{flex:none;width:150px;height:182px;border:3px solid #B9892E;padding:4px;background:#fff;box-shadow:0 2px 8px rgba(15,44,76,.18);}
+  .slip-photo img{width:100%;height:100%;object-fit:cover;display:block;}
+  .slip-photo .np{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:Arial;font-size:11px;color:#5B6572;background:#F6F5F1;text-align:center;}
+  .slip-sec{font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#0F2C4C;border-left:3px solid #B9892E;padding-left:9px;margin:46px 0 12px;}
+  table.slip-tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:14.5px;background:transparent;}
+  table.slip-tbl th,table.slip-tbl td{border:none;position:static;} /* override the portal's global table styles */
+  table.slip-tbl th{background:#0F2C4C;color:#fff;font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:1.3px;text-transform:uppercase;text-align:left;padding:9px 12px;}
+  table.slip-tbl td{border-bottom:1px solid #E2DFD5;padding:17px 12px;vertical-align:middle;}
+  table.slip-tbl tr:nth-child(even) td{background:rgba(246,245,241,.45);}
+  table.slip-tbl td.k{font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:700;color:#2C4A6E;width:28%;}
+  table.slip-tbl td.d{font-family:'Courier New',monospace;font-weight:700;white-space:nowrap;width:18%;}
+  table.slip-tbl tr.promo td{background:rgba(251,247,238,.7) !important;border-top:2px solid #B9892E;border-bottom:2px solid #B9892E;}
+  table.slip-tbl tr.promo td.k{color:#8A5A00;}
+  .slip-bottom{margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;gap:20px;padding:0 0 30px;}
+  .slip-verify{display:flex;gap:14px;align-items:flex-end;}
+  .slip-qr{width:112px;height:112px;border:1px solid #E2DFD5;padding:5px;background:#fff;}
+  .slip-qr img{width:100%;height:100%;display:block;image-rendering:pixelated;}
+  .slip-vtext{font-family:Arial,Helvetica,sans-serif;font-size:9.5px;color:#5B6572;line-height:1.45;max-width:190px;}
+  .slip-vtext b{display:block;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:#0F2C4C;margin-bottom:3px;}
+  .slip-bar{margin-top:7px;background:#fff;padding:3px 0;}
+  .slip-bar img{height:34px;max-width:200px;display:block;}
+  .slip-bar span{display:block;font-family:'Courier New',monospace;font-size:9px;color:#1B2430;letter-spacing:.6px;margin-top:2px;}
+  .gl{display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:11.5px;font-weight:700;color:#0F2C4C;background:#E9D9B6;border-radius:10px;padding:3px 10px;white-space:nowrap;}
+  .slip-sign{display:flex;justify-content:flex-end;}
+  .slip-sign div{width:300px;text-align:center;}
+  .slip-venue{display:flex;align-items:stretch;margin:22px 0 0;border:1.5px solid #B9892E;border-radius:4px;overflow:hidden;background:rgba(251,247,238,.92);}
+  .slip-venue .lbl{background:#0F2C4C;color:#E9D9B6;font-family:Arial,Helvetica,sans-serif;font-size:10.5px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:12px 16px;display:flex;align-items:center;}
+  .slip-venue .val{flex:1;font-size:19px;font-weight:700;color:#0F2C4C;padding:10px 18px;display:flex;align-items:center;letter-spacing:.5px;}
+  .slip-sign .line{position:relative;display:flex;align-items:flex-end;justify-content:center;}
+  .slip-sign .line img{height:62px;width:auto;margin-bottom:-6px;}
+  .slip-sign .line{height:70px;border-bottom:1.5px solid #1B2430;}
+  .slip-sign .lab{font-family:Arial,Helvetica,sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#5B6572;margin-top:5px;}
+  .slip-sign .nm{font-size:16px;font-weight:700;color:#0F2C4C;margin-top:8px;}
+  .slip-sign .tt{font-family:Arial,Helvetica,sans-serif;font-size:12.5px;color:#2C4A6E;margin-top:2px;}
+  .slip-foot{position:relative;border-top:1px solid #E2DFD5;padding:10px 34px;display:flex;justify-content:space-between;font-family:Arial,Helvetica,sans-serif;font-size:9.5px;color:#5B6572;letter-spacing:.4px;background:rgba(246,245,241,.9);}`;
+}
+function slipHTML(r){
+  const logo = (document.querySelector('.app-logo img')||{}).src || '';
+  const v = k => escapeHtml(String(r[k]==null?'':r[k]).trim());
+  return `<div class="slip-page"><div class="slip-frame"><div class="slip-inner">
+    <img class="slip-wm" src="${LAGOS_CREST_IMG}" alt="">
+    <div class="slip-banner">
+      <div class="slip-logo"><img src="${logo}" alt="SEAP · Lagos State Civil Service Commission"></div>
+      <div><div class="t1">Lagos State Government · Civil Service Commission</div>
+        <div class="t2">Y2027 Promotion Exercise</div>
+        <div class="t3">Structured Evaluation and Assessment Programme (SEAP)</div></div>
+      <div class="slip-stripe">${'<i></i>'.repeat(32)}</div>
+    </div>
+    <div class="slip-body">
+      <div class="slip-title"><div class="orn"><i></i>◆<i></i></div><h1>CANDIDATE ELIGIBILITY SLIP</h1><div class="orn"><i></i>◆<i></i></div></div>
+      <div class="slip-head">
+        <div class="slip-id">
+          <div class="slip-seapwrap"><div class="slip-seap"><div class="lbl">ELIGIBILITY / SEAP NUMBER</div><div class="no">${v('seap_no') || '—'}</div></div></div>
+          <div class="slip-name">${v('surname_first')}</div>
+          <div class="slip-mda">${v('mda')}</div>
+          <div class="slip-nums"><div><b>CSC File No</b><span>${v('csc_file_no') || '—'}</span></div><div><b>Oracle No</b><span>${v('oracle_no') || '—'}</span></div></div>
+        </div>
+        <div class="slip-photo">${slipPhoto(r) ? `<img src="${slipPhoto(r)}" alt="Passport photograph">` : '<div class="np">No photograph<br>supplied</div>'}</div>
+      </div>
+      <div class="slip-sec">Service Record</div>
+      <table class="slip-tbl">
+        <tr><th>Particulars</th><th>Post / Designation</th><th>Grade Level</th><th>Date</th></tr>
+        <tr><td class="k">First Appointment</td><td>${v('post_1st_appt') || '—'}</td><td>${slipGL(r.grade_1st)}</td><td class="d">${escapeHtml(slipDate(r.date_1st_appt))}</td></tr>
+        <tr><td class="k">Confirmation</td><td>—</td><td>—</td><td class="d">${escapeHtml(slipDate(r.date_confirmation))}</td></tr>
+        <tr><td class="k">Present Post</td><td>${v('present_post') || '—'}</td><td>${slipGL(r.grade_present)}</td><td class="d">${escapeHtml(slipDate(r.date_present_appt))}</td></tr>
+        <tr class="promo"><td class="k">Promotion Post</td><td>${v('promotion_post') || '—'}</td><td>${slipGL(r.grade_promotion)}</td><td class="d">—</td></tr>
+      </table>
+      <div class="slip-venue"><div class="lbl">Venue of Assessment</div><div class="val">${escapeHtml(SLIP_VENUE)}</div></div>
+      <div class="slip-bottom">
+        ${slipVerifyBlock(r)}
+        <div class="slip-sign"><div><div class="line">${slipSignatureImg()?`<img src="${slipSignatureImg()}" alt="Signature">`:''}</div><div class="lab">Signature</div><div class="nm">${escapeHtml(SLIP_SIGNATORY.name)}</div><div class="tt">${escapeHtml(SLIP_SIGNATORY.title)}</div></div></div>
+      </div>
+    </div>
+    <div class="slip-foot"><span>Lagos State Civil Service Commission · Y2027 Promotion Exercise</span><span>${v('seap_no')}</span></div>
+  </div></div></div>`;
+}
+function slipPhoto(r){ return r.photo || PHOTO_CACHE[r.brief_id] || ''; }
+function photosForSlips(records){ return fetchPhotos(records.filter(r => !r.photo && r.has_photo !== false).map(r => r.brief_id)); }
+function slipFileStem(r){ return safeFileName(r.seap_no || r.surname_first || r.oracle_no); }
+// Renders slips to a real A4 PDF (one page each). Falls back to printing if the PDF libraries could not load.
+async function downloadSlipsPdf(records, filename, msgId){
+  if (!records.length){ showMsg(msgId,'warn','There are no verified officers to produce slips for.'); return; }
+  if (!window.jspdf || !window.html2canvas){ showMsg(msgId,'warn','PDF tools could not load — opening the print view instead (choose “Save as PDF”).'); printSlips(records); return; }
+  showMsg(msgId,'warn',`Preparing ${records.length} slip(s)… fetching photographs`);
+  await photosForSlips(records);
+  // Many slips: render a little lighter so a large PDF stays manageable (still crisp in print).
+  const big = records.length > 20, scale = big ? 1.5 : 2, quality = big ? 0.85 : 0.92;
+  const host = document.createElement('div');
+  host.style.cssText = 'position:fixed;left:-10000px;top:0;';
+  host.innerHTML = `<style>${slipCSS()}</style>`;
+  document.body.appendChild(host);
+  try{
+    const pdf = new window.jspdf.jsPDF({unit:'mm', format:'a4', orientation:'portrait'});
+    for (let i=0; i<records.length; i++){
+      const wrap = document.createElement('div'); wrap.innerHTML = slipHTML(records[i]); host.appendChild(wrap);
+      await Promise.all(Array.from(wrap.querySelectorAll('img')).map(img=>img.complete ? 0 : new Promise(r=>{ img.onload=img.onerror=r; })));
+      const canvas = await window.html2canvas(wrap.firstElementChild, {scale, backgroundColor:'#ffffff', logging:false});
+      if (i) pdf.addPage();
+      pdf.addImage(canvas.toDataURL('image/jpeg', quality), 'JPEG', 0, 0, 210, 297);
+      if (records.length > 1) showMsg(msgId,'warn',`Preparing slip ${i+1} of ${records.length}…`);
+      host.removeChild(wrap);
+    }
+    pdf.save(filename);
+    showMsg(msgId,'ok',`${records.length} slip(s) downloaded as ${filename}.`);
+  }catch(err){ showMsg(msgId,'err','Could not create the PDF: '+err.message); }
+  finally{ document.body.removeChild(host); }
+}
+async function printSlips(records, msgId){
+  if (!records.length) return;
+  const w = openPrintWindow('Candidate Eligibility Slips');
+  if (!w){ showMsg(msgId || 'verified-msg','err','Please allow pop-ups to print the slips.'); return false; }
+  await photosForSlips(records);
+  w.document.open();
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Candidate Eligibility Slips</title><style>
+    @page{size:A4;margin:0;} body{margin:0;background:#eee;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .slip-page{margin:0 auto;page-break-after:always;} @media screen{.slip-page{margin:16px auto;box-shadow:0 2px 12px rgba(0,0,0,.2);}}
+    ${slipCSS()}</style></head><body>${records.map(slipHTML).join('')}<script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script></body></html>`);
+  w.document.close();
+}
+function verifiedRecordByBrief(id){ return VERIFIED_DATA.find(r=>String(r.brief_id)===String(id)); }
+function slipForBrief(id){
+  const r = verifiedRecordByBrief(id);
+  if (!r){ showMsg('verify-msg','warn','This officer is not yet in “Verified and Authentic Data”. Refresh and try again.'); return; }
+  downloadSlipsPdf([r], `Slip_${slipFileStem(r)}.pdf`, 'verify-msg');
+}
+
+/* ---- Slip QR code + barcode, and the public verification page ---- */
+// The QR code opens this portal with ?verify=<signed code>; anyone can scan it to
+// confirm the slip is genuine and still valid. The barcode carries the SEAP number
+// for desk scanners.
+function slipVerifyUrl(r){ return location.origin + location.pathname + '?verify=' + encodeURIComponent(r.verify_code); }
+function slipQrDataUrl(text){
+  if (!window.qrcode) return '';
+  const qr = window.qrcode(0, 'M'); qr.addData(text); qr.make();
+  return qr.createDataURL(6, 0);
+}
+function slipBarcodeDataUrl(text){
+  if (!window.JsBarcode || !text) return '';
+  try{ const c = document.createElement('canvas'); window.JsBarcode(c, text, {format:'CODE128', displayValue:false, height:60, width:2, margin:0}); return c.toDataURL('image/png'); }
+  catch(e){ return ''; }
+}
+function slipVerifyBlock(r){
+  const qr = r.verify_code ? slipQrDataUrl(slipVerifyUrl(r)) : '';
+  const bar = slipBarcodeDataUrl(String(r.seap_no||'').trim());
+  if (!qr && !bar) return '<div></div>';
+  return `<div class="slip-verify">${qr?`<div class="slip-qr"><img src="${qr}" alt="Verification QR code"></div>`:''}
+    <div class="slip-vtext"><b>Verify this slip</b>${qr?'Scan the QR code with any phone camera to confirm this slip is genuine and still valid.':''}
+    ${bar?`<div class="slip-bar"><img src="${bar}" alt="SEAP number barcode"><span>${escapeHtml(String(r.seap_no))}</span></div>`:''}</div></div>`;
+}
+async function verifySlipPage(code){
+  const body = document.getElementById('sv-body');
+  try{
+    const res = await callScript({action:'verifySlip', code});
+    if (!res || !res.success) throw new Error((res&&res.message)||'no response');
+    if (!res.valid){
+      showMsg('sv-msg','err', res.message || 'This slip could not be verified.');
+      body.innerHTML = `<div class="stamp" style="font-size:16px;padding:10px 16px;margin:6px 0 4px;">✕ ${res.reason==='revoked'?'No longer valid':'Not genuine'}</div>`;
+      return;
+    }
+    const r = res.record;
+    showMsg('sv-msg','ok','✓ VALID — this Candidate Eligibility Slip was issued by the portal and the officer is in Verified and Authentic Data.');
+    const row = (l,v)=>`<tr><th style="width:38%;position:static;">${escapeHtml(l)}</th><td>${escapeHtml(String(v==null?'':v)) || '—'}</td></tr>`;
+    const gl = v => { const g = normalizeGrade(v); return g ? ' · GL '+g : ''; };
+    body.innerHTML = `<div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;">
+      <div class="stamp ok" style="font-size:16px;padding:10px 16px;">✓ Valid slip</div>
+      ${r.photo?`<img src="${r.photo}" alt="Passport photograph" style="margin-left:auto;width:120px;height:146px;object-fit:cover;border:3px solid var(--gold);">`:''}</div>
+      <table style="margin-top:14px;">
+        ${row('Eligibility / SEAP Number', r.seap_no)}${row('Name', r.surname_first)}${row('Department/Ministry (MDA)', r.mda)}
+        ${row('CSC File No', r.csc_file_no)}${row('Oracle No', r.oracle_no)}
+        ${row('First Appointment', (r.post_1st_appt||'') + gl(r.grade_1st) + ' · ' + slipDate(r.date_1st_appt))}
+        ${row('Confirmation', slipDate(r.date_confirmation))}
+        ${row('Present Post', (r.present_post||'') + gl(r.grade_present) + ' · ' + slipDate(r.date_present_appt))}
+        ${row('Promotion Post', (r.promotion_post||'') + gl(r.grade_promotion))}
+        ${row('Venue of Assessment', SLIP_VENUE)}
+        ${row('Verified', r.verified_at)}
+      </table>`;
+  }catch(err){ showMsg('sv-msg','err','Could not check this slip: '+err.message); }
+}
+/* ---- Edit a verified officer (administrators) ---- */
+const SLIP_EDIT_FIELDS = [
+  ['seap_no','Eligibility / SEAP Number','text'], ['surname_first','Name (Surname First)','text'], ['mda','Department/Ministry (MDA)','mda'],
+  ['csc_file_no','CSC File No','text'], ['oracle_no','Oracle No','text'],
+  ['post_1st_appt','Post of 1st Appt','text'], ['grade_1st','Grade Level (1st Appt)','grade'], ['date_1st_appt','Date of 1st Appt','date'],
+  ['date_confirmation','Date of Confirmation','date'],
+  ['present_post','Present Post','text'], ['grade_present','Grade Level (Present)','grade'], ['date_present_appt','Date of Present Appt','date'],
+  ['promotion_post','Promotion Post','text'], ['grade_promotion','Grade Level (Promotion)','grade'],
+];
+let SLIP_EDIT = null; // { record, newPhoto }
+/* Fix MDA grouping (administrators): places every officer under the MDA written on the
+   eligibility list they were uploaded from. Shows what would move before anything changes. */
+let REGROUP = null;
+async function openRegroup(){
+  showModalLoading('Fix MDA grouping');
+  try{
+    const res = await callScript({action:'regroupVerifiedMda', token:AUTH_TOKEN});
+    if (!res || !res.success){ document.getElementById('brief-modal-body').innerHTML = `<div class="msgbox show err">${escapeHtml((res&&res.message)||'Could not check the grouping.')}</div>`; return; }
+    REGROUP = res; renderRegroup();
+  }catch(err){ document.getElementById('brief-modal-body').innerHTML = `<div class="msgbox show err">${escapeHtml(err.message)}</div>`; }
+}
+function renderRegroup(){
+  const res = REGROUP, auto = res.groups.filter(g=>g.moves.length), choose = res.groups.filter(g=>g.status==='choose' || g.status==='unknown');
+  const moveTxt = g => g.moves.map(m=>`${m.count} from “${escapeHtml(m.from||'(blank)')}”`).join('<br>');
+  const mdaSelect = g => { const opts = Array.from(new Set(g.mdas.concat(LAGOS_MDA_LIST)));
+    return `<select data-rk="${escapeHtml(g.key)}" style="max-width:300px;"><option value="">— leave as it is —</option>${opts.map(m=>`<option${m===g.chosenMda?' selected':''}>${escapeHtml(m)}</option>`).join('')}</select>`; };
+  document.getElementById('brief-modal-body').innerHTML = `
+    <p class="hint" style="margin-top:0;">Every officer is placed under the MDA written beside <b>“MDA:”</b> on the eligibility list they were uploaded from. That MDA is read from the officers on the same list who had no Form A (they were always filed under the sheet's MDA). Officers whose MDA was changed with ✎ Edit are left as they are. Nothing changes until you click <b>Apply</b>.</p>
+    ${res.toMove ? `<div class="msgbox show warn"><b>${res.toMove}</b> officer(s) will move to the MDA on their list.${res.duplicates?` ${res.duplicates} older duplicate entr${res.duplicates===1?'y':'ies'} of the same officer will be removed.`:''}</div>`
+                 : `<div class="msgbox show ok">Every officer is already under the MDA on their list.</div>`}
+    ${auto.length ? `<h4 style="margin:14px 0 6px;color:var(--navy);">Officers to move</h4>
+      <div class="tablewrap"><table><thead><tr><th>List (file)</th><th>MDA on the list</th><th>Officers moving</th><th>Officers on list</th></tr></thead><tbody>
+      ${auto.map(g=>`<tr><td>${escapeHtml(g.file)}<div class="hint" style="margin:0;">${escapeHtml(g.by)}</div></td><td><b>${escapeHtml(g.sheetMda)}</b></td><td>${moveTxt(g)}</td><td>${g.total}</td></tr>`).join('')}
+      </tbody></table></div>` : ''}
+    ${choose.length ? `<h4 style="margin:14px 0 6px;color:var(--navy);">Lists that need you to choose the MDA</h4>
+      <p class="hint" style="margin:0 0 6px;">The portal can't tell which MDA these lists were for. Choose the MDA written on the sheet (or leave it as it is, or upload that list again).</p>
+      <div class="tablewrap"><table><thead><tr><th>List (file)</th><th>Why</th><th>Officers now under</th><th>MDA on the list</th></tr></thead><tbody>
+      ${choose.map(g=>`<tr><td>${escapeHtml(g.file||'(no file name)')}<div class="hint" style="margin:0;">${escapeHtml(g.by)} · ${g.total} officer(s)</div></td><td class="hint">${escapeHtml(g.reason||'')}</td><td>${g.mdas.map(escapeHtml).join('<br>')}</td><td>${g.status==='unknown'?'<span class="hint">Upload this list again</span>':mdaSelect(g)}</td></tr>`).join('')}
+      </tbody></table></div>` : ''}
+    <div id="regroup-msg" class="msgbox"></div>`;
+  document.getElementById('brief-modal-foot').innerHTML = `<button class="btn btn-primary" id="regroup-apply"${res.toMove?'':' disabled'}>Apply</button>${choose.length?'<button class="btn btn-ghost" id="regroup-recheck">Update preview</button>':''}<button class="btn btn-ghost" onclick="closeBriefModal()">Close</button>`;
+  const choices = () => { const c = {}; document.querySelectorAll('#brief-modal-body [data-rk]').forEach(el=>{ if (el.value) c[el.dataset.rk] = el.value; }); return c; };
+  const recheck = async () => {
+    const c = choices();
+    const res2 = await callScript({action:'regroupVerifiedMda', token:AUTH_TOKEN, choices:c});
+    if (!res2 || !res2.success){ showMsg('regroup-msg','err',(res2&&res2.message)||'Could not check the grouping.'); return; }
+    res2.groups.forEach(g=>{ if (c[g.key]) g.chosenMda = c[g.key]; });
+    // keep lists you chose for in the "choose" table so the choice can still be changed
+    res2.groups.forEach(g=>{ if (g.status==='chosen') g.status = 'choose'; });
+    REGROUP = res2; renderRegroup();
+  };
+  const rc = document.getElementById('regroup-recheck'); if (rc) rc.onclick = recheck;
+  document.querySelectorAll('#brief-modal-body [data-rk]').forEach(el=>{ el.onchange = recheck; });
+  document.getElementById('regroup-apply').onclick = async () => {
+    const btn = document.getElementById('regroup-apply'); btn.disabled = true; showMsg('regroup-msg','warn','Moving officers…');
+    try{
+      const r = await callScript({action:'regroupVerifiedMda', token:AUTH_TOKEN, choices:choices(), apply:true});
+      if (!r || !r.success){ showMsg('regroup-msg','err',(r&&r.message)||'Could not apply.'); btn.disabled = false; return; }
+      closeBriefModal();
+      await loadVerifiedData();
+      showMsg('verified-msg','ok',`✓ MDA grouping fixed — ${r.moved} officer(s) moved to the MDA on their eligibility list${r.duplicatesRemoved?`; ${r.duplicatesRemoved} older duplicate entr${r.duplicatesRemoved===1?'y':'ies'} removed`:''}. Each move is recorded in the log.`);
+    }catch(err){ showMsg('regroup-msg','err',err.message); btn.disabled = false; }
+  };
+}
+document.getElementById('verified-regroup').addEventListener('click', openRegroup);
+async function openSlipEdit(r){
+  SLIP_EDIT = { record: r, newPhoto: '' };
+  showModalLoading('Edit officer · ' + (r.surname_first||''));
+  await photosForSlips([r]);
+  const val = k => escapeHtml(String(r[k]==null?'':r[k]));
+  const fieldHtml = ([k,label,type]) => {
+    let input;
+    if (type==='mda'){ input = `<select data-ek="${k}">${mdaOptionsHTML(String(r[k]||''))}</select>`; }
+    else if (type==='grade'){ const g = normalizeGrade(r[k]); input = `<select data-ek="${k}"><option value="">—</option>${GRADE_OPTIONS.map(o=>`<option value="${o}"${o===g?' selected':''}>GL ${o}</option>`).join('')}</select>`; }
+    else input = `<input type="text" data-ek="${k}" value="${val(k)}"${type==='date'?' placeholder="DD/MM/YYYY"':''}>`;
+    return `<div class="field"><label>${escapeHtml(label)}</label>${input}<div class="err-msg"></div></div>`;
+  };
+  const photo = slipPhoto(r);
+  document.getElementById('brief-modal-body').innerHTML = `
+    <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;">
+      <div style="text-align:center;"><div id="edit-photo-box" style="width:110px;height:132px;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;background:#F6F5F1;overflow:hidden;">
+        ${photo?`<img src="${photo}" style="width:100%;height:100%;object-fit:cover;">`:'<span class="hint" style="margin:0;padding:6px;">No photograph</span>'}</div>
+        <button class="btn btn-ghost" id="edit-photo-btn" style="margin-top:6px;font-size:11.5px;padding:5px 10px;">Change photo</button>
+        <input type="file" id="edit-photo-input" accept="image/*" style="display:none;"></div>
+      <p class="hint" style="flex:1;min-width:220px;margin:0;">Correct anything that should print differently on this officer's slip. Changes are saved to Verified and Authentic Data and recorded in the log with your name. Dates: DD/MM/YYYY.</p>
+    </div>
+    <div class="grid">${SLIP_EDIT_FIELDS.map(fieldHtml).join('')}</div>
+    <div id="edit-msg" class="msgbox"></div>`;
+  document.getElementById('brief-modal-foot').innerHTML = `<button class="btn btn-primary" id="edit-save-btn">Save Changes</button><button class="btn btn-ghost" onclick="closeBriefModal()">Cancel</button>`;
+  document.getElementById('edit-photo-btn').onclick = () => document.getElementById('edit-photo-input').click();
+  document.getElementById('edit-photo-input').onchange = e => {
+    const file = e.target.files && e.target.files[0]; if (!file) return;
+    if (!/^image\//.test(file.type)){ showMsg('edit-msg','err','Please choose an image file.'); return; }
+    resizePhoto(file, url => { SLIP_EDIT.newPhoto = url; document.getElementById('edit-photo-box').innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;">`; showMsg('edit-msg','ok','New photograph ready — click Save Changes.'); },
+      err => showMsg('edit-msg','err','Could not read that image: '+err));
+  };
+  document.getElementById('edit-save-btn').onclick = saveSlipEdit;
+}
+async function saveSlipEdit(){
+  const r = SLIP_EDIT.record, fields = {}; let bad = 0;
+  document.querySelectorAll('#brief-modal-body [data-ek]').forEach(el => {
+    const k = el.dataset.ek, type = (SLIP_EDIT_FIELDS.find(f=>f[0]===k)||[])[2];
+    let v = String(el.value||'').trim(); const box = el.closest('.field'); box.classList.remove('invalid'); box.querySelector('.err-msg').textContent = '';
+    const fail = m => { box.classList.add('invalid'); box.querySelector('.err-msg').textContent = m; bad++; };
+    if (type==='date' && v){ const d = parseFlexibleDate(v); if (!d) return fail('Use DD/MM/YYYY'); v = fmtDate(d); }
+    if (k==='surname_first'){ if (!v) return fail('Name is required'); v = v.replace(/\s+/g,' '); }
+    if (k==='oracle_no' && v && !/^\d{1,10}$/.test(v)) return fail('Digits only');
+    fields[k] = v;
+  });
+  if (bad){ showMsg('edit-msg','err','Please correct the highlighted field(s).'); return; }
+  const btn = document.getElementById('edit-save-btn'); btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    const res = await callScript({action:'updateVerifiedRecord', token:AUTH_TOKEN, brief_id:r.brief_id, fields, photo:SLIP_EDIT.newPhoto||undefined});
+    if (!res || !res.success) throw new Error((res&&res.message)||'not saved');
+    if (SLIP_EDIT.newPhoto) PHOTO_CACHE[r.brief_id] = SLIP_EDIT.newPhoto;
+    closeBriefModal();
+    showMsg('verified-msg','ok', res.changed ? `Saved ${res.changed} change(s) for ${fields.surname_first}. Print the slip again to get the updated copy.` : 'No changes to save.');
+    await loadVerifiedData();
+  }catch(err){ showMsg('edit-msg','err','Could not save: '+err.message); btn.disabled = false; btn.textContent = 'Save Changes'; }
+}
+/* ---- Full backup (super administrator) — input for the Cloudflare migration ---- */
+const BACKUP_TABS = [['Users',500],['Submissions',500],['Briefs',20],['Verifications',500],['Verified and Authentic Data',500]]; // Form As carry photos: small pages
+document.getElementById('backup-download').addEventListener('click', async ()=>{
+  const btn = document.getElementById('backup-download'); btn.disabled = true;
+  try{
+    const backup = { format:'y2027-portal-backup', version:1, exportedAt:new Date().toISOString(), source:String(SCRIPT_URL), config:{}, tabs:{} };
+    showMsg('backup-msg','warn','Reading settings…');
+    const cfg = await callScript({action:'exportTab', token:AUTH_TOKEN, tab:'AdminConfig'});
+    if (!cfg || !cfg.success) throw new Error((cfg&&cfg.message)||'export refused');
+    backup.config = cfg.config;
+    for (const [tab, limit] of BACKUP_TABS){
+      backup.tabs[tab] = [];
+      for (let offset=0;;){
+        showMsg('backup-msg','warn',`Reading ${tab}… ${backup.tabs[tab].length} row(s) so far`);
+        const res = await callScript({action:'exportTab', token:AUTH_TOKEN, tab, offset, limit});
+        if (!res || !res.success) throw new Error((res&&res.message)||('could not read '+tab));
+        backup.tabs[tab].push(...res.rows); offset += res.rows.length;   // servers cap page sizes
+        if (!res.rows.length || backup.tabs[tab].length >= res.total) break;
+      }
+    }
+    const name = `Y2027_Portal_Backup_${new Date().toISOString().slice(0,10)}.json`;
+    downloadBlob(JSON.stringify(backup), 'application/json', name);
+    showMsg('backup-msg','ok',`Backup downloaded (${name}): ${BACKUP_TABS.map(([t])=>`${backup.tabs[t].length} ${t}`).join(', ')}. Keep this file private.`);
+  }catch(err){ showMsg('backup-msg','err','Could not create the backup: '+err.message); }
+  btn.disabled = false;
+});
+const SLIP_SIGNATURE_IMG_DATA = 'data:image/png;base64,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'; // Director, CMD signature (white background removed)
+const LAGOS_CREST_IMG = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxMTEhUUExIWFhUWGSAbGBgYGBoaIBoaHxshGhgaHx4dISghGiAnHh0gITEhJSkrLi4uHyAzODMtNygtLisBCgoKDg0OGxAQGy0mICUtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLf/AABEIALEBHAMBIgACEQEDEQH/xAAcAAEAAwEBAQEBAAAAAAAAAAAABQYHBAMCCAH/xABPEAACAQMCBAMEBAsEBgcJAAABAgMABBESIQUGEzEiQVEHFGFxIzJCgRYzU3JzkZOhsbLSFTVSYiQ0gqKzwVVjlMLR4fAIFyVDRFSDhJL/xAAbAQEAAgMBAQAAAAAAAAAAAAAAAwQBAgUGB//EADgRAAEDAgQDBQYFBAMBAAAAAAEAAhEDIQQSMUEFUWEiMnGB8BMUkaGxwQYjUtHhM0Ji8XKCwhX/2gAMAwEAAhEDEQA/ANxpSlESlKURKUpREpSlESlKwa/49cvi4uruSzinzhYuqz9MELnDErDuQSVBO4BxUNasKYEiZ5XPOwFz6Oi1LoW7O2ASewr6zWTcg81yrP7nfXKTLPn3eQOzkHAbpNJoUPqR1ZW+7zArmm56aCzksImb3yKZ7dXZWPTiWURxzNsSx0sqjGSWway1+YZhoQsyFraTKezA4JBwQdxsR8xXRVO4LY2vB7PMsoRQdUkkjElpG7nzJYkdhXpy/wA/WV67JBI5K+ZidVOP8xGB8jg1qyr2C98N8TttM6HpssyrbSv5mv7U6JSuO/vo4UMksixoMZZ2CgZOBufUkCuS35lspBmO8t3H+WaM/wAGoil6VCSc02KsEN7bByQAvWjySTgbas99qm6IlKUoiUpXHxG46cUknfQpbfPkCfIE+XkKIuylRfA+Kx3VtFcx7JKgcZxlcjcHyyDkH5VU7n2vcLSbpdZmGcGRUJQH59yPioIrBMItApXJY3cc0aSxsHR1DKw7FTuDXXWUSlKURKUpREpSlESlKURKUpREpSlESlKURKUpRErgfhkJDqY1KuCrKRsQ31gR8aovtD58kt3NvaGIOozNNIwCxZxhVB2d8NqxvgY8JzWdX/Od1LrnhvLuEIcFZHRlI3wQCsajPpux3wNqgqFmYZmzG8afeT0WpcF6+0Dhi8PkMICR4YTWU2XDIA7MYiQrBtDNkA4xqG9cnBuY7ZuLT386npLEJ9B7mYImFAOxOtm0527HyzURzdz1LxC2hjuY1aWFyVmHh1oykHUg7HOk5G23aqQDWW0oaWzuUhXpb+441eL71cCON5FVQdwpZsJHEvcsc4z8ix7V+huV+VrexhEUSDG2onGWbAGo+pOK/NnCuY47MKLVGEhx1bjbqkHGpISQRAMahqwzH4DarFy/y1xXiYR0mkWA6z1XuJHIIOkRsC+dQ7ZCjYk79qxVpMecz7gaDaecbn6bQsr9J0qs8j2V5Daol7KJZABpbu4BUakc7hyrZGvPiGCd6s1ThZVQ5qilnuIYYGCvApujnGkuDogjcYJ0SEy5I3GjI3AqW4XPFdRrL0xk5Dq6gskinS8bf5lYEH5bbVzcqfS9a7P/ANS+Y/0CeCHB8w3ilH6U1Hcx3zWM/WhjaY3Ct1LaMEu7InhnUAHsNMbnzBjxkqFYi6uYkE2bCEKpmQ9dgq/RQNlTtjGuTdEB9HbfRg93KFy0lnCXOZEXpSH/AKyMmOT/AH1NePLUEccAkMySyT4lkmBAEjMBgr6IqgKo8lUeeTXPwiQQX09vnwXH+kwkHbV4UuEHxDaJPj1W9DRFaa/hNf2uS/vEhjeWQhUjUsxPkoGSawTARZVzP7UbvrmHh1k0mkkF3R31aWKEqqEELqVhqJ3Ib0rz5d9seuYQ30PR1ALqwRpY7eIMfqnY58t87b1CcU9slxKXFpbwRRopY9Y6mcBvIZUZ3J0jJ771TuYebk4idV1bxRzacLNDlOw8IdTq1jsM5BA7dsGENcTflqDeTzGkaLCmJOa5rewl4RH+N94kiLAYBiZsYXPbWxYfAGoeDld7iWcQIpjtoiHkIfS0iL4sEfaLZwOwGPLFV6yuWEhkZ/Go1At4iW7DGftDOQT2xWvcL5jsuDw/SZmvJEXMEZwsMZGpIyT4V75JwWLHJGDUdQVGw1h7R+E2k/CwF9d1gzKvnsgglj4XCkwIZS2kE58BYsn3YNXess5a9r9q7rDcwPZs2NJY6037ZOAVznvpx8RWp1Yp5sozRO8aeXRbBKUpW6JSlKIlKUoiUpSiJSlKIlKUoiUpSiJSlKIqJzxZcMs0F/cW4ZomJjQE4eV21bJnQWLZYsRnud8Vm/FOc7/iEmuHg0LqQY1aSBpjp+sV1nSAPPsO9bfxbgsNwYjKuroyCRN+zgEAn17/AMK4+ZePW/D4TLL3Y4SNBl5H8lUeZ/cKicakjJHUmfkBHxJ8isL8oqyC5zPGVTqEyRoNGBq8SAHdcdsdxUlf21oGuAUuInJX3eJgBswzltQzjPbcbHzrq545wkvplcwQwaGLARqNRfYEu+MufCPh2ri4nzFJOJjMqvJKFUSf4FRi2FHlk9z6Z9ay5riRGm8Hw8vH5aqam5oaZAnw6RrKjuL8NNvJ02eOQ4B1RtqG/lnbcVtfKntstyqR3UDQnZeohDpnG7sNmXffYNWUchWSTXsUb6NLsFIYBiQfNQwwSMedXRZLNzFILdsog05S1GR4SCwCeMjSNzk7n1rJdlHaP2W9LD1a7iKLCY5XhbddcxW0ZjDygCRC6MFZkKAgFtagooGpdyR3FfXHistpOiSqpliZEcOB4nQqhBz3yRisY/tELAkEfXSONmZArwKV1lmcAiM+E6z4e3b0FRh4JcyW6G2m6NvHqwZ5VyGU41KyoAmW1JlTkgEnvioX4qlTu9wA216+rLGIwtfDjNWYWg2EiFp9mOCvFGfdIpWCLqRbV7h4vCPC4RHaIjthsdq8TxSztpWuLHQsenpSZt7hYcqxbKzRxlEYElSuDqOkbFaxeyh4lMzyx3M5QagbgyuoKorMxzkswAz2z3x51ynht5LDNeOzYUKWYnBcHEZJ9TjGc7tnO+c1MatMGC4aga7nQKtmHNbrw1eGQIDcWwaaVmcyvYtmWSR2cqmEYndsLGSWCgd8E19lLA3ln7taLBKsjSOTZvA/SWF0IGY1LAu6DzHf0rNl9nbLYMy3jgsglKK2YnwuoDbGrfs2+Mdj3riblSTREf7Qcwv0nTxNt1mEWrGrClWKq2M7eY7VTbxPDOmHbxodfgsCo06L9BScftlfR1VL7+BAXYY75VQWX7wKh+beO2R4c0kxdoLhNKKqsskmseEIrAHV5jI279qx+Xh89neLme5mheJdaAyFyusp0WdQSgB1nWADgNgZ2q5wycQAAWSVVUYVfe4SFA2AGeHnsBT36lGYuGUi2s9ZtsdFPSo1KolgkeuarE3tIiigkgj4RGsKkKY5A3yzINOB5DvucnzqlczcctLtdUdgttPkZaKT6NlAII6ekaT2OQd8Gtau76/RGeSaUqoyw95iJwPQe4qCazr2jWcSNbroVWfWZZy2qR/pCmpkUAKAE2wN/F2qejWpP7hm8b6xPLkJWtSk+nZwhZ/UnGNOZGkHUBVlXGvVk5JPdRjGSGznI271bdNvK494B6MYwkkeVRiSAfEVwukDITPc/DFVfhSW/vSibqNb6yDoALldwuxx8M9j3xvUrXyDY+uXqynxWF9gbOBFxPhE221tz1WocL5j4NxDpWtxamAqNMTMw0An7IYEFQSdgdh8K27hlsY4Y4ySdCKuT3OFAyfjtX5f5p5bi0RTcP1XELA65AGLBzIEVHXHgbxKAPtZyNq/Qfs0vZJuF2jygh+npOc5OglAxz6hQfvqKlSY0ZmAgHY/WOf2VUK1UpSrCylKUoiUpSiJSlKIlKUoiUpSiJSlKIlKUoiV+eL6a54pxG4kj1u0LmKFdI0IjTLFGx2Y6SC7OwG2BvgYr9D1XuXeWI7SSeRGZmmbO+AFTW7hFAGwBkb57elauEiFgiVkfP8AymLDhlnaIY2klmLSyaca2VGI33Olc4/V2qipy9Kttb8QjUSI0jdQArhHQlwhHcakUnt6DzGdi/8AaAtHNpbypnVHPjYkYDowzkdt1Az8a4+TeFRPy9EY1Cs8qGVuxYrchXyc/k8qPhisgQiqt3wNbXmC3MKBbeUrLDp+roZN8emGzt8R6iuC0/FRfmL/ACitJ4MVl4XYSOoM0EggLdyNDmMgE74OhT+qs1tPxUf6Nf4CquJ0HmvW/hTv1fBv1cvda8EtYwQRGpI33GcZOds9q+p5lUFmOABn7h8BvXInFoSca/s6sntj+OrftVVrXRaV6mtWoNcBULZ2mJ+emn8rvaWU23uxlPTwwwBpHiYtvjdtyTgnFfzjV7JLFLrfICagoGlAypoDAA7nSAMnJr+KwIBByD2IrzvvxMv5jfy1hsB0xeZ8yqp4bhGtL2U2yAYMcxr1PXXqtBu+DAxyLA7QGRSDo3Q6s5JjPg3yckAH4153/LscqFNboGKl1XBRypDZaNgV3IySME+ZNS8Z2HyFcHEuImMhEj1sV1HLBVVOokZdjudIMgJKqcAE1w6BrPcG09fL79BvZeWqUqDQXPAjf1zXpa8NEchcO5ygTSzagArFhgnxd2Pcmu6uBL89PUU8YkMRQMMdVZDERqOBpDg+I/ZGcV98PvDJsy6HCq2M6gUbOiRDgFkbScEgHY7Vh1GqWl5FgYJ5H1vpdbsqUxDWxe4C8eZ2xZXJ9ImP6lJqge0SD3i7tbeMDWWkUsc7F7qVRn4AJnbyzV85p/1K5/QSf8NqpHE4Hglvb2QkaXmjtmOkDW00y+HYkkDUR8mztiujw5+Wi8jvSMv/ACIIFvVpXM4pZzfBU+4gulswSSbYTNGuASNY0sTnGwORjfcg4Gxr35ctDGXeeHMWFBJyrx9RW6c6nvhSuSe1X3jvBVXl3h6YbVJKsudlXLq7EsT2Gg4HmSF7168b5fccN4feMDq6CW08ZOnXC5xH37EFlP6j9mu3WLgCG+v5N1zXuJF9h8uXgu7lEPY8TEUoQNJoScIQI5Cy5t7pVx4XLho2G27gjvWyRoAAAAAOwG2BVF4Pws3DcLuHDGSGH6V9tPhTTp9SzSMGHfAjbtne/wBbUhDVgJSlKlWUpSlESlKURKUpREpSlESlKURKUpREpSlESlKURQXOXBBe2c1uTpLrlG/wupDIfkGAz8M1TeWuX3s+C3SFHSUrJK8bMu0qxgeFlONDFAwzuM48q0+uDjUIe3mQ9midT8ipFYRZRyxIUgu7csGMPEgwwQRofcdviD9+aplgPo4/zF/gKtttJi+vBn8eLOcDKkgAFdwCcbNnffBB8xVRs/xcf5q/yiqmK0C9b+E/6lXwb9XKAihW6nkeV8QQIXdox4impUVFztqZ3VMnYZJ3AxU3PywjCBZeHy2QuiFtp+t1AXYeBZVI2DZG4CEd8EAiomNhbzyiVOpBPGUlCDSVQupDL9nUjojb7EjB75qUuOakCwNJfTXvu2GtoWhESq6gaGlbUS+nHYaicY1AE1aZGUZV5zHtqNrv9t3pMz/s7dSo7lud8vHIHLKR37LjC6fgfh8Klb0fRSfo2/lNRnL9my6pJNQZie5BDZw2rb+NSl5+Lk/Rt/A1Qqx7Sy99wptX3ECrMwddYvrIWo2rfRqT/hB/dVcuLh5IreSZCBOFKAKqSIHwAUJdhOuCNalR4QxIx4asVj+LT8xf4CofituISohRIUkJEkiLp0scYLlVLBMa/q+ItoAK6tQ4eCLfaFkdonsmYym/L1tuvM4jNkzTYaiJnove84BBJb9GXW6BjITqIZnLMzsdOO5ZjgDG+w7Vx2/FNCJIkTNFIyapC0kjDWyoNchUoGUsB09ZI3G2MV98Ql0QqxZ4o9cjLqkZDpCu1ujyPlo9RCfW7NhTkEivfg8EMuZtCOwbwTmMKzrpBRyPJgGKE+qtjA2qeCyi59U5wXEWcR2r3jeTfXyUU5qgazsmBqNuXl60XRzKM2dyP+pk/wCG1VX2hXANraxFgo95v5STqxmO4l0DKjUMljv8at3G1zbTj1jf+Q1SePB5bqGBYjIAt0T5BRLdyDWfgDp+8irXBe6/xb9HKrxPVvgfqtA5q5KkvLPhtmuFhhKdZvNUSLR4c9yckdjuQewNXm74fG8PSKAoAAFPbw4Kj9wrvpXac3MCDuuYuWythHGqKMBRjb/1611UpRrQ1oaNrfBEpSlbIlKUoiUpSiJSlKIlKUoirPEOj1m1cReJiQOkJYhgkDACspbfY/fX1PwjpqXe/ulVRkszxAAfEmOs+5qP/wAZb9JD/BKvXtJn02Eo830r/vBj+4Gq7axIeTtK6lThwa+g0OP5gbPSY0+K84khYgDi0pYnAVZ4CSfQAJvXRf2CQrqk4hcIvbLSRDf0GU3PwrJuFEwzWsp7FlcfISEH+Q1YPavOxu1XOyohUeQOpiT9+36hUYxRyFxFx91bdwRnvLKTXmCDJgat2G3IfurlYJFOSI+JzsRuVEkWceuOnnFevELSOEAy8SuEB7apIhn5fR5P3VSrnl6eC/VraGbpI8ZBAZh9UFtz3GSQfmRXhzS3X4sY3YlOpHHjPZDjIHpuSfvrJxDg0yLzG8KNnC6NSo3I/sFmfbMNLGJvf4yFeuH20c4Ji4ncPjvpkiJHzHTyK87zoRNiTis6N/hMkWR8wI8j76pHAPoOL6IyQgmePGT9XUVAOe/bz8wDXBbLE95KLokZMo1MxAEmTgsR2Af7u2dqx7y6BYTMdFJ/8emHklxLcgdYdq8/SFqfC7NX0yRX80qA+UkbKcfZOlP1jINTlxHqRl9VI/WMVS+QeXZ7RpGdkKSKuNDlgSCd+w8j3q6TthWJ7AE/uqzTcXNBcIK4+Jp06dUtpuzN2Pl9l+a+FOYuIW6l9bzW8Rc6NGcxpKnwOBhcjvpydyaW/wCLT80fy11XqIL3hhELJJ7tGHcnwvi2X6vxU5B+6uaD6ifmj+Wq2K0b5/Zel/CnereDP/S/s0SupRhkHuprnFhECWCDxAA+YwuMDB28hXWx7Z2zsMKzEn0AG5PwFTPCuXJZMNJ9An3GQ/7JBVPvyfgK0w9CrVMUx9h5rq8a4zw3hjRUxrmg7CA5510Gu5E2AnVQ2NwoBJP1VVSzH81R5fHsKnrHlN5Px56aH/5aEFiPRnxhPkufzq6+DcW4dHL7vBIvVY6TpDMXI23cghjt61aa7WE4ZSb2nHMfl/Pn8F8l/Ef4/wCI1/ycMw0GEb/1HDTU6A/43/yKg47Ge3GIX60Y7RzHDADyWQDf5OD+cK6rLi0btobXHL+TkGlv9nykHxUkVJVzX1nHKuiVEdfRwDv6j0PxFQY78P4bES5nYd008x+0LjcK/GeLw0Mrj2jfg4ee/mCeq6KVT4uMGO7a0heSRkAPTnPhxpDYjlGX2U5w4bPqKn7Xi8bMI3DxSntHIApP5pyVk/2Sa8hi+F4jCy5zZbpmFx57jzX0nAcYw2MADDDiJyus6DuBuOokdV08TGYZR6xt/KapHB7hjxeYLpISLBDE5Ae4RvDjudTjvtjVV5vB9G/5rfwNUDlsN/a9ywxgwxE59C9u+334+7NX+C92p5fdacT7zPP7L9E1VOKrFE5MvEpoyxLBNcYwCfsroJwO1WusU4yUPFZPetXS6uG3bOjOF7bgacHbyrrVqhYBG5UfD8E3EvcHEw0Ta5Olh61gK/W9vG8ZkTic7IoyWEsOF2z4vo/Dt6185tv+mJP+0Qf0VB8r8oyI8jF4zbzxOmqJ9RKvjceHBxjvvVS5k4SkF4YEZioKDLY1eJQT2AH2vSoX16jWhxbCuUOG4WtWdTZVJgTYbWBk6SD8lpfSh09T+1JdGrTr60OnVjVpzox23xX8jSFs6eKSthSxxNCdKjGWOE2AyN/jVR584bHZww28bOVeR5CXK5zoRPIAYwP41wcn2+LxrZmIE8TxsV7gGMNtkEZ2rPvDw/KQP9o3hVB+HNdrzEOIsLtaYJ9Qr5/o3/TEn/aIP6K/hNuAD/a0mCSAevBgkAEgHRjIBG3xFZxxzhCQX5t1ZigZBqbGrDgMewA8z5VNc+cFjs4II43chpJG8WnOSqDGwAx4a1GIfDiQLLd3CsPnptD3du4sNIn4q78KMJlGjiTzMAT0+rE4IxjJCKDtnPf0qzVnns64RbqsdwsxMzIwMepMAFsfVA1DsO5860OrNJznNly5OLpU6VUspkkDmIvulKUqRVkpSlEWNc1f3y36SH+CVafa1MBbRp/ikz9yow/iwry5j5Dkubh51mRQ+nwlSSMKB3z8M14T+zuRoY4veF8Du2dLb6wg7Z8tH76ollSHty69eq9KMThHOw7zVjIACMrv0842IHPxVF4jeK8Vuihw0SlWJxuTI75GDn7R74qW9ok3Unik/wAcEbf/ANAmrbxXkMywW8aSIjQqQzaT4ySpzt6YPfPenGeRTPFCOqomiQR5IOllXOjI7gjPff8AhUZw9TK4Ry9euSss4phPaU35tC+dTGYzOmhiegN9FXeYb+5h4gYxcylGkVgoeRcK7BsY1YwAcf8AKvnjX99//ni/ilTI9n8rOkklzqkBBckFshcaQCTk7AjJ+G21SPNXJRuJveIZRHKcagwOCVwAwYbqQAB2PYdq2NGpBMbgxP8APVQsx+FY9gDx3HNJAIEy25sLGDe+2iqdp/fX/wC0/wDxGrt4vHbX80iwpJFcgMSTp0OV76gDkE4+sB881O8s8lNDP7xPKJJAWKhc4y2fGxbcnc+Xc53rl4ryFJ13mtpxHrLEgllK6s6gGUHY5O2KyKNQM03uN1q7HYY1hlqQWsADr5c3URcaaiLLi9lPEpC8sBYlNJcZ8iGVTj0znt22+JrROMyhIJnPZY2J+QUmq7ybyj7mWkdw8jLp8IwoBIJAzuckDfbsNq7+fM/2ddqpALwugJ/zjR/3qs4drm0wHLk8UrUq2Kc+joY8zufWuu6yLnO3KcS4cpcnRAE074XTENxn1z5elePB+ASzKhx0o9I8TjLEYH1UI/e2Pka9ucINfHWYH8TENW2MDHTVcH4MDnzz5dqluBcxWotbcPdQK/Rj1AyoCG0DUCM7b1bw+Hp1j+Zt5Lz/ABLjmO4XRjBWNSxdEkZbiNhMm5B6RqpLhXBYoN0XLkbyNu5+/wAh8BgfCoznrmQ2UCsgBkkbSgPYYGS5Hnjbb4iu48z2X/3cH7Vf/GqB7UJfeTFLBmWGNSGkRWZFctnSXA05xjbOe3rXSrPbSpQyByiPkvF8Nw9bG44OxIc6TLi6TMC0k8zAv4KpcqWk8lygtivVXLrqIA2+ff5VcJ73iQa6SW+SN7dFOBo+kLDKLGdIJz29ckDzqocMdYRDdLIDJHNvFnDYXSwI9QfEp/8AOtH4pfWV1NE8UiNK2lcgZdN9UbDKHThyuSewzVGnZhM35TqCPqvU4yauKY3KC0gjMWZi1zXaGRZpHZB0k5tgrtaE6E1Z1aVznGdWN84271/L1yEkKlVIQkF/qg42J+HrUDJzXDBHquGIIHhIBbqKRlSCFC6iNiCF3DY8ODWdc387S3Y6aKY4c7juX7Y1H5jsNvnV52LphoIM9N/PkvLUOA4upXLHNygG7iOz/wBZ7wO0WjWyr0vFZnl67TSdXvr1EMPkRuBvjA8q27gB96soTOmsvGpYSqDqI214PrjUD8Qaw/grItxC0wzGJEL9z4M+LYbnb0rYv/eDw8bdZtvLpyf01WwbgJLnfPVdr8R0qj/ZsoUiYvLQbchI+PS3Ndt7bSW8bvDIZI0UkxSktsAWwkmCy/JtQ+VVbgq4uOITBWJjsYyrKV2JgjfcFgT9XOQDjT8qkeKc+2MkEsayuS8bqPo37lCKieUwsnEJI3XLTWESK2TgFrSIdgjZySO5UD17VVxFGhTcXUQBNzHTpor/AATEY+pTc3GZuzGXML31ubnQayv0apzvWacztaXt17tokS5DaBKAuCR21DVlh+8fuq98BvRPawSjtLEj7/5kDf8AOqtzFyQ8s5uIJRHISCc5GGAA1Ky79h2xVWuHFthPMdF6vhtSmyqS9xaYMG8A7TGo52jmq57O76WG8NsWJRi4I1ZUMoJyPQ+EjPmDv2Fc3Pn96P8AnR/yJVt5S5Ma3m680okkAOkKDgFu7FjuxxnyHc96+ePcjvcXbXCzKoJU6SpJ8KqvfPnpqt7Gp7LLG667cfhRjnVcwgsgmDBdI5CdNzyUD7XJM3Maj7MY/WWb/kBUZZ8UR+KxTxgqhdFAbGQDpU5wSPU1b+ZuSHu7lphMqg6QFKkkADB3+eTX1x7kQzXPWjlWMeHChexUAZ2x6UfSqFxdG4PwTDY7CMoU6Tnf2OB70DNlJBEXnmLCOtqrzj/fD/nQ/wAqVYPbF9S3+b/wWuvjHJDzXhuRMqgsh0lST4FC4znzx++pDnTlhr4RhZFj6ZYnKls6sehGO1bGk/K8RqbKJuOw/tcM7N3Gw6xscscufKVG+znl5Ejjuw7FpI2BU6dIy3ltn7I86vtUHlrkaS1nWZpg4TV4QpGdSlfM/Gr9Vig0tZBELmcSqNqVy9tTODvBEXMNvrA3SlKVKqCUpSiKHueX7eR2d4yWbudbjyx2DYHavj8FbT8kf2kn9VTdKIoT8FbT8kf2kn9VPwVtPyR/aSf1VN0oihPwVtPyR/aSf1U/BW0/JH9pJ/VU3SiKE/BW0/JH9pJ/VT8FbT8kf2kn9VTdKIoWHlu2RldYyGUgg9SQ7jfsWwa5udWzFBHnBluYR81SQTSD4+CNqsdUT2hXQ1xocYWKV+6fXcLbx/XBXBWSXOx2B2NCizPkmN7k8Uu5wdUQhcnQEJVZROfCFGSUi9MnPxrML21MUrxPuY3ZDj1UlTj7xW3ezf6OCaRJY44J52Cp0x4lHgQEtgaTgnGgHfuO1Zdznw7py6wS4OY2b1dAAGzjfXHokz5ln32qvRxNKpVdSYbt1sY636HVah4JICjLe2MjqsADOwzgHttk6tahf1HFb57Er4Nw+GIBSB1VkAI8LLJqywO51LIo2z9Ueu35wLnAHkK/vVb1PbG223pVgrZbP7fOGQQR2/Rt4omkkclo0VSw0JnVpHqe3wzWT8KsJriVIYVLyudKqCBnYnGSQAMZ7193E9w1vAshl93QsIiQdAJYtIFPYknv51Ncn88yWCPGttbTRyHMgljyzDyGoHcDyBBAyfWgsitlxwi+tY9HELbWkakrMxaWI6W6gMmA5BxrXdRkNjbua/zdyxbQvC8cjwpI5SRGSRxEwAOUYqGkTfswDjbvvi8ct+06zc4b3qxY9yjmeH5aXDdMH0RR8/Oq7zNxOGa5mtraSGVXGtWWN1j1+B5UA1lsERDGnUMucYwCMIs+43CiTyLGZCqthTIuliAO5X7Oe4HkMVHE1P3/AAR1naN0eIjUWBV32XVllyAWXw433GDnsaiBC3iAUkjvgZwPjttWUXPitjvWXh9xYXQHgdpLZ2yq4EPTts6mU6caGORjIBGcE1nHKVuHuoyw1JGeq428QTxaN/N2AQfFhWm+0SST+zLWOVYj7vMnUlVixZih6hCOgDZYljvg7bb7RPrU2vbTeYLrBYzAEStZ5KI90RB2heSIfKOVoxj4FVBHwIr2n5atnZnaMlmJJPUkG5OTsGwKg+WOKxRzSxtIFE4SeHWyeLWgjcArsTqRXIH5VfUVcUcEAggg9iN6kBWVE/grafkj+0k/qp+Ctp+SP7ST+qpulZRQn4K2n5I/tJP6qfgrafkj+0k/qqbpRFCfgrafkj+0k/qp+Ctp+SP7ST+qpulEURZcAt4nEkcZDLnB1ue4x2LEdjUvSlESlKURKUpREpSlESlKURKUpRErlvLtIl1SOqLkDLEKMk4AyahObOLSQiFIdIkmcjW4yEVVLOQMjU22ACcbk74wafcW07SrcG4M00alUE8cJUAnJCmONWjJ7agT5ZDAYqlisdTodkntRaZjzIBgfFT08NVqNzME+am7rjE06BJOnFFKpycHLq2+hcsCjBAQSQQcgj0Gdc7SyvYzTokjwzzaI3UjSltbhjHuR4VadmZfUAAHsKufClVrbWhZkZQSZ5AcEE9RNa7gq4fLeTdtgAIWXhXC5zGv0ci9NQRG2dOnAjJIbIB06ACDq2+Z41HiL6ddxr5jFoAEDe466TP3ig2oQTmXjyLNb29vFEIpXm6Y6oEbMBrYk5+zscqT3+jI8gK8+drWO7R10yGRdIJWFzlDkxvjGQyEtse6mQAeIEe/GeFyrJCLKMRk6kdeoUHhdnRgRkkeJyTj7QG5AFS/AreZQXOpjhYsyAo3hycgH7OpmG+S2Mg4xVX2zaVT3prpcbwXCbnfWBy5WKnLcOKAqNf+YTdsG19SYjSOa/PUw0EqQMg9wSc/Eb4II8/MVofKvs6uJLOK7Fv1pHnjZIWZUUwLkuza9iHOABg7b4OakeeOR2kkkliQYyWYLpyrZyWVRu6HuynxKSSNWcGoXnNvEooRbvdXChNKR6H0roQFSuVAZiDpH1tsMCM9vUYfE08SzPTPjzHQ+rrDHh1wtW9nnGbe2hubO8iaBBcylBNGel0ydlaQjp7EEbkA7Yqp+0Li/AiCLSEyTD7UY0xZ+JbxY/R47d6y6WVpHzI5LMd2csx+ZO5P761fg/sxihQTcReJbV0X6VbhlIc5IKgxAYYEDSdxg7+VTmN1sste6lm0oWZvQFtv318WkoVt+xBB2BxkYyMg4I75G/oR3qX5xNv72yWs7zQIFRJJMb4G+AFXwg7dt8E75qCaPHy8jvvvjbasotA19dIycm4imJwgCGRemWfAGCNYVceAgdRQWGcV48W4PFJE720oQqAJlQ+AjWyDUIxhMKM5ZVB3O+cmE4VdIJI3hRjJldcOA3VwQ7fYKhMrnTp2+ONrlwrgayYuneKJI8KbgnYHYAqCzK8g2CkeBMggyN9WOrVZSbmeYHqw5lY8V58k8GjtwklxGza3AKhSSZAC6RAdzo0mSQdgwjXujCrPzhJDd8PvNCeKPDk6cMCuGBYHxDwgg5A8/nUnd2JaK3lieMJEuFCqJEZXXGoHUuMnHizsC2c5r74Vy+Yuqj/SNMugspAVUwdumd0GWPm2dtxXk8TjadZwxBPaB7InQNdv9TvNgIC0JpFmYk55sItHjrPLnooDli6ZbC0meMdSN2DRsMa4J2VBIMjOjqCNi7FiSH8sCrdbcVa3dx1W2kJER+qy4VpFXK4ByzsMHPrkCqzyTy7PHaz205hCP9HJpL5aNlbxYxoL5K4bAbCgZwFqzWKTRwhZnVnEOZWLnGtVOsgYGFO3bGB5VY4li2Cu2pQdLtDB6gjnbmI3haPdcFquPC+JrOoI2bfUhIJGDpPb4/xHapOsqsL24lZZ0Y26aSEBAkl0tpJJL5VA2lToKsRgHK7qJ3g/HZ1uIoZnEqTFkR9IV1dUZ8NpwrKVVtwFIIHfO3Xw2Pa+KdSA/kNJ8dJ6T0V0YasKedzfXhqrxSlK6KhSlKURKUpREpSlESlKURKUpREpSlESlKURVjnywEtozeINCyzBk+uAhzIE2PiaLWo2OdXY9qrfF+XrxVQoFvIg6P4G6UjRhlLqRqCSZj1bhlBOPDWlEVWuA3C2zmxkYLo/1XUcdSE7oi+rRbxlRk6QjH61RPose4OcLjQrdtRzQQDY6rMuYIoJJpoo43QSRxyJaTK0AVo3AnRFcBAWTTgoTkNLvUxw2SaZkuZY+j0WyUYfSHKlCW7GNQrFgpznY+QzaePX6Sv0ShZYhI8ySRoyPEqBuzA5BYhQRj7fwqGuLKBYt4pFAtVkkW2mkiXLnTo6YbpgAaiSRsBXNxeGFYPyvi+4MaAO33jWNZsrgwuI9jkaB24P+V7AXgXgHzGkqB49alrqR2RmQtH3i1qU8IQq/wBhQxbJJGDqPY118TSZLaRW6kjAMFCAuqEkMUzjUdMfhEh3GGxgkCpGKDEcbdW9KOekq6bOVSc4CA9MMykDY5x3rrEBVAiT3I0yCJY0htw2rQHOPsgAHcnzB71T9xrlrGy3sx+q8C2308NrxV6GKe1jHMbDdIDdjfMZ05/tdVKxhmyMwT/RsrJmSZlOXGsESOQ2Q3psSDtgkSvNnAra5R5JCkZTGtwVO4PjDg7NpXsfrb7EV9pwyKGSFGlvW1DqAXEqJoJkKkALFqLAjIwcYxg4q8DlWzXxPD1SviDTs85BHmDKWIPyqdvDqj6ntBUykH+0HeOZGu9jcla46nVc8VHMFOdA3Sx8ea/PU/JWWLWkyyhNw8Lq2WBHhUMwIYZUjxtnO3Y182vDuKRFTG8uZRnOJH1qd8MMMp7HY75z6VqPEOJtK1pxGGOPoOxgEUWl5GV0LIZWU6UZZEVQgzo1PltyB/bNwTJCSwy7Hqg5IcBZPATsFAYkHsCWGO4rbFY+vhXZHQ6wMmx5GwIFreO28UH1HMMLKrjlzidydEokYISfxZUAnIJywRfsnz8q67X2dSKgknKxpvqMrhNOMjdVznt+UXOR61rnDLtWjh8QI0gemWCBtx8t/vrnmgknvYDAIn6KyTMsoOl3BEKLkZ6Z8UmH0nBXsaq0OLYnE1hRADZmTE6Sd/BG1XOMKqcvcI4eYpVi0XBCklSQqMgH1tKkk5YYXqMzA7jFSHH5eq9ubIqwhIyu6ppcBIJCcYZfrKuAe5OfDVn4s1lJBJM9hB1o5OiyTRRkpIdLY1KDkaGD5UnbHnkVGBrM4RreWMEb9G5mRWXWUUqhdOopK5ACk48qs1sA01s76pJH6hmEER0HUREbLoYbBYkxXpCYMXg3AnQxP79YXFwG3dfeTJoQvGCkMTSGM6teZgSB4nKnOkDYA7lqi5uASymNI4xFIhCyTOVWVnK6yVaMktqGckkDfz7VZo+B2gk1LcX6DDxrK0muMhcs6qZA+r6p7jfScUWzQZlF5xEHSqgGK2GpGbCFQYQpyds98fCoG4Csx5e17Z87QI0jlzH3RtDFsLjku6x7PMxbbW3Q8jpwce0StbuIjJG8TjQF1jUQnTV17bamGT2JPbJrl4bwyQwdOQdNLiRIY4Q5bSj/AOsZOTp+jVm0g7aPLJFS8sFuWj13F7IQS6hjawhGBKMCQkfiyewz3zR7Kz6kye59eSMMV95nMupkbcmKRiAMEsNI3Ge2a3w+BdTDQ5zYBm0uNiXACbDXXlzlbNwWJNL2RYImZMA2Mak2E62+V14cVt442WKwuprl+ooMEfSlKRg5dWkIGgaRgGR87jepPl/hs73+qbQFtk1dNMtplkUqoaTbUwhZiVCgDqJu2c1K8P46I7aQvEFeJhGsKIyFmbHRQI31S2QO5HnnFTHAOHNBFhyGldjJM47NK27kZ30jZVHkqqPKuszDUMwqtaJ+HyG61rPrMmi8n19uWilaUpVlVkpSlESlKURKUpREpSlESlKURKUpREpSlESuO/sIpkKSxpIh7q6hht54Pn8a7KURV1+BSx5FvdOq4I6U494j3/OIl+GOppA8qj24XMqmP3OApqDa4JnjfWpyrBTHgY8vpDVypWCAdVuyo9ndJHh00VJjSRFjQcOvPo5erkSWja38WdRacHctnsPKvmUSvqIsb5WabrKwksgVbQFwPpm2KjBBB71eKVrkbyW/vNb9R35b3O3P9tFSG4XcnQyW5DKrLqlvWRyGOo6jFE+fF5AgVM+737YHVtolxggRSTN9ztIg/WhqepWWtDdAtalV9TvmdfmZKonCeAWL2Se8QpqtlMMkuDG493Jj1F0IcfU1DfzBHeq9AsTQGRGuFCzCJY1KSMImXUv49JCTgHw5xtV6v+XVkaRklePq4MsemJ45GAChmSRG3woGVK50jOcVyT8Bumk6nvFsW1I2WtZc6kyEJ03Kg41HyFRVaReREW5gHXxU2GqYdoIrMLpI32G3nOu226rUFrLKVMF3I4eRoAzi3CskaB0yVt9QzltvI1L8A4BZtALl1kGVPU1TyaMIzZ1KpWN1B1EZXzz516/gpOy6GmtOmXMhVbWUeMjSSNVywAx5Yx8KkByuGTpS3M0kOAOiBFHHpH2cRorFT2KliCNqxSpFhm3kP4WcRUwzmAUWEGdTrF+pmZG0CN8xiJ5Z4POlujLFahGc3EcTRtEYi5LKpKllyitoyFHbz7npvrG6kfqSWsesFSrw3GphoZmXAkhUDOogjJyKudKnLQdQq7Kj2d0kevU891QY7VgdL2V70lLlI9VoyKXDKxBWXUdmbAPbNeMXCo8OHhunL6QcwIMqrhgG0nDE6QpY+VaJSozRYdlYGOxA0f8ATYzOms3PM6ys9HD28CpZ3mI9QQ/6GoVGYNpPUkJ2PYhc12JwK5eRnMcUf1sdaR7rGsYk+ixGilhts7DftjartSsikwbLR2Lru1ed+muunP7nmVWuEcqxQsshZnZGLLnSiozDSSqRhUzpJXUwZsEjVuastKVuABooHOLjJMlKUpWVhKUpREpSlESlKURKUpREpSlESlKURKUpREpSlESlKURKUpREpSlESlKURKUpREpSlESlKURKUpREpSlESlKURKUpREpSlESlKURf/9k='; // Lagos State crest — faint background on the slip
+document.getElementById('verified-slips').addEventListener('click', ()=>{
+  const mda = isAdminRole() ? document.getElementById('verify-mda-select').value : (CURRENT_USER?CURRENT_USER.mda:'');
+  downloadSlipsPdf(allVerifiedInOrder(), `Eligibility_Slips_${safeFileName(mda||'All_MDAs')}.pdf`, 'verified-msg');
+});
+document.getElementById('verified-print').addEventListener('click', ()=>{
+  if (!VERIFIED_DATA.length){ showMsg('verified-msg','warn','There are no verified officers to print slips for.'); return; }
+  printSlips(allVerifiedInOrder());
+});
+document.getElementById('verify-slips').addEventListener('click', ()=>{
+  const recs = VERIFY.results.filter(r=>r.storedVerified).map(r=>verifiedRecordByBrief(r.online.id)).filter(Boolean);
+  downloadSlipsPdf(recs, `Eligibility_Slips_${safeFileName(VERIFY.mda||'All_MDAs')}.pdf`, 'verify-msg');
 });
 // Audit log (best effort — a failure never blocks the downloads).
 async function saveVerificationLog(){
@@ -3338,8 +4122,10 @@ async function saveVerificationLog(){
       fields_compared: r.compared, fields_matched: r.matched, discrepancies: r.mismatches,
       discrepancy_details: r.fields.filter(f=>f.result==='mismatch').map(f=>`${f.label}: online "${f.online}" vs sheet "${f.sheet}"`).join('; '),
     }));
-    const res = await callScript({action:'saveVerification', token:AUTH_TOKEN, source:VERIFY_SOURCES[VERIFY.source].label, fileName:VERIFY.fileName, mda:VERIFY.mda, results});
-    if (!res || !res.success) console.warn('Verification log not saved:', res && res.message);
+    for (let i = 0; i < results.length; i += 200){
+      const res = await callScript({action:'saveVerification', token:AUTH_TOKEN, source:VERIFY_SOURCES[VERIFY.source].label, fileName:VERIFY.fileName, mda:VERIFY.mda, results:results.slice(i, i+200)});
+      if (!res || !res.success){ console.warn('Verification log not saved:', res && res.message); break; }
+    }
   }catch(err){ console.warn('Verification log not saved:', err.message); }
 }
 </script>

@@ -1,0 +1,39 @@
+# Cloudflare Worker for the Y2027 Promotion Eligibility List Portal.
+# See ../CLOUDFLARE_MIGRATION.md for the step-by-step deployment.
+name = "y2027-eligibility-portal"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+# Keep the *.workers.dev address ON. (With a custom domain configured, Cloudflare otherwise
+# switches it off by default — and if the custom domain then fails, the portal has no address.)
+workers_dev = true
+preview_urls = false
+
+# The portal's own address. `wrangler deploy` attaches it as a Custom Domain (Cloudflare
+# creates the DNS record and HTTPS certificate — the zone portals.com.ng must be on this
+# Cloudflare account). The *.workers.dev address then redirects here.
+routes = [
+  { pattern = "csc-registration-2027-promotion.portals.com.ng", custom_domain = true }
+]
+
+# The portal page (copied from ../Y2027_Eligibility_List_Portal.html by `npm run build`).
+# run_worker_first lets the Worker tell the page to use this Worker's /api.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+
+# CANONICAL_HOST switches on the redirect from *.workers.dev. The deploy script first publishes
+# with the redirect OFF, checks the custom domain really answers over HTTPS, and only then
+# publishes again with it ON — so visitors are never sent to an address that doesn't work yet.
+[vars]
+CANONICAL_HOST = "csc-registration-2027-promotion.portals.com.ng"
+PORTAL_URL = "https://csc-registration-2027-promotion.portals.com.ng/"   # used in password-reset emails
+
+[[d1_databases]]
+binding = "DB"
+database_name = "eligibility_portal"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"   # printed by: npx wrangler d1 create eligibility_portal
+
+# Optional settings (Cloudflare dashboard → Worker → Settings → Variables, or `wrangler secret put`):
+#   BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD  first super-admin on an EMPTY database (not needed after import)
+#   RESEND_API_KEY, MAIL_FROM                         send account / password-reset emails via resend.com

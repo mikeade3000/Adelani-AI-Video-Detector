@@ -1,0 +1,44 @@
+# Publishes the Y2027 Eligibility Portal to Cloudflare automatically.
+# Runs on every push to main that changes eligibility-portal/, and on demand
+# (Actions tab → "Deploy portal to Cloudflare" → Run workflow).
+#
+# One-time setup (repository → Settings → Secrets and variables → Actions → New repository secret):
+#   CLOUDFLARE_API_TOKEN    API token with: Account · Workers Scripts · Edit, and Account · D1 · Edit
+#   CLOUDFLARE_ACCOUNT_ID   from the Cloudflare dashboard (Workers & Pages → Account details)
+# Optional secrets, copied into the Worker on each run:
+#   BOOTSTRAP_ADMIN_PASSWORD (only for an empty database), RESEND_API_KEY, MAIL_FROM, PORTAL_URL
+name: Deploy portal to Cloudflare
+
+on:
+  push:
+    branches: [main]
+    paths: ['eligibility-portal/**', '.github/workflows/deploy-cloudflare.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-cloudflare
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: eligibility-portal/cloudflare
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: eligibility-portal/cloudflare/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Deploy (creates the D1 database and tables if missing, then publishes)
+        run: node scripts/deploy.mjs --ci
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          BOOTSTRAP_ADMIN_PASSWORD: ${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          PORTAL_URL: ${{ secrets.PORTAL_URL }}

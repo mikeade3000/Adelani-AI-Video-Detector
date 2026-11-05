@@ -1,0 +1,19 @@
+{
+  "name": "y2027-eligibility-portal-cloudflare",
+  "private": true,
+  "description": "Cloudflare Worker + D1 backend for the Y2027 Promotion Eligibility List Portal",
+  "scripts": {
+    "build": "node -e \"require('fs').mkdirSync('public',{recursive:true});require('fs').copyFileSync('../Y2027_Eligibility_List_Portal.html','public/index.html')\"",
+    "predev": "npm run build",
+    "dev": "wrangler dev",
+    "predeploy": "npm run build",
+    "deploy": "wrangler deploy",
+    "db:schema:local": "wrangler d1 execute eligibility_portal --local --file=schema.sql",
+    "db:schema:remote": "wrangler d1 execute eligibility_portal --remote --file=schema.sql",
+    "import:backup": "node migrate/import-backup.js",
+    "setup": "node scripts/deploy.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

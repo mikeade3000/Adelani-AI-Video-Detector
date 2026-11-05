@@ -7,6 +7,17 @@ Two files make up the portal:
 | `Y2027_Eligibility_List_Portal.html` | The portal page that officers, MDA users and administrators open. |
 | `Code.gs` | The Google Apps Script backend that stores everything in a Google Sheet. |
 
+## Moving to Cloudflare
+
+The portal can run on **Cloudflare**: a Worker plus a D1 database, replacing Apps Script and the Google Sheet.
+Users keep their passwords, and existing links and slip QR codes keep working.
+The code is in `cloudflare/`, and the step-by-step guide is **[CLOUDFLARE_MIGRATION.md](CLOUDFLARE_MIGRATION.md)**.
+**Uploading is automated:**
+* On Windows, drag your backup file onto `cloudflare/deploy.cmd`. On Mac or Linux, run `cloudflare/deploy.sh backup.json`.
+  This signs in, creates the database, imports the backup and publishes.
+* Optionally, GitHub Actions can publish every change pushed to `main`.
+Until you switch, everything below still applies to the Google Sheets backend.
+
 ## Live backend
 
 The portal uses this Apps Script Web App URL:
@@ -62,24 +73,111 @@ If an officer submitted Form A more than once, only the latest submission is che
 
 ### Verified and Authentic Data
 
-When the check compares against **Form A**, officers whose uploaded row matches their Form A on every
-compared field are saved automatically to a new **Verified and Authentic Data** sheet, and the screen
-confirms how many were stored. Officers with differences or missing details are listed, and are **not** saved.
+When you upload the eligibility list, **every officer on the list is saved** to **Verified and Authentic Data**,
+ready for slip printing, using the details on the list. Each row records its *Form A check*:
+* **Matches Form A**: every compared field agrees.
+* **Differs from Form A**: the list's details are saved and printed. **Download list of differences / missing Form A (.xlsx)** shows what differs, so you can follow up.
+* **No Form A**: the officer is saved without a photograph. An administrator can add one with **✎ Edit**.
 
-* A value missing on either side counts as a discrepancy, for example a blank *Date of Confirmation* in the sheet.
-* **Official email, WhatsApp number and disability are never compared.** The screen lists them as "Not compared (by policy)".
-* Each saved row combines the officer's eligibility-list values (grade levels, promotion post, proposed
-  dates, email, WhatsApp number, disability, remarks) with their Form A details (date of birth, state of
-  origin, education, service record, certifying officer), plus who verified them and when.
-* The sheet always reflects the latest check. Re-checking an officer replaces their row rather than adding a duplicate.
-  If a later check finds a discrepancy, the officer is removed until the record is corrected and checked again.
-* The server only saves officers whose Form A belongs to the user's MDA and whose Oracle No agrees with it.
-  The Form A details are copied from the stored submission, not from the browser.
+Form As that are not on the list are left untouched. Uploading the list again replaces each officer's row; nothing is duplicated.
+* **Official email, WhatsApp number and disability are never compared.**
+* The server only saves officers for the user's own MDA (administrators can upload for any MDA).
+
 * Panel **03 · Verified and Authentic Data** on the Verification tab lists the saved officers (MDA users
   see their own MDA) and downloads them as Excel.
 
+### Candidate Eligibility Slip
+
+Every officer in **Verified and Authentic Data** can get a **Candidate Eligibility Slip**: one elegant A4 page,
+downloaded as a PDF or printed. The slip shows:
+
+* the SEAP logo in the top banner, with the Lagos State crest as a faint background;
+* the **Eligibility/SEAP Number**, name, MDA, CSC File No and Oracle No;
+* the passport photograph from the officer's Form A;
+* the service record: first appointment, confirmation, present post and promotion post, with grade levels and dates;
+* a signature block for **Mr. Babatunde Aragbanda, Director, CMD**.
+
+Where to get slips:
+* **Slip (PDF)** on each fully matched officer in the results list, or **Download Slips for Verified Officers (PDF)** for all of them.
+* In panel **03 · Verified and Authentic Data**: **Slip (PDF)** per officer, **Download All Slips (PDF)** as one PDF with one page each, or **Print All Slips**.
+
+Every officer on the list gets a slip. Officers with no Form A show "No photograph supplied" until a photo is added with ✎ Edit.
+
+**Verifying a slip.** Each slip carries two codes:
+* **A QR code.** Scanning it with any phone camera opens the portal's verification page, no login needed. The page shows
+  **VALID**, with the officer's details and photograph to compare against the paper. It shows **NOT GENUINE** if the code
+  was forged or altered (it is signed with the server's secret). It shows **NO LONGER VALID** if the officer has since
+  been removed from Verified and Authentic Data.
+* **A barcode** (Code 128) of the Eligibility/SEAP Number, for desk barcode scanners.
+
+Slips downloaded before this update have no codes. Download them again to get them.
+The SEAP number comes from the uploaded list's **ELIGIBILITY/SEAP NUMBER** column. It is stored, not compared.
+To change the signatory, edit `SLIP_SIGNATORY` in the portal's script.
+
+### Which MDA an officer is listed under
+
+Every officer is placed under the MDA written beside **"MDA:"** on the eligibility list they were uploaded from,
+whatever MDA their own Form A names. The Form A still supplies the photograph and is still compared.
+If a sheet has no "MDA:" line, the MDA chosen at upload is used. MDA users' uploads always go under their own MDA.
+
+**Fix MDA grouping** (administrators, on the Verify & Print Slips tab) corrects officers uploaded before this rule.
+It works per upload (one file from one uploader):
+* That list's MDA is read from its officers who had no Form A, because they were always filed under the sheet's MDA.
+* Every other officer from that list moves to it.
+* If a list's MDA can't be told (every officer had a Form A), you choose it from a drop-down, or upload that list again.
+* A preview shows every move before you click **Apply**.
+* Officers whose MDA was changed by hand with ✎ Edit are left alone.
+* If the same officer ends up twice in one MDA from two different lists, the older entry is removed.
+* Each move is recorded in the log as "MDA corrected".
+
+### MDA Print Links (passwordless, tied to the MDA's email)
+
+The **MDA Print Links** tab (administrators) lists every MDA in Verify & Print Slips. Each MDA can have one private link.
+
+**Creating and sending a link**
+1. Type the MDA's email address(es). If the MDA has a portal account, click its email to add it.
+2. Click **Create link**.
+3. A **Send the link** window opens. Choose **Gmail**, **Yahoo Mail**, **Outlook.com** or **Email program**: your own mailbox opens with the message and link already written to the MDA, and you click Send there.
+   No email service needs to be set up. **Copy message** is there for WhatsApp.
+
+**How an MDA uses its link**
+1. Open the link. It shows only the MDA's name.
+2. Type the email address the link was sent to.
+3. Only **that MDA's slips** open, for **1 hour**: print one slip or all of them, download them as PDF, or download the list in Excel.
+   Nothing can be edited or uploaded.
+
+**What protects it**
+* A wrong email is refused, and 5 wrong emails lock the link for 15 minutes.
+* **New link** replaces a link, and the old one stops working at once. **Switch off** blocks it.
+* Removing an email from the list ends that email's session.
+* Every sign-in, print and download is recorded in the log ("MDA print link").
+
+**Shortcut:** on Verify & Print Slips, the **🔗 MDA link** button on each MDA heading jumps to that MDA's row.
+
+These links replace the old per-MDA download links, which now say they have been replaced.
+
+### Reports on Verified and Authentic Data
+
+The **Reports** tab (administrators) has a **Report on** choice:
+* **Verified and Authentic Data** (the default): every officer on the uploaded eligibility lists.
+* **Eligibility List records**: Single Entry / Bulk Upload records, as before.
+
+You can also limit a report to one MDA. All three reports work on either source.
+With Verified and Authentic Data, they add Form A check counts (matches / differs / no Form A).
+The Promotion Defence Report shows these per MDA, next to the GL06–10 and GL12–16 brackets.
+Grade brackets use the officer's **present** grade level.
+
 Each check is also logged, one row per officer, in the **Verifications** sheet (who checked, when,
 which file, the result and the discrepancies).
+
+## Fixes in the slip update
+
+* **Simultaneous submissions could overwrite each other.** The previous update wrote each new row at
+  "last row + 1". Two Form As sent at the same moment could pick the same row. Every action that writes
+  now takes the Apps Script lock, so saves happen one at a time. If the lock can't be obtained within
+  30 seconds, the user sees "The system is busy — please try again in a moment" and nothing is lost.
+* A **Verified and Authentic Data** sheet created by the previous version automatically gains the new
+  `seap_no` column at the end. Its existing rows are kept.
 
 ## Fixes in this update
 
