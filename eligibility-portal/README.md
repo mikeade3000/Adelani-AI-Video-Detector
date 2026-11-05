@@ -149,8 +149,7 @@ The **MDA Print Links** tab (administrators) lists every MDA in Verify & Print S
 **Form A on the link page**
 * Every officer who submitted a Form A (Brief on Candidate) has a **🖨 Form A** button and a **PDF** button on their row. Officers without one show **No Form A**.
 * **Print All Form A** and **Download All Form A (PDF)** cover the whole MDA.
-* Each Form A starts with a **Source of the slip details** box. It lists every detail printed on the slip (name, CSC File No, Oracle No, posts and dates), as given on the MDA's eligibility list, next to the officer's own entry on Form A, marked ✓ Same or ✗ Differs.
-  It also says which details come only from the list (SEAP No, grade levels, promotion post) and that the slip photograph is the Form A photograph.
+* Each Form A prints as the officer submitted it, with their photograph.
 * Officers whose Form A differs are marked **Differs from slip** in the list.
 
 **What protects it**

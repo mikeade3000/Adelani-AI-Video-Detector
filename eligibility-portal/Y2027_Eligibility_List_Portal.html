@@ -719,7 +719,7 @@
         </div>
         <input type="text" id="mdl-search" placeholder="Find an officer: name, SEAP No, Oracle No or File No" style="max-width:420px;margin:12px 0 8px;">
         <div class="tablewrap"><table id="mdl-table"><thead><tr><th>#</th><th>SEAP No</th><th>Name</th><th>Oracle No</th><th>CSC File No</th><th>Present Post</th><th>Promotion Post</th><th>Slip</th><th>Form A (Brief on Candidate)</th></tr></thead><tbody></tbody></table></div>
-        <p class="hint" style="margin-top:8px;">Each officer's <b>Form A</b> is the brief they submitted. It opens with a <b>Source of the slip details</b> box showing every detail printed on the slip next to the officer's own entry on Form A (✓ same / ✗ differs).</p>
+        <p class="hint" style="margin-top:8px;">Each officer's <b>Form A</b> is the brief (Brief on Candidate) they submitted.</p>
       </div>
       <p class="footnote" style="margin-top:20px;">This is a private link for one MDA. It opens only with the MDA's registered email address, and each sign-in lasts 1 hour.</p>
     </div>
@@ -1911,22 +1911,15 @@ function briefPrintCSS(){
     td{border:1px solid #C9CFD8;padding:5px 8px;font-size:12px;vertical-align:top;}
     td.l{width:42%;background:#F6F5F1;font-weight:600;}
     .auth{margin-top:12px;border:1px solid #1E6B3A;background:#E7F3EC;padding:9px 12px;font-size:12px;border-radius:4px;}
-    .note{font-size:10.5px;color:#5B6572;margin-top:8px;}
-    .src{border:1.5px solid #B9892E;background:#FBF7EE;border-radius:4px;padding:8px 10px 6px;margin:0 0 10px;}
-    .src .st{font-weight:700;color:#0F2C4C;font-size:12.5px;letter-spacing:.04em;}
-    .src p{font-size:11px;color:#3B4654;margin:3px 0 6px;}
-    .src table td,.src table th{font-size:11px;padding:4px 7px;border:1px solid #D9CFB8;text-align:left;}
-    .src table th{background:#0F2C4C;color:#fff;font-weight:600;}
-    .src .ok{color:#1E6B3A;font-weight:700;white-space:nowrap;} .src .bad{color:#A3271F;font-weight:700;white-space:nowrap;} .src .na{color:#5B6572;}
-    .src tr.diff td{background:#FCEDEB;}`;
+    .note{font-size:10.5px;color:#5B6572;margin-top:8px;}`;
 }
-function briefPrintHTML(b, extraTop){
+function briefPrintHTML(b){
   const row=(l,v)=>`<tr><td class="l">${escapeHtml(l)}</td><td>${escapeHtml(v==null?'':String(v))}</td></tr>`;
   const photo = briefPhoto(b);
   const ph = photo?`<img class="photo" src="${photo}">`:'';
   const sent = String(b.Status)==='Sent';
   const authBlock = sent ? `<div class="auth"><b>AUTHORISED &amp; SENT TO THE COMMISSION.</b><br>By: ${escapeHtml(b['Authorized By']||'')} · MDA: ${escapeHtml(b['Authorized MDA']||'')} · On: ${escapeHtml(String(b['Authorized At']||''))}<br>The assigned officer accepts responsibility for all details as sent.</div>` : '';
-  return `<div class="sheet"><div class="hd${ph?' hp':''}">${ph}<div class="o">LAGOS STATE GOVERNMENT · CIVIL SERVICE COMMISSION<br>YEAR 2027 PROMOTION EXERCISE</div><div class="t">BRIEF ON CANDIDATE — FORM A</div></div>${extraTop||''}
+  return `<div class="sheet"><div class="hd${ph?' hp':''}">${ph}<div class="o">LAGOS STATE GOVERNMENT · CIVIL SERVICE COMMISSION<br>YEAR 2027 PROMOTION EXERCISE</div><div class="t">BRIEF ON CANDIDATE — FORM A</div></div>
   <h3>1. Candidate</h3><table>${row('Name (Surname first)',b['Name (Surname first)'])}${row('Department/Ministry',b['Department/Ministry'])}</table>
   <h3>2–6. Appointments &amp; Designations</h3><table>${row('Date of 1st Appt',b['Date of 1st Appt'])}${row('Designation at 1st Appt',b['Designation at 1st Appt'])}${row('Date of Confirmation',b['Date of Confirmation'])}${row('Date of Present Appt',b['Date of Present Appt'])}${row('Present Designation',b['Present Designation'])}${row('Conversion Post',b['Conversion Post'])}</table>
   <h3>7. Educational Qualifications</h3><table>${row('(a) Post Primary',b['Educ: Post Primary'])}${row('(b) Secondary School',b['Educ: Secondary School'])}${row('(c) University etc',b['Educ: University etc'])}${row('(d) Professional Certificates',b['Educ: Professional Certificates'])}${row('(e) Additional Qualification',b['Educ: Additional Qualification'])}</table>
@@ -3024,42 +3017,20 @@ async function mdlAllowed(event, records){
 async function mdlPrint(records){ if (await mdlAllowed('print', records)) printSlips(records, 'mdl-msg'); }
 async function mdlPdf(records, name){ if (await mdlAllowed('pdf', records)) downloadSlipsPdf(records, name, 'mdl-msg'); }
 
-/* ---- Form A (Brief on Candidate) on the link page ----
-   Each Form A opens with "Source of the slip details": every detail printed on the slip
-   (taken from the MDA's eligibility list) next to the officer's own entry on Form A. */
-const SLIP_SOURCE_FIELDS = [
-  ['surname_first','Name (Surname first)','Name','name'], ['csc_file_no','CSC File No.','CSC File No','fileno'],
-  ['oracle_no','Oracle No.','Oracle No','idnum'], ['post_1st_appt','Designation at 1st Appt','Post at 1st appointment','post'],
-  ['date_1st_appt','Date of 1st Appt','Date of 1st appointment','date'], ['date_confirmation','Date of Confirmation','Date of confirmation','date'],
-  ['present_post','Present Designation','Present post','post'], ['date_present_appt','Date of Present Appt','Date of present appointment','date']];
-function slipSourceHTML(r, b){
-  let diffs = 0;
-  const rows = SLIP_SOURCE_FIELDS.map(([sk, bk, label, type]) => {
-    const c = compareField({key:sk, label, type}, b[bk], r[sk]);
-    const mark = c.result==='match' ? '<span class="ok">✓ Same</span>' : c.result==='skip' ? '<span class="na">—</span>' : '<span class="bad">✗ Differs</span>';
-    if (c.result==='mismatch') diffs++;
-    return `<tr${c.result==='mismatch'?' class="diff"':''}><td>${escapeHtml(label)}</td><td>${escapeHtml(c.sheet||'—')}</td><td>${escapeHtml(c.online||'—')}</td><td>${mark}</td></tr>`;
-  }).join('');
-  const gl = v => { const g = normalizeGrade(v); return g ? 'GL ' + g : '—'; };
-  return `<div class="src"><div class="st">SOURCE OF THE SLIP DETAILS</div>
-    <p>The Candidate Eligibility Slip (Eligibility/SEAP No <b>${escapeHtml(r.seap_no||'—')}</b>) prints the details on ${escapeHtml(r.mda||'the MDA')}'s eligibility list. Below, each of them is shown beside the officer's own entry on this Form A${diffs?` — <b>${diffs} detail(s) differ</b>`:' — all agree'}.</p>
-    <table><tr><th>Slip detail</th><th>On the slip (eligibility list)</th><th>On this Form A</th><th></th></tr>${rows}</table>
-    <p style="margin:6px 0 0;">From the eligibility list only (not on Form A): SEAP No; grade levels ${escapeHtml(gl(r.grade_1st))} / ${escapeHtml(gl(r.grade_present))}; promotion post ${escapeHtml(r.promotion_post||'—')} (${escapeHtml(gl(r.grade_promotion))}).
-    ${slipPhoto(r) ? 'The photograph on the slip is the one on this Form A.' : 'This Form A has no photograph, so the slip has none.'}</p></div>`;
-}
+/* ---- Form A (Brief on Candidate) on the link page: each officer's brief, as submitted ---- */
 async function mdlBriefs(){
   if (MDL.briefs) return MDL.briefs;
   const res = await callScript({action:'mdaLinkBriefs', mdaToken:MDL.token});
   if (!res || !res.success){ mdlEnded((res&&res.message)||'Please sign in again.'); return null; }
   return (MDL.briefs = res.briefs || {});
 }
-// Form A pages (with the source box) for the officers that have one, photographs included.
+// Form A pages for the officers that have one, photographs included.
 async function mdlFormAPages(records){
   const briefs = await mdlBriefs(); if (!briefs) return null;
   const withA = records.filter(r => briefs[r.brief_id]);
   if (!withA.length){ showMsg('mdl-msg','warn','None of these officers submitted a Form A.'); return null; }
   await photosForSlips(withA);
-  return withA.map(r => { const b = Object.assign({}, briefs[r.brief_id], {'Photo (data URL)': slipPhoto(r)}); return briefPrintHTML(b, slipSourceHTML(r, b)); });
+  return withA.map(r => { const b = Object.assign({}, briefs[r.brief_id], {'Photo (data URL)': slipPhoto(r)}); return briefPrintHTML(b); });
 }
 async function mdlFormAPrint(records){
   if (!(await mdlAllowed('forma_print', records))) return;
