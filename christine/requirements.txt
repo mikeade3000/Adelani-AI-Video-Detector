@@ -1,0 +1,20 @@
+# Cloud brain
+anthropic>=2.5,<3
+# Hearing (runs locally)
+faster-whisper>=1.1
+sounddevice>=0.5
+numpy>=1.26
+# Voice
+edge-tts>=7.0
+pygame>=2.6
+pyttsx3>=2.98
+# Computer control
+psutil>=6.0
+send2trash>=1.8
+pywin32>=308; sys_platform == "win32"
+keyboard>=0.13
+rapidfuzz>=3.9
+# Reading documents and articles
+pypdf>=5.0
+python-docx>=1.1
+trafilatura>=2.0
