@@ -712,11 +712,14 @@
             <button class="btn btn-primary" id="mdl-print-all">🖨 Print All Slips</button>
             <button class="btn btn-ghost" id="mdl-pdf-all">Download All Slips (PDF)</button>
             <button class="btn btn-gold" id="mdl-xlsx">Download List (Excel)</button>
+            <button class="btn btn-primary" id="mdl-forma-print-all">🖨 Print All Form A</button>
+            <button class="btn btn-ghost" id="mdl-forma-pdf-all">Download All Form A (PDF)</button>
             <button class="btn btn-ghost" id="mdl-signout">Sign out</button>
           </div>
         </div>
         <input type="text" id="mdl-search" placeholder="Find an officer: name, SEAP No, Oracle No or File No" style="max-width:420px;margin:12px 0 8px;">
-        <div class="tablewrap"><table id="mdl-table"><thead><tr><th>#</th><th>SEAP No</th><th>Name</th><th>Oracle No</th><th>CSC File No</th><th>Present Post</th><th>Promotion Post</th><th>Slip</th></tr></thead><tbody></tbody></table></div>
+        <div class="tablewrap"><table id="mdl-table"><thead><tr><th>#</th><th>SEAP No</th><th>Name</th><th>Oracle No</th><th>CSC File No</th><th>Present Post</th><th>Promotion Post</th><th>Slip</th><th>Form A (Brief on Candidate)</th></tr></thead><tbody></tbody></table></div>
+        <p class="hint" style="margin-top:8px;">Each officer's <b>Form A</b> is the brief they submitted. It opens with a <b>Source of the slip details</b> box showing every detail printed on the slip next to the officer's own entry on Form A (✓ same / ✗ differs).</p>
       </div>
       <p class="footnote" style="margin-top:20px;">This is a private link for one MDA. It opens only with the MDA's registered email address, and each sign-in lasts 1 hour.</p>
     </div>
@@ -1688,7 +1691,7 @@ function downloadBriefDoc(d, photo){
 // where loading every photo at once exceeds the database's memory limit).
 const PHOTO_CACHE = {};
 // MDA print link page state (?mdalink=…): its session token fetches photos instead of a login.
-const MDL = { link:'', email:'', token:'', mda:'', expiresAt:0, records:[], timer:null };
+const MDL = { link:'', email:'', token:'', mda:'', expiresAt:0, records:[], briefs:null, timer:null };
 function briefPhoto(b){ return !b ? '' : (b['Photo (data URL)'] || PHOTO_CACHE[b.id] || ''); }
 async function fetchPhotos(ids){
   const need = [...new Set(ids.filter(id => id && !(id in PHOTO_CACHE)))];
@@ -1902,20 +1905,28 @@ function briefPrintCSS(){
     .hd .o{font-weight:700;color:#0F2C4C;font-size:14px;line-height:1.5;}
     .hd .t{font-weight:700;color:#0F2C4C;font-size:18px;margin-top:6px;}
     .photo{position:absolute;top:0;right:0;width:100px;height:120px;object-fit:cover;border:2px solid #0F2C4C;border-radius:3px;}
+    .hd.hp{min-height:124px;padding-right:112px;padding-left:112px;}
     h3{color:#0F2C4C;border-left:3px solid #B9892E;padding-left:8px;font-size:13px;margin:14px 0 5px;text-transform:uppercase;}
     table{width:100%;border-collapse:collapse;margin-bottom:5px;}
     td{border:1px solid #C9CFD8;padding:5px 8px;font-size:12px;vertical-align:top;}
     td.l{width:42%;background:#F6F5F1;font-weight:600;}
     .auth{margin-top:12px;border:1px solid #1E6B3A;background:#E7F3EC;padding:9px 12px;font-size:12px;border-radius:4px;}
-    .note{font-size:10.5px;color:#5B6572;margin-top:8px;}`;
+    .note{font-size:10.5px;color:#5B6572;margin-top:8px;}
+    .src{border:1.5px solid #B9892E;background:#FBF7EE;border-radius:4px;padding:8px 10px 6px;margin:0 0 10px;}
+    .src .st{font-weight:700;color:#0F2C4C;font-size:12.5px;letter-spacing:.04em;}
+    .src p{font-size:11px;color:#3B4654;margin:3px 0 6px;}
+    .src table td,.src table th{font-size:11px;padding:4px 7px;border:1px solid #D9CFB8;text-align:left;}
+    .src table th{background:#0F2C4C;color:#fff;font-weight:600;}
+    .src .ok{color:#1E6B3A;font-weight:700;white-space:nowrap;} .src .bad{color:#A3271F;font-weight:700;white-space:nowrap;} .src .na{color:#5B6572;}
+    .src tr.diff td{background:#FCEDEB;}`;
 }
-function briefPrintHTML(b){
+function briefPrintHTML(b, extraTop){
   const row=(l,v)=>`<tr><td class="l">${escapeHtml(l)}</td><td>${escapeHtml(v==null?'':String(v))}</td></tr>`;
   const photo = briefPhoto(b);
   const ph = photo?`<img class="photo" src="${photo}">`:'';
   const sent = String(b.Status)==='Sent';
   const authBlock = sent ? `<div class="auth"><b>AUTHORISED &amp; SENT TO THE COMMISSION.</b><br>By: ${escapeHtml(b['Authorized By']||'')} · MDA: ${escapeHtml(b['Authorized MDA']||'')} · On: ${escapeHtml(String(b['Authorized At']||''))}<br>The assigned officer accepts responsibility for all details as sent.</div>` : '';
-  return `<div class="sheet"><div class="hd">${ph}<div class="o">LAGOS STATE GOVERNMENT · CIVIL SERVICE COMMISSION<br>YEAR 2027 PROMOTION EXERCISE</div><div class="t">BRIEF ON CANDIDATE — FORM A</div></div>
+  return `<div class="sheet"><div class="hd${ph?' hp':''}">${ph}<div class="o">LAGOS STATE GOVERNMENT · CIVIL SERVICE COMMISSION<br>YEAR 2027 PROMOTION EXERCISE</div><div class="t">BRIEF ON CANDIDATE — FORM A</div></div>${extraTop||''}
   <h3>1. Candidate</h3><table>${row('Name (Surname first)',b['Name (Surname first)'])}${row('Department/Ministry',b['Department/Ministry'])}</table>
   <h3>2–6. Appointments &amp; Designations</h3><table>${row('Date of 1st Appt',b['Date of 1st Appt'])}${row('Designation at 1st Appt',b['Designation at 1st Appt'])}${row('Date of Confirmation',b['Date of Confirmation'])}${row('Date of Present Appt',b['Date of Present Appt'])}${row('Present Designation',b['Present Designation'])}${row('Conversion Post',b['Conversion Post'])}</table>
   <h3>7. Educational Qualifications</h3><table>${row('(a) Post Primary',b['Educ: Post Primary'])}${row('(b) Secondary School',b['Educ: Secondary School'])}${row('(c) University etc',b['Educ: University etc'])}${row('(d) Professional Certificates',b['Educ: Professional Certificates'])}${row('(e) Additional Qualification',b['Educ: Additional Qualification'])}</table>
@@ -2963,7 +2974,7 @@ async function mdlOpen(){
   finally{ btn.disabled = false; }
 }
 function mdlEnded(message){
-  MDL.token = ''; MDL.records = []; if (MDL.timer){ clearInterval(MDL.timer); MDL.timer = null; }
+  MDL.token = ''; MDL.records = []; MDL.briefs = null; if (MDL.timer){ clearInterval(MDL.timer); MDL.timer = null; }
   try{ sessionStorage.removeItem(mdlKey()); }catch(e){}
   document.querySelector('#mdl-table tbody').innerHTML = '';
   mdlStep('email'); document.getElementById('mdl-email').value = ''; showMsg('mdl-msg','warn', message);
@@ -2993,9 +3004,12 @@ function renderMdaLinkSlips(){
   const gl = v => { const g = normalizeGrade(v); return g ? ` <span class="pill admin">GL ${g}</span>` : ''; };
   document.querySelector('#mdl-table tbody').innerHTML = list.map((r,i)=>`<tr><td>${i+1}</td><td style="font-family:var(--mono);white-space:nowrap;">${escapeHtml(r.seap_no||'—')}</td><td><b>${escapeHtml(r.surname_first||'')}</b></td>
     <td>${escapeHtml(r.oracle_no||'')}</td><td>${escapeHtml(r.csc_file_no||'')}</td><td>${escapeHtml(r.present_post||'')}${gl(r.grade_present)}</td><td>${escapeHtml(r.promotion_post||'')}${gl(r.grade_promotion)}</td>
-    <td><span class="action-btns"><button class="btn btn-primary" data-mdl="print" data-m="${r._m}">🖨 Print</button><button class="btn btn-ghost" data-mdl="pdf" data-m="${r._m}">PDF</button></span></td></tr>`).join('')
-    || `<tr><td colspan="8" class="hint">${MDL.records.length ? 'No officer matches your search.' : 'No officers are listed for this MDA yet.'}</td></tr>`;
+    <td><span class="action-btns"><button class="btn btn-primary" data-mdl="print" data-m="${r._m}">🖨 Print</button><button class="btn btn-ghost" data-mdl="pdf" data-m="${r._m}">PDF</button></span></td>
+    <td>${r.form_a ? `<span class="action-btns"><button class="btn btn-primary" data-mdl="forma-print" data-m="${r._m}">🖨 Form A</button><button class="btn btn-ghost" data-mdl="forma-pdf" data-m="${r._m}">PDF</button></span>${r.form_a_check==='Differs from Form A'?'<div style="margin-top:4px;"><span class="pill" style="background:var(--warn-bg);color:var(--warn);">Differs from slip</span></div>':''}`
+      : '<span class="pill" style="background:#EEF1F5;color:var(--slate);">No Form A</span>'}</td></tr>`).join('')
+    || `<tr><td colspan="9" class="hint">${MDL.records.length ? 'No officer matches your search.' : 'No officers are listed for this MDA yet.'}</td></tr>`;
   ['mdl-print-all','mdl-pdf-all','mdl-xlsx'].forEach(id => { document.getElementById(id).disabled = !MDL.records.length; });
+  ['mdl-forma-print-all','mdl-forma-pdf-all'].forEach(id => { document.getElementById(id).disabled = !MDL.records.some(r => r.form_a); });
 }
 // Every print or download is first recorded by the server, which also confirms the session is
 // still valid — so a link switched off or replaced, or an ended hour, stops it at once.
@@ -3009,6 +3023,86 @@ async function mdlAllowed(event, records){
 }
 async function mdlPrint(records){ if (await mdlAllowed('print', records)) printSlips(records, 'mdl-msg'); }
 async function mdlPdf(records, name){ if (await mdlAllowed('pdf', records)) downloadSlipsPdf(records, name, 'mdl-msg'); }
+
+/* ---- Form A (Brief on Candidate) on the link page ----
+   Each Form A opens with "Source of the slip details": every detail printed on the slip
+   (taken from the MDA's eligibility list) next to the officer's own entry on Form A. */
+const SLIP_SOURCE_FIELDS = [
+  ['surname_first','Name (Surname first)','Name','name'], ['csc_file_no','CSC File No.','CSC File No','fileno'],
+  ['oracle_no','Oracle No.','Oracle No','idnum'], ['post_1st_appt','Designation at 1st Appt','Post at 1st appointment','post'],
+  ['date_1st_appt','Date of 1st Appt','Date of 1st appointment','date'], ['date_confirmation','Date of Confirmation','Date of confirmation','date'],
+  ['present_post','Present Designation','Present post','post'], ['date_present_appt','Date of Present Appt','Date of present appointment','date']];
+function slipSourceHTML(r, b){
+  let diffs = 0;
+  const rows = SLIP_SOURCE_FIELDS.map(([sk, bk, label, type]) => {
+    const c = compareField({key:sk, label, type}, b[bk], r[sk]);
+    const mark = c.result==='match' ? '<span class="ok">✓ Same</span>' : c.result==='skip' ? '<span class="na">—</span>' : '<span class="bad">✗ Differs</span>';
+    if (c.result==='mismatch') diffs++;
+    return `<tr${c.result==='mismatch'?' class="diff"':''}><td>${escapeHtml(label)}</td><td>${escapeHtml(c.sheet||'—')}</td><td>${escapeHtml(c.online||'—')}</td><td>${mark}</td></tr>`;
+  }).join('');
+  const gl = v => { const g = normalizeGrade(v); return g ? 'GL ' + g : '—'; };
+  return `<div class="src"><div class="st">SOURCE OF THE SLIP DETAILS</div>
+    <p>The Candidate Eligibility Slip (Eligibility/SEAP No <b>${escapeHtml(r.seap_no||'—')}</b>) prints the details on ${escapeHtml(r.mda||'the MDA')}'s eligibility list. Below, each of them is shown beside the officer's own entry on this Form A${diffs?` — <b>${diffs} detail(s) differ</b>`:' — all agree'}.</p>
+    <table><tr><th>Slip detail</th><th>On the slip (eligibility list)</th><th>On this Form A</th><th></th></tr>${rows}</table>
+    <p style="margin:6px 0 0;">From the eligibility list only (not on Form A): SEAP No; grade levels ${escapeHtml(gl(r.grade_1st))} / ${escapeHtml(gl(r.grade_present))}; promotion post ${escapeHtml(r.promotion_post||'—')} (${escapeHtml(gl(r.grade_promotion))}).
+    ${slipPhoto(r) ? 'The photograph on the slip is the one on this Form A.' : 'This Form A has no photograph, so the slip has none.'}</p></div>`;
+}
+async function mdlBriefs(){
+  if (MDL.briefs) return MDL.briefs;
+  const res = await callScript({action:'mdaLinkBriefs', mdaToken:MDL.token});
+  if (!res || !res.success){ mdlEnded((res&&res.message)||'Please sign in again.'); return null; }
+  return (MDL.briefs = res.briefs || {});
+}
+// Form A pages (with the source box) for the officers that have one, photographs included.
+async function mdlFormAPages(records){
+  const briefs = await mdlBriefs(); if (!briefs) return null;
+  const withA = records.filter(r => briefs[r.brief_id]);
+  if (!withA.length){ showMsg('mdl-msg','warn','None of these officers submitted a Form A.'); return null; }
+  await photosForSlips(withA);
+  return withA.map(r => { const b = Object.assign({}, briefs[r.brief_id], {'Photo (data URL)': slipPhoto(r)}); return briefPrintHTML(b, slipSourceHTML(r, b)); });
+}
+async function mdlFormAPrint(records){
+  if (!(await mdlAllowed('forma_print', records))) return;
+  const w = openPrintWindow('Form A — Brief on Candidate');
+  if (!w){ showMsg('mdl-msg','err','Please allow pop-ups to print Form A.'); return; }
+  const pages = await mdlFormAPages(records); if (!pages){ w.close(); return; }
+  w.document.open();
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Form A — Brief on Candidate</title><style>${briefPrintCSS()}
+    .sheet{page-break-after:always;} @page{size:A4;margin:10mm;}</style></head><body>${pages.join('')}
+    <script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script></body></html>`);
+  w.document.close();
+}
+// A4 PDF of Form A pages; a long Form A continues onto a second page.
+async function mdlFormAPdf(records, filename){
+  if (!(await mdlAllowed('forma_pdf', records))) return;
+  if (!window.jspdf || !window.html2canvas){ showMsg('mdl-msg','warn','PDF tools could not load — opening the print view instead (choose “Save as PDF”).'); mdlFormAPrint(records); return; }
+  showMsg('mdl-msg','warn','Preparing Form A… fetching photographs');
+  const pages = await mdlFormAPages(records); if (!pages) return;
+  const host = document.createElement('div'); host.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;background:#fff;';
+  host.innerHTML = `<style>${briefPrintCSS()}</style>`; document.body.appendChild(host);
+  try{
+    const pdf = new window.jspdf.jsPDF({unit:'mm', format:'a4', orientation:'portrait'});
+    const big = pages.length > 20, scale = big ? 1.5 : 2;
+    let first = true;
+    for (let i = 0; i < pages.length; i++){
+      const wrap = document.createElement('div'); wrap.innerHTML = pages[i]; host.appendChild(wrap);
+      await Promise.all(Array.from(wrap.querySelectorAll('img')).map(img => img.complete ? 0 : new Promise(r => { img.onload = img.onerror = r; })));
+      const canvas = await window.html2canvas(wrap.firstElementChild, {scale, backgroundColor:'#ffffff', logging:false, width:794, windowWidth:794});
+      const margin = 8, w = 210 - 2*margin, pageH = 297 - 2*margin, pxPerMm = canvas.width / w, slice = Math.floor(pageH * pxPerMm);
+      for (let y = 0; y < canvas.height; y += slice){
+        const part = document.createElement('canvas'); part.width = canvas.width; part.height = Math.min(slice, canvas.height - y);
+        part.getContext('2d').drawImage(canvas, 0, y, canvas.width, part.height, 0, 0, canvas.width, part.height);
+        if (!first) pdf.addPage(); first = false;
+        pdf.addImage(part.toDataURL('image/jpeg', big ? 0.85 : 0.92), 'JPEG', margin, margin, w, part.height / pxPerMm);
+      }
+      host.removeChild(wrap);
+      if (pages.length > 1) showMsg('mdl-msg','warn',`Preparing Form A ${i+1} of ${pages.length}…`);
+    }
+    pdf.save(filename);
+    showMsg('mdl-msg','ok',`${pages.length} Form A downloaded as ${filename}.`);
+  }catch(err){ showMsg('mdl-msg','err','Could not create the PDF: '+err.message); }
+  finally{ document.body.removeChild(host); }
+}
 async function mdlExcel(){
   if (!(await mdlAllowed('xlsx', MDL.records))) return;
   const rows = MDL.records.map((r,i)=>({ 'S/N': i+1, 'Eligibility/SEAP Number': r.seap_no||'', 'Names (Surname First)': r.surname_first||'', 'MDA': r.mda||'',
@@ -3025,11 +3119,15 @@ document.getElementById('mdl-search').addEventListener('input', renderMdaLinkSli
 document.getElementById('mdl-print-all').addEventListener('click', () => mdlPrint(MDL.records));
 document.getElementById('mdl-pdf-all').addEventListener('click', () => mdlPdf(MDL.records, `Eligibility_Slips_${safeFileName(MDL.mda)}.pdf`));
 document.getElementById('mdl-xlsx').addEventListener('click', mdlExcel);
+document.getElementById('mdl-forma-print-all').addEventListener('click', () => mdlFormAPrint(MDL.records));
+document.getElementById('mdl-forma-pdf-all').addEventListener('click', () => mdlFormAPdf(MDL.records, `Form_A_${safeFileName(MDL.mda)}.pdf`));
 document.getElementById('mdl-signout').addEventListener('click', () => { callScript({action:'mdaLinkSignOut', mdaToken:MDL.token}).catch(()=>{}); mdlEnded('You have signed out.'); });
 document.getElementById('mdl-table').addEventListener('click', e => {
   const btn = e.target.closest('button[data-mdl]'); if (!btn) return;
   const r = MDL.records[+btn.dataset.m]; if (!r) return;
-  if (btn.dataset.mdl === 'print') mdlPrint([r]); else mdlPdf([r], `Slip_${slipFileStem(r)}.pdf`);
+  const kind = btn.dataset.mdl;
+  if (kind === 'print') mdlPrint([r]); else if (kind === 'pdf') mdlPdf([r], `Slip_${slipFileStem(r)}.pdf`);
+  else if (kind === 'forma-print') mdlFormAPrint([r]); else if (kind === 'forma-pdf') mdlFormAPdf([r], `Form_A_${slipFileStem(r)}.pdf`);
 });
 /* =========================================================================
    VERIFICATION — the MDA uploads an Excel sheet of its officers' details and

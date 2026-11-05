@@ -81,6 +81,7 @@ function doPost(e) {
       case 'mdaLinkOpen': return handleMdaLinkOpen(body);
       case 'mdaLinkData': return handleMdaLinkData(body);
       case 'mdaLinkPhotos': return handleMdaLinkPhotos(body);
+      case 'mdaLinkBriefs': return handleMdaLinkBriefs(body);
       case 'mdaLinkLog': return handleMdaLinkLog(body);
       case 'mdaLinkSignOut': return handleMdaLinkSignOut(body);
       case 'listMdaLinks': return handleListMdaLinks(body);
@@ -800,7 +801,8 @@ const MDA_LINK_SESSION_MS = 60 * 60 * 1000;   // 1 hour
 const MDA_LINK_TRIES = 5, MDA_LINK_LOCK_MS = 15 * 60 * 1000;
 const MDA_LINK_FIELDS = ['brief_id', 'seap_no', 'surname_first', 'mda', 'csc_file_no', 'oracle_no', 'post_1st_appt', 'grade_1st', 'date_1st_appt',
   'date_confirmation', 'present_post', 'grade_present', 'date_present_appt', 'promotion_post', 'grade_promotion'];
-const MDA_LINK_EVENTS = { print: 'MDA link: slips printed', pdf: 'MDA link: slips downloaded (PDF)', xlsx: 'MDA link: list downloaded (Excel)' };
+const MDA_LINK_EVENTS = { print: 'MDA link: slips printed', pdf: 'MDA link: slips downloaded (PDF)', xlsx: 'MDA link: list downloaded (Excel)',
+  forma_print: 'MDA link: Form A printed', forma_pdf: 'MDA link: Form A downloaded (PDF)' };
 const EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 const MDA_LINK_GONE = "This link is not valid. It may have been replaced or switched off — please ask the Civil Service Commission for your MDA's current link.";
 
@@ -895,13 +897,32 @@ function mdaBriefPhotos(ids) {
   }
   return photos;
 }
+// Form A of the given officers, without the photograph (keyed by id).
+function mdaBriefsByIds(ids) {
+  const want = {}; ids.forEach(id => { want[String(id)] = true; });
+  const out = {};
+  const bs = getOrCreateBriefsSheet();
+  if (bs.getLastRow() >= 2) {
+    const headers = bs.getRange(1, 1, 1, bs.getLastColumn()).getValues()[0].map(String);
+    bs.getRange(2, 1, bs.getLastRow() - 1, bs.getLastColumn()).getValues().forEach(row => {
+      const o = briefRowToObj(headers, row.map(fmtCell));
+      if (!want[String(o.id)]) return;
+      delete o['Photo (data URL)'];
+      Object.keys(o).forEach(k => { o[k] = o[k] == null ? '' : String(o[k]); });
+      out[String(o.id)] = o;
+    });
+  }
+  return out;
+}
 function handleMdaLinkData(body) {
   const s = mdaLinkSession(body.mdaToken);
   const rows = mdaVerifiedRows(s.mda);
   const photos = mdaBriefPhotos(rows.map(r => r.brief_id));
+  const briefs = mdaBriefsByIds(rows.map(r => r.brief_id));
   const records = rows.map(r => {
     const o = {}; MDA_LINK_FIELDS.forEach(c => { o[c] = r[c] == null ? '' : String(r[c]); });
     o.has_photo = !!(photos[String(r.brief_id)] || r.photo); o.verify_code = String(r.brief_id) + '.' + slipSignature(r.brief_id);
+    o.form_a = !!briefs[String(r.brief_id)]; o.form_a_check = String(r.form_a_check || '') || (o.form_a ? 'Matches Form A' : 'No Form A');
     return o;
   });
   return jsonOut({ success: true, mda: s.mda, email: s.email, expiresAt: Number(s.expiry), records: records });
@@ -913,6 +934,11 @@ function handleMdaLinkPhotos(body) {
   const fromBriefs = mdaBriefPhotos(rows.map(r => r.brief_id));
   const photos = {}; rows.forEach(r => { photos[String(r.brief_id)] = fromBriefs[String(r.brief_id)] || String(r.photo || ''); });
   return jsonOut({ success: true, photos: photos });
+}
+// The Form A (Brief on Candidate) of each officer on the session's MDA list who submitted one.
+function handleMdaLinkBriefs(body) {
+  const s = mdaLinkSession(body.mdaToken);
+  return jsonOut({ success: true, briefs: mdaBriefsByIds(mdaVerifiedRows(s.mda).map(r => r.brief_id)) });
 }
 function handleMdaLinkLog(body) {
   const s = mdaLinkSession(body.mdaToken);

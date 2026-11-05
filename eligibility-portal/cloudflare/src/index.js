@@ -126,6 +126,7 @@ async function route(ctx, body) {
     case 'mdaLinkOpen': return handleMdaLinkOpen(ctx, body);
     case 'mdaLinkData': return handleMdaLinkData(ctx, body);
     case 'mdaLinkPhotos': return handleMdaLinkPhotos(ctx, body);
+    case 'mdaLinkBriefs': return handleMdaLinkBriefs(ctx, body);
     case 'mdaLinkLog': return handleMdaLinkLog(ctx, body);
     case 'mdaLinkSignOut': return handleMdaLinkSignOut(ctx, body);
     case 'listMdaLinks': return handleListMdaLinks(ctx, body);
@@ -506,7 +507,8 @@ const MDA_LINK_SESSION_MS = 60 * 60 * 1000;   // 1 hour
 const MDA_LINK_TRIES = 5, MDA_LINK_LOCK_MS = 15 * 60 * 1000;
 const MDA_LINK_FIELDS = ['brief_id', 'seap_no', 'surname_first', 'mda', 'csc_file_no', 'oracle_no', 'post_1st_appt', 'grade_1st', 'date_1st_appt',
   'date_confirmation', 'present_post', 'grade_present', 'date_present_appt', 'promotion_post', 'grade_promotion'];
-const MDA_LINK_EVENTS = { print: 'MDA link: slips printed', pdf: 'MDA link: slips downloaded (PDF)', xlsx: 'MDA link: list downloaded (Excel)' };
+const MDA_LINK_EVENTS = { print: 'MDA link: slips printed', pdf: 'MDA link: slips downloaded (PDF)', xlsx: 'MDA link: list downloaded (Excel)',
+  forma_print: 'MDA link: Form A printed', forma_pdf: 'MDA link: Form A downloaded (PDF)' };
 const EMAIL_RE = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 let mdaLinkSchemaReady = false;
 async function ensureMdaLinkSchema(ctx) {
@@ -572,12 +574,14 @@ async function handleMdaLinkOpen(ctx, body) {
 }
 async function handleMdaLinkData(ctx, body) {
   const s = await mdaLinkSession(ctx, body.mdaToken);
-  const rows = await ctx.all(`SELECT ${MDA_LINK_FIELDS.map(c => 'v.' + c).join(', ')}, ((b.photo IS NOT NULL AND b.photo != '') OR (v.photo IS NOT NULL AND v.photo != '')) AS has_photo
+  const rows = await ctx.all(`SELECT ${MDA_LINK_FIELDS.map(c => 'v.' + c).join(', ')}, v.form_a_check, (b.id IS NOT NULL) AS form_a,
+    ((b.photo IS NOT NULL AND b.photo != '') OR (v.photo IS NOT NULL AND v.photo != '')) AS has_photo
     FROM verified v LEFT JOIN briefs b ON b.id = v.brief_id WHERE lower(trim(v.mda)) = ? ORDER BY v.seq`, lower(s.mda));
   const records = [];
   for (const r of rows) {
     const o = {}; MDA_LINK_FIELDS.forEach(c => { o[c] = str(r[c]); });
-    o.has_photo = !!r.has_photo; o.verify_code = `${r.brief_id}.${await slipSignature(ctx, r.brief_id)}`;
+    o.has_photo = !!r.has_photo; o.form_a = !!r.form_a; o.form_a_check = str(r.form_a_check) || (r.form_a ? 'Matches Form A' : 'No Form A');
+    o.verify_code = `${r.brief_id}.${await slipSignature(ctx, r.brief_id)}`;
     records.push(o);
   }
   return { success: true, mda: s.mda, email: s.email, expiresAt: Number(s.expiry), records };
@@ -591,6 +595,15 @@ async function handleMdaLinkPhotos(ctx, body) {
       WHERE v.brief_id IN (${ids.map(() => '?').join(',')}) AND lower(trim(v.mda)) = ?`, ...ids, lower(s.mda))).forEach(r => { photos[r.id] = str(r.photo); });
   }
   return { success: true, photos };
+}
+// The Form A (Brief on Candidate) of each officer on the session's MDA list who submitted one: the
+// officer's own details, shown beside the slip. Photographs come separately from mdaLinkPhotos.
+async function handleMdaLinkBriefs(ctx, body) {
+  const s = await mdaLinkSession(ctx, body.mdaToken);
+  const rows = await ctx.all(`SELECT b.id, b.timestamp, b.fields, b.status, b.authorized_by, b.authorized_mda, b.authorized_at
+    FROM verified v JOIN briefs b ON b.id = v.brief_id WHERE lower(trim(v.mda)) = ?`, lower(s.mda));
+  const briefs = {}; rows.forEach(r => { briefs[r.id] = briefOut(r, false); });
+  return { success: true, briefs };
 }
 async function handleMdaLinkLog(ctx, body) {
   const s = await mdaLinkSession(ctx, body.mdaToken);
