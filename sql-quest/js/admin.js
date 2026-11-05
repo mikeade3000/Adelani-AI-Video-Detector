@@ -32,10 +32,10 @@ SQ.Admin = (function () {
           '<td>' + (u.active ? '<span class="tag good">Active</span>' : '<span class="tag bad">Disabled</span>') + '</td>' +
           '<td style="text-align:right">' + (u.id === me.id ? '<small>you</small>' : '<button class="btn sm" data-pw="' + u.id + '">Reset password</button> <button class="btn sm" data-act="' + u.id + '">' + (u.active ? 'Disable' : 'Enable') + '</button> <button class="btn sm danger" data-del="' + u.id + '">Delete</button>') + '</td></tr>';
       }).join('') || '<tr><td colspan="6" class="empty">No users match.</td></tr>';
-      U.$all('[data-role]').forEach(function (s) { s.onchange = function () { S.user(s.dataset.role).role = s.value; S.save(); U.toast('Role updated to ' + s.value); }; });
-      U.$all('[data-pw]').forEach(function (b) { b.onclick = function () { U.prompt('Reset password', 'New password (min 6 characters)', 'text').then(function (v) { if (v === null) return; try { S.setPassword(b.dataset.pw, v); U.toast('Password reset'); } catch (e) { U.toast(e.message); } }); }; });
-      U.$all('[data-act]').forEach(function (b) { b.onclick = function () { var u = S.user(b.dataset.act); u.active = !u.active; S.save(); draw(); }; });
-      U.$all('[data-del]').forEach(function (b) { b.onclick = function () { U.confirm('Delete this user and all their progress?', 'Delete', true).then(function (ok) { if (!ok) return; var db = S.raw(), id = b.dataset.del; db.users = db.users.filter(function (u) { return u.id !== id; }); delete db.progress[id]; db.submissions = db.submissions.filter(function (s) { return s.userId !== id; }); db.userBadges = db.userBadges.filter(function (x) { return x.userId !== id; }); db.teams.forEach(function (t) { t.memberIds = t.memberIds.filter(function (m) { return m !== id; }); }); S.save(); draw(); }); }; });
+      U.$all('[data-role]').forEach(function (s) { s.onchange = function () { SQ.act('userRole', { id: s.dataset.role, role: s.value }).then(function (r) { if (r) U.toast('Role updated to ' + s.value); draw(); }); }; });
+      U.$all('[data-pw]').forEach(function (b) { b.onclick = function () { U.prompt('Reset password', 'New password (min 6 characters)', 'text').then(function (v) { if (v === null) return; SQ.act('userPassword', { id: b.dataset.pw, password: v }).then(function (r) { if (r) U.toast('Password reset'); }); }); }; });
+      U.$all('[data-act]').forEach(function (b) { b.onclick = function () { var u = S.user(b.dataset.act); SQ.act('userActive', { id: u.id, active: !u.active }).then(function (r) { if (r) draw(); }); }; });
+      U.$all('[data-del]').forEach(function (b) { b.onclick = function () { U.confirm('Delete this user and all their progress?', 'Delete', true).then(function (ok) { if (!ok) return; SQ.act('userDelete', { id: b.dataset.del }).then(function (r) { if (r) draw(); }); }); }; });
     }
     A.view('<div class="page-head"><div><h1>Users & roles</h1><p>Each user has one role. The app checks it on every page (role-based access control).</p></div><button class="btn primary" id="newu">+ Create user</button></div>' +
       '<div class="btn-row" style="margin-bottom:12px"><input type="search" id="q" placeholder="Search users…" style="max-width:280px"><select id="rf" style="width:auto"><option value="">All roles</option><option>student</option><option>teacher</option><option>admin</option></select></div>' +
@@ -46,8 +46,8 @@ SQ.Admin = (function () {
       var m = U.modal('<h3>Create user</h3><form id="nu"><div id="nue"></div><div class="field"><label>Display name</label><input type="text" id="nu-d" required></div><div class="field"><label>Username</label><input type="text" id="nu-u" required></div><div class="field"><label>Temporary password</label><input type="text" id="nu-p" required minlength="6"></div><div class="field"><label>Role</label><select id="nu-r"><option>student</option><option selected>teacher</option><option>admin</option></select></div><div class="btn-row" style="justify-content:flex-end"><button type="button" class="btn" data-close>Cancel</button><button class="btn primary">Create</button></div></form>');
       U.$('#nu', m.el).onsubmit = function (e) {
         e.preventDefault();
-        try { S.createUser({ displayName: U.$('#nu-d').value, username: U.$('#nu-u').value, password: U.$('#nu-p').value, role: U.$('#nu-r').value }); m.close(); U.toast('User created'); draw(); }
-        catch (er) { U.$('#nue').innerHTML = '<div class="form-error">' + esc(er.message) + '</div>'; }
+        SQ.Backend.act('userCreate', { displayName: U.$('#nu-d').value, username: U.$('#nu-u').value, password: U.$('#nu-p').value, role: U.$('#nu-r').value })
+          .then(function () { m.close(); U.toast('User created'); draw(); }, function (er) { U.$('#nue').innerHTML = '<div class="form-error">' + esc(er.message) + '</div>'; });
       };
     };
     draw();
@@ -65,9 +65,7 @@ SQ.Admin = (function () {
       }).join(''));
     U.$all('[data-vis]').forEach(function (cb) {
       cb.onchange = function () {
-        var id = cb.dataset.vis, cc = db.customChallenges.find(function (c) { return c.id === id; });
-        if (cc) cc.published = cb.checked; else if (cb.checked) delete db.hidden[id]; else db.hidden[id] = true;
-        S.save(); cb.parentNode.lastChild.textContent = cb.checked ? ' Published' : ' Hidden';
+        SQ.act('contentVisibility', { id: cb.dataset.vis, visible: cb.checked }).then(function (r) { if (r) cb.parentNode.lastChild.textContent = cb.checked ? ' Published' : ' Hidden'; else cb.checked = !cb.checked; });
       };
     });
   });
@@ -78,18 +76,17 @@ SQ.Admin = (function () {
     A.view('<div class="page-head"><div><h1>Badges</h1><p>Edit names, icons and descriptions, disable badges or add new milestone badges.</p></div><button class="btn primary" id="addb">+ New badge</button></div>' +
       '<div class="table-wrap"><table><thead><tr><th>Icon</th><th>Name</th><th>Description</th><th>Rule</th><th class="num">Earned by</th><th>Enabled</th></tr></thead><tbody>' +
       db.badges.map(function (b, i) {
-        return '<tr><td><input type="text" data-f="icon" data-i="' + i + '" value="' + esc(b.icon) + '" style="width:56px;text-align:center"></td><td><input type="text" data-f="name" data-i="' + i + '" value="' + esc(b.name) + '" style="min-width:140px"></td><td><input type="text" data-f="desc" data-i="' + i + '" value="' + esc(b.desc) + '" style="min-width:220px"></td><td><small>' + esc(ruleText(b.rule)) + '</small></td><td class="num">' + db.userBadges.filter(function (x) { return x.badgeId === b.id; }).length + '</td><td><input type="checkbox" data-en="' + i + '"' + (b.disabled ? '' : ' checked') + ' style="width:18px;height:18px;accent-color:var(--brand)"></td></tr>';
+        return '<tr><td><input type="text" data-f="icon" data-i="' + esc(b.id) + '" value="' + esc(b.icon) + '" style="width:56px;text-align:center"></td><td><input type="text" data-f="name" data-i="' + esc(b.id) + '" value="' + esc(b.name) + '" style="min-width:140px"></td><td><input type="text" data-f="desc" data-i="' + esc(b.id) + '" value="' + esc(b.desc) + '" style="min-width:220px"></td><td><small>' + esc(ruleText(b.rule)) + '</small></td><td class="num">' + db.userBadges.filter(function (x) { return x.badgeId === b.id; }).length + '</td><td><input type="checkbox" data-en="' + esc(b.id) + '"' + (b.disabled ? '' : ' checked') + ' style="width:18px;height:18px;accent-color:var(--brand)"></td></tr>';
       }).join('') + '</tbody></table></div><p class="muted" style="margin-top:8px">Changes save automatically.</p>');
-    U.$all('[data-f]').forEach(function (inp) { inp.onchange = function () { db.badges[+inp.dataset.i][inp.dataset.f] = inp.value.slice(0, inp.dataset.f === 'desc' ? 140 : 40); S.save(); U.toast('Badge saved'); }; });
-    U.$all('[data-en]').forEach(function (cb) { cb.onchange = function () { db.badges[+cb.dataset.en].disabled = !cb.checked; S.save(); }; });
+    U.$all('[data-f]').forEach(function (inp) { inp.onchange = function () { var o = { id: inp.dataset.i }; o[inp.dataset.f] = inp.value; SQ.act('badgeUpdate', o).then(function (r) { if (r) U.toast('Badge saved'); }); }; });
+    U.$all('[data-en]').forEach(function (cb) { cb.onchange = function () { SQ.act('badgeUpdate', { id: cb.dataset.en, enabled: cb.checked }).then(function (r) { if (r) U.toast(cb.checked ? 'Badge enabled' : 'Badge disabled'); }); }; });
     U.$('#addb').onclick = function () {
       var m = U.modal('<h3>New badge</h3><form id="nb"><div class="grid g2"><div class="field"><label>Icon (emoji)</label><input type="text" id="nb-i" value="🏆" required maxlength="4"></div><div class="field"><label>Name</label><input type="text" id="nb-n" required maxlength="40"></div></div><div class="field"><label>Description</label><input type="text" id="nb-d" required maxlength="140"></div>' +
         '<div class="grid g2"><div class="field"><label>Awarded when</label><select id="nb-t"><option value="xp">XP reaches</option><option value="completed">Challenges completed reaches</option><option value="streak">Best streak reaches</option><option value="bosses">Bosses defeated reaches</option><option value="firstTry">First-try passes reaches</option><option value="reviews">Peer reviews given reaches</option></select></div><div class="field"><label>Value</label><input type="number" id="nb-v" min="1" value="1000" required></div></div>' +
         '<div class="btn-row" style="justify-content:flex-end"><button type="button" class="btn" data-close>Cancel</button><button class="btn primary">Add badge</button></div></form>');
       U.$('#nb', m.el).onsubmit = function (e) {
         e.preventDefault();
-        db.badges.push({ id: S.uid('b'), icon: U.$('#nb-i').value, name: U.$('#nb-n').value.trim(), desc: U.$('#nb-d').value.trim(), rule: { type: U.$('#nb-t').value, value: +U.$('#nb-v').value } });
-        S.save(); S.users().forEach(function (u) { if (u.role === 'student') E.checkBadges(u.id); }); m.close(); A.render();
+        SQ.act('badgeAdd', { icon: U.$('#nb-i').value, name: U.$('#nb-n').value, desc: U.$('#nb-d').value, type: U.$('#nb-t').value, value: +U.$('#nb-v').value }).then(function (r) { if (r) { m.close(); A.render(); } });
       };
     };
   });
@@ -108,28 +105,29 @@ SQ.Admin = (function () {
       '<div class="field"><label class="check"><input type="checkbox" id="s-signup"' + (st.allowStudentSignup ? ' checked' : '') + '> Allow students to sign up</label></div>' +
       '<div class="field"><label class="check"><input type="checkbox" id="s-demo"' + (st.showDemoAccounts ? ' checked' : '') + '> Show demo accounts on the login page</label><small>Turn this off and change demo passwords before going live.</small></div></div>' +
       '<div style="grid-column:1/-1"><button class="btn primary lg">Save settings</button></div></form>' +
-      '<div class="card" style="margin-top:16px"><h3>💾 Data</h3><p class="muted">All data lives in this browser. Export a backup regularly, or import one on another device.</p><div class="btn-row"><button class="btn" id="exp">⬇ Export backup (JSON)</button><label class="btn" style="margin:0">⬆ Import backup<input type="file" id="imp" accept="application/json" class="hidden"></label><button class="btn danger" id="reset">Reset platform to demo data</button></div></div>');
+      '<div class="card" style="margin-top:16px"><h3>💾 Data</h3><p class="muted">' + (SQ.Backend.mode() === 'server' ? 'Data is stored on the server in PostgreSQL. Export a backup regularly; you can also import a backup from the browser-only version to move it onto the server.' : 'All data lives in this browser. Export a backup regularly, or import one on another device or onto a SQL Quest server.') + '</p><div class="btn-row"><button class="btn" id="exp">⬇ Export backup (JSON)</button><label class="btn" style="margin:0">⬆ Import backup<input type="file" id="imp" accept="application/json" class="hidden"></label>' + (SQ.Backend.caps().allowReset ? '<button class="btn danger" id="reset">Reset platform to demo data</button>' : '') + '</div></div>');
     U.$('#sf').onsubmit = function (e) {
       e.preventDefault();
       var n = function (id, d) { var v = parseFloat(U.$(id).value); return isNaN(v) ? d : v; };
-      Object.assign(st, { platformName: U.$('#s-name').value.trim() || 'SQL Quest', lives: n('#s-lives', 3), hintCost: n('#s-hint', 5), speedBonusPct: n('#s-speed', 10), accuracyBonusPct: n('#s-acc', 20),
+      SQ.act('settingsSave', { platformName: U.$('#s-name').value.trim() || 'SQL Quest', lives: n('#s-lives', 3), hintCost: n('#s-hint', 5), speedBonusPct: n('#s-speed', 10), accuracyBonusPct: n('#s-acc', 20),
         retryPenaltyPct: n('#s-retry', 50), reviewXP: n('#s-review', 15), bossTimeMultiplier: n('#s-boss', 1), queryTimeoutMs: n('#s-timeout', 2000),
-        blocked: U.$('#s-blocked').value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean), allowStudentSignup: U.$('#s-signup').checked, showDemoAccounts: U.$('#s-demo').checked });
-      S.save(); U.toast('Settings saved'); A.refreshShell();
+        blocked: U.$('#s-blocked').value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean), allowStudentSignup: U.$('#s-signup').checked, showDemoAccounts: U.$('#s-demo').checked }).then(function (r) { if (r) { U.toast('Settings saved'); A.refreshShell(); } });
     };
     U.$('#exp').onclick = function () {
-      var blob = new Blob([JSON.stringify(S.raw(), null, 1)], { type: 'application/json' });
+      SQ.Backend.exportData().then(function (data) {
+      var blob = new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' });
       var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sqlquest-backup-' + S.today() + '.json'; a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      }, function (e) { U.toast(e.message); });
     };
     U.$('#imp').onchange = function () {
       var f = this.files[0]; if (!f) return;
       f.text().then(function (txt) {
         var d; try { d = JSON.parse(txt); } catch (e) { return U.toast('That file is not valid JSON.'); }
         if (!d || d.version !== 1 || !Array.isArray(d.users)) return U.toast('That is not a SQL Quest backup.');
-        U.confirm('Replace ALL current data with this backup?', 'Import', true).then(function (ok) { if (!ok) return; localStorage.setItem('sqlquest_v1', JSON.stringify(d)); location.reload(); });
+        U.confirm('Replace ALL current data with this backup?', 'Import', true).then(function (ok) { if (!ok) return; SQ.act('importData', { data: d }).then(function (r) { if (r) { U.toast('Backup imported — please log in again.', 4000); A.go('#/login'); } }); });
       });
     };
-    U.$('#reset').onclick = function () { U.confirm('Erase everything and restore the demo data?', 'Reset', true).then(function (ok) { if (ok) { S.resetAll(); E.finishSeed(); A.go('#/login'); } }); };
+    if (U.$('#reset')) U.$('#reset').onclick = function () { U.confirm('Erase everything and restore the demo data?', 'Reset', true).then(function (ok) { if (ok) SQ.act('resetPlatform', {}).then(function (r) { if (r) A.go('#/login'); }); }); };
   });
 
   return { home: home };

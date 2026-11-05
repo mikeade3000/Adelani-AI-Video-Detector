@@ -46,7 +46,9 @@ SQ.Engine = (function () {
   }
 
   /* ───────── progress & unlocking ───────── */
-  function levelDone(p, level) { return level.challenges.length > 0 && level.challenges.every(function (c) { return p.completed[c.id]; }); }
+  /* Teacher-added (custom) challenges are bonus practice: they never block progress. */
+  function core(level) { var c = level.challenges.filter(function (x) { return !x.custom; }); return c.length ? c : level.challenges; }
+  function levelDone(p, level) { var c = core(level); return c.length > 0 && c.every(function (x) { return p.completed[x.id]; }); }
   function assignedUnlocks(u) {
     if (!u || !u.classId) return {};
     var m = {};
@@ -76,7 +78,7 @@ SQ.Engine = (function () {
   }
   function worldProgress(userId, w) {
     var p = S.progress(userId), total = 0, done = 0;
-    w.levels.forEach(function (l) { l.challenges.forEach(function (c) { total++; if (p.completed[c.id]) done++; }); });
+    w.levels.forEach(function (l) { core(l).forEach(function (c) { total++; if (p.completed[c.id]) done++; }); });
     total++; if (p.bosses[w.id]) done++;
     return { done: done, total: total, pct: Math.round(100 * done / total) };
   }
@@ -89,7 +91,7 @@ SQ.Engine = (function () {
         var l = w.levels[j];
         if (!levelUnlocked(userId, w, j)) break;
         if (!p.lessons[l.id]) return { kind: 'lesson', world: w, level: l, href: '#/lesson/' + l.id };
-        var c = l.challenges.find(function (x) { return !p.completed[x.id]; });
+        var c = core(l).find(function (x) { return !p.completed[x.id]; });
         if (c) return { kind: 'challenge', world: w, level: l, ch: c, href: '#/play/' + c.id };
       }
       if (!p.bosses[w.id] && bossUnlocked(userId, w)) return { kind: 'boss', world: w, href: '#/boss/' + w.id };

@@ -1,0 +1,17 @@
+{
+  "name": "sql-quest-server",
+  "version": "1.0.0",
+  "description": "SQL Quest server: Node.js API + PostgreSQL storage + server-side auto-grader",
+  "private": true,
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "express": "4.21.2",
+    "pg": "8.13.1",
+    "sql.js": "1.10.3"
+  }
+}

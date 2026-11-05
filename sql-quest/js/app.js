@@ -107,6 +107,10 @@ SQ.App = (function () {
 
   /* Every navigation is checked against the user's role (role-based access control). */
   function render() {
+    if (SQ.Backend.stale()) { SQ.Backend.refresh().then(doRender); return; }
+    doRender();
+  }
+  function doRender() {
     if (cleanup) { try { cleanup(); } catch (e) {} cleanup = null; }
     U.$all('.modal-back, .dropdown').forEach(function (m) { m.remove(); });
     var path = (location.hash || '#/').slice(1) || '/';
@@ -152,9 +156,9 @@ SQ.App = (function () {
       d = document.createElement('div'); d.className = 'dropdown';
       d.innerHTML = '<div style="padding:8px 12px"><b>' + esc(me.displayName) + '</b><br><small>@' + esc(me.username) + ' · ' + me.role + '</small></div>' +
         '<a href="#/profile">👤 Profile & settings</a>' + (me.role === 'student' ? '<a href="#/badges">🏅 My badges</a>' : '') +
-        '<button id="theme-dd">🌓 Toggle dark mode</button><button id="logout">🚪 Log out</button>';
+        '<a href="#/help">❓ Help</a><button id="theme-dd">🌓 Toggle dark mode</button><button id="logout">🚪 Log out</button>';
       document.body.appendChild(d);
-      U.$('#logout').onclick = function () { S.logout(); d.remove(); go('#/login'); };
+      U.$('#logout').onclick = function () { d.remove(); SQ.act('logout').then(function () { go('#/login'); }); };
       U.$('#theme-dd').onclick = function () { toggleTheme(); d.remove(); };
       setTimeout(function () { document.addEventListener('click', function h() { d.remove(); document.removeEventListener('click', h); }); }, 0);
     };
@@ -171,9 +175,13 @@ SQ.App = (function () {
 
   function start() {
     try { var t = localStorage.getItem('sqlquest_theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) {}
-    E.finishSeed();
-    window.addEventListener('hashchange', render);
-    render();
+    U.$('#view').innerHTML = '<div class="empty" style="padding-top:20vh"><span class="big">🗄️</span>Loading…</div>';
+    SQ.Backend.init().then(function () {
+      window.addEventListener('hashchange', render);
+      render();
+    }, function (e) {
+      U.$('#view').innerHTML = '<div class="card empty"><span class="big">⚠️</span><h2>Could not start</h2><p>' + esc(e.message) + '</p><button class="btn" onclick="location.reload()">Try again</button></div>';
+    });
   }
 
   return { route: route, go: go, render: render, view: view, start: start, onCleanup: onCleanup, refreshShell: function () { shell(S.current()); } };
@@ -210,16 +218,11 @@ SQ.App = (function () {
     U.$all('.demo-list button').forEach(function (b) { b.onclick = function () { U.$('#u').value = b.dataset.u; U.$('#p').value = b.dataset.p; U.$('#auth-form').requestSubmit(); }; });
     U.$('#auth-form').onsubmit = function (e) {
       e.preventDefault();
-      try {
-        if (mode === 'login') S.login(U.$('#u').value, U.$('#p').value);
-        else {
-          if (!st.allowStudentSignup) throw new Error('Sign-up is currently disabled.');
-          var u = S.createUser({ username: U.$('#u').value, password: U.$('#p').value, displayName: U.$('#dn').value });
-          if (U.$('#code').value.trim()) { try { S.joinClass(u.id, U.$('#code').value); } catch (er) { U.toast('Account created, but: ' + er.message); } }
-          S.login(U.$('#u').value, U.$('#p').value);
-        }
-        A.go('#/home');
-      } catch (err) { U.$('#err').innerHTML = '<div class="form-error">' + esc(err.message) + '</div>'; }
+      var btn = U.$('#auth-form button.primary'); btn.disabled = true;
+      var p = mode === 'login' ? SQ.Backend.act('login', { username: U.$('#u').value, password: U.$('#p').value }) :
+        SQ.Backend.act('register', { username: U.$('#u').value, password: U.$('#p').value, displayName: U.$('#dn').value, code: U.$('#code').value });
+      p.then(function (r) { if (r && r.warning) U.toast(r.warning, 5000); A.go('#/home'); },
+        function (err) { btn.disabled = false; U.$('#err').innerHTML = '<div class="form-error">' + esc(err.message) + '</div>'; });
     };
   }
   A.route('/login', null, function () { authPage('login'); });
@@ -280,7 +283,7 @@ SQ.App = (function () {
         '<div class="card"><div class="card-head"><h3>🏅 Recent badges</h3><a href="#/badges">All →</a></div>' + (badges.length ? '<div class="btn-row">' + badges.slice(0, 6).map(function (b) { return '<span class="badge-mini" title="' + esc(b.name + ' — ' + b.desc) + '">' + b.icon + '</span>'; }).join('') + '</div>' : '<p class="muted">Pass your first challenge to earn a badge.</p>') + '</div>' +
       '</div></div>');
     var j = U.$('#join');
-    if (j) j.onsubmit = function (e) { e.preventDefault(); try { var c = S.joinClass(me.id, U.$('#jc').value); U.toast('Joined ' + c.name + '!'); A.render(); } catch (er) { U.toast(er.message); } };
+    if (j) j.onsubmit = function (e) { e.preventDefault(); SQ.act('joinClass', { code: U.$('#jc').value }).then(function (r) { if (r) { U.toast('Joined ' + r.name + '!'); A.render(); } }); };
   }
 
   /* World map */
@@ -295,7 +298,7 @@ SQ.App = (function () {
             var lu = E.levelUnlocked(me.id, w, i), done = E.levelDone(prog, l);
             return '<div class="node ' + (done ? 'done ' : '') + (lu ? '' : 'locked') + '"><a class="dot" href="#/lesson/' + l.id + '" style="text-decoration:none">' + (done ? '✓' : (i + 1)) + '</a><div><a href="#/lesson/' + l.id + '" style="color:var(--ink);font-weight:600">' + esc(l.title) + '</a><div class="subnodes" style="margin-top:4px">' +
               '<a href="#/lesson/' + l.id + '" class="' + (prog.lessons[l.id] ? 'done' : '') + '">📖 Lesson</a>' +
-              l.challenges.map(function (c) { return '<a href="#/play/' + c.id + '" class="' + (prog.completed[c.id] ? 'done' : '') + '">' + typeIcon(c.type) + ' ' + esc(c.title) + '</a>'; }).join('') + '</div></div><span>' + (lu ? '' : '🔒') + '</span></div>';
+              l.challenges.map(function (c) { return '<a href="#/play/' + c.id + '" class="' + (prog.completed[c.id] ? 'done' : '') + '"' + (c.custom ? ' title="Bonus challenge added by your teacher"' : '') + '>' + (c.custom ? '⭐ ' : typeIcon(c.type) + ' ') + esc(c.title) + '</a>'; }).join('') + '</div></div><span>' + (lu ? '' : '🔒') + '</span></div>';
           }).join('') +
           '<a class="node boss ' + (prog.bosses[w.id] ? 'done ' : '') + (E.bossUnlocked(me.id, w) ? '' : 'locked') + '" href="#/boss/' + w.id + '"><span class="dot">' + (prog.bosses[w.id] ? '✓' : '⚔️') + '</span><div><b>Boss: ' + esc(w.boss.title) + '</b><br><small>' + w.boss.challenges.length + ' questions · ' + Math.round(w.boss.timeLimit * S.settings().bossTimeMultiplier / 60) + ' min · +' + w.boss.xp + ' XP</small></div><span>' + (E.bossUnlocked(me.id, w) ? '→' : '🔒') + '</span></a>' +
           '</div></div>';
@@ -319,9 +322,9 @@ SQ.App = (function () {
           (ls.example ? '<h3 style="margin-top:16px">Try it</h3><pre>' + esc(ls.example) + '</pre><button class="btn sm" data-try="' + i + '">▶ Run example</button><div id="try-' + i + '" style="margin-top:10px"></div>' : '') + '</div>';
       }).join('') +
       '<div class="card"><h3>Practise it</h3><div class="list">' + l.challenges.map(function (c) {
-        return '<a class="list-item" href="#/play/' + c.id + '" style="color:var(--ink)"><span class="badge-mini" style="background:var(--brand-soft)">' + typeIcon(c.type) + '</span><span class="grow"><b>' + esc(c.title) + '</b><br><small>' + SQ.typeName(c.type) + ' · ' + (c.xp || 20) + ' XP</small></span>' + (prog.completed[c.id] ? '<span class="tag good">✓ Done</span>' : '<span class="btn sm primary">Start</span>') + '</a>';
+        return '<a class="list-item" href="#/play/' + c.id + '" style="color:var(--ink)"><span class="badge-mini" style="background:var(--brand-soft)">' + typeIcon(c.type) + '</span><span class="grow"><b>' + esc(c.title) + '</b>' + (c.custom ? ' <span class="tag xp">⭐ Bonus</span>' : '') + '<br><small>' + SQ.typeName(c.type) + ' · ' + (c.xp || 20) + ' XP' + (c.custom ? ' · optional, added by your teacher' : '') + '</small></span>' + (prog.completed[c.id] ? '<span class="tag good">✓ Done</span>' : '<span class="btn sm primary">Start</span>') + '</a>';
       }).join('') + '</div></div></div>');
-    if (!prog.lessons[l.id]) { prog.lessons[l.id] = true; S.save(); }
+    if (!prog.lessons[l.id]) SQ.act('lessonRead', { levelId: l.id });
     U.$all('[data-try]').forEach(function (b) {
       b.onclick = function () {
         var i = +b.dataset.try, out = U.$('#try-' + i);
@@ -379,12 +382,12 @@ SQ.App = (function () {
       '</div></div>');
     var av = me.avatar;
     U.$all('#avs button').forEach(function (b) { b.onclick = function () { av = b.dataset.av; U.$all('#avs button').forEach(function (x) { x.classList.toggle('primary', x === b); }); }; });
-    U.$('#pf').onsubmit = function (e) { e.preventDefault(); me.displayName = U.$('#pf-dn').value.trim().slice(0, 40) || me.displayName; me.avatar = av; S.save(); U.toast('Profile saved'); A.render(); };
-    var jf = U.$('#jf'); if (jf) jf.onsubmit = function (e) { e.preventDefault(); try { var c = S.joinClass(me.id, U.$('#jf-c').value); U.toast('Joined ' + c.name); A.render(); } catch (er) { U.toast(er.message); } };
+    U.$('#pf').onsubmit = function (e) { e.preventDefault(); SQ.act('updateProfile', { displayName: U.$('#pf-dn').value, avatar: av }).then(function (r) { if (r) { U.toast('Profile saved'); A.render(); } }); };
+    var jf = U.$('#jf'); if (jf) jf.onsubmit = function (e) { e.preventDefault(); SQ.act('joinClass', { code: U.$('#jf-c').value }).then(function (r) { if (r) { U.toast('Joined ' + r.name); A.render(); } }); };
     U.$('#pw').onsubmit = function (e) {
       e.preventDefault();
-      try { S.login(me.username, U.$('#pw-o').value); S.setPassword(me.id, U.$('#pw-n').value); U.toast('Password updated'); e.target.reset(); }
-      catch (er) { U.toast(er.message === 'Wrong username or password.' ? 'Current password is wrong.' : er.message); }
+      var form = e.target;
+      SQ.act('changePassword', { oldPassword: U.$('#pw-o').value, newPassword: U.$('#pw-n').value }).then(function (r) { if (r) { U.toast('Password updated'); form.reset(); } });
     };
   });
 
@@ -393,13 +396,13 @@ SQ.App = (function () {
     var db = S.raw(), prog = S.progress(me.id), tab = p.tab || 'review';
     function anon(uid) { var i = S.users().filter(function (u) { return u.classId === me.classId; }).findIndex(function (u) { return u.id === uid; }); return 'Classmate #' + (i + 1); }
     function draw() {
-      var out = '';
+      var out = ''; db = S.raw(); prog = S.progress(me.id); me = S.current();
       if (!me.classId) out = '<div class="card empty"><span class="big">🏫</span>Join a class to use peer review.</div>';
       else if (tab === 'review') {
         var pool = db.reviews.filter(function (r) { return r.classId === me.classId && r.authorId !== me.id; });
         out = pool.length ? '<div class="grid g2">' + pool.map(function (r) {
           var f = E.find(r.challengeId), mine = r.reviews.find(function (x) { return x.reviewerId === me.id; });
-          return '<div class="card"><div class="card-head"><h3>' + esc(f ? f.ch.title : r.challengeId) + '</h3><small>' + anon(r.authorId) + ' · ' + U.timeAgo(r.createdAt) + '</small></div>' +
+          return '<div class="card"><div class="card-head"><h3>' + esc(f ? f.ch.title : r.challengeId) + '</h3><small>' + esc(r.authorLabel || anon(r.authorId)) + ' · ' + U.timeAgo(r.createdAt) + '</small></div>' +
             (f ? '<small class="muted">' + f.ch.prompt.replace(/<[^>]+>/g, '') + '</small>' : '') + '<div class="code-snip">' + esc(r.query) + '</div>' + (r.note ? '<p>💬 “' + esc(r.note) + '”</p>' : '') +
             (mine ? '<div class="feedback good"><span class="fi">✅</span><div>You reviewed this (' + '★'.repeat(mine.rating) + '): ' + esc(mine.comment) + '</div></div>' :
               '<form data-rv="' + r.id + '"><label>Rating</label><div class="stars" data-stars>' + [1, 2, 3, 4, 5].map(function (n) { return '<button type="button" data-n="' + n + '">★</button>'; }).join('') + '</div><div class="field" style="margin-top:8px"><label>Feedback</label><textarea required maxlength="500" placeholder="What is good? What could be clearer or simpler?"></textarea></div><button class="btn primary sm">Submit review (+' + S.settings().reviewXP + ' XP)</button></form>') + '</div>';
@@ -427,11 +430,11 @@ SQ.App = (function () {
         f.onsubmit = function (e) {
           e.preventDefault();
           var rating = +U.$('[data-stars]', f).dataset.v; if (!rating) return U.toast('Pick a star rating.');
-          var r = db.reviews.find(function (x) { return x.id === f.dataset.rv; });
-          r.reviews.push({ reviewerId: me.id, rating: rating, comment: U.$('textarea', f).value.trim().slice(0, 500), at: Date.now() });
-          prog.reviewsGiven++; var nb = E.grantXP(me.id, S.settings().reviewXP); S.touchStreak(me.id);
-          U.toast('+' + S.settings().reviewXP + ' XP for reviewing!' + (nb.length ? ' New badge: ' + nb.map(function (b) { return b.icon + ' ' + b.name; }).join(', ') : ''));
-          A.refreshShell(); draw();
+          SQ.act('reviewSubmit', { reviewId: f.dataset.rv, rating: rating, comment: U.$('textarea', f).value }).then(function (r) {
+            if (!r) return;
+            U.toast('+' + r.xp + ' XP for reviewing!' + (r.newBadges.length ? ' New badge: ' + r.newBadges.map(function (b) { return b.icon + ' ' + b.name; }).join(', ') : ''));
+            A.refreshShell(); draw();
+          });
         };
       });
       var sh = U.$('#share');
@@ -440,8 +443,10 @@ SQ.App = (function () {
         U.$('#sh-c').onchange = upd; upd();
         sh.onsubmit = function (e) {
           e.preventDefault(); var cid = U.$('#sh-c').value;
-          db.reviews.push({ id: S.uid('r'), classId: me.classId, authorId: me.id, challengeId: cid, query: prog.completed[cid].query, note: U.$('#sh-n').value.trim(), createdAt: Date.now(), reviews: [] });
-          S.save(); U.toast('Shared with your class'); tab = 'mine'; U.$all('#rvt button').forEach(function (x) { x.classList.toggle('active', x.dataset.tab === tab); }); draw();
+          SQ.act('reviewShare', { challengeId: cid, note: U.$('#sh-n').value }).then(function (r) {
+            if (!r) return;
+            U.toast('Shared with your class'); tab = 'mine'; U.$all('#rvt button').forEach(function (x) { x.classList.toggle('active', x.dataset.tab === tab); }); draw();
+          });
         };
       }
     }

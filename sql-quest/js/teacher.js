@@ -29,7 +29,7 @@ SQ.Teacher = (function () {
   function newClass() {
     U.prompt('Create a class', 'Class name').then(function (n) {
       if (n === null) return;
-      try { var c = S.createClass(S.current().id, n); U.toast('Class created — join code ' + c.code); A.go('#/teach/class/' + c.id); } catch (e) { U.toast(e.message); }
+      SQ.act('classCreate', { name: n }).then(function (r) { if (r) { U.toast('Class created — join code ' + r.code); A.go('#/teach/class/' + r.id); } });
     });
   }
 
@@ -47,6 +47,7 @@ SQ.Teacher = (function () {
     if (!c || (me.role !== 'admin' && c.teacherId !== me.id)) return A.view('<div class="card empty">Class not found.</div>');
     var tab = 'students';
     function draw() {
+      db = S.raw(); c = db.classes.find(function (x) { return x.id === p.id; }) || c;
       var students = S.users().filter(function (u) { return u.role === 'student' && u.classId === c.id; });
       var html = '';
       if (tab === 'students') {
@@ -79,25 +80,24 @@ SQ.Teacher = (function () {
       U.$('#cv').innerHTML = html; bind();
     }
     function bind() {
-      U.$all('[data-rm]').forEach(function (b) { b.onclick = function () { U.confirm('Remove this student from the class?', 'Remove', true).then(function (ok) { if (ok) { S.user(b.dataset.rm).classId = null; S.save(); draw(); } }); }; });
-      var af = U.$('#af'); if (af) af.onsubmit = function (e) { e.preventDefault(); db.assignments.push({ id: S.uid('a'), classId: c.id, worldId: U.$('#af-w').value, due: U.$('#af-d').value, note: U.$('#af-n').value.trim(), unlock: U.$('#af-u').checked, createdAt: Date.now() }); S.save(); U.toast('World assigned'); draw(); };
-      U.$all('[data-del-a]').forEach(function (b) { b.onclick = function () { db.assignments = db.assignments.filter(function (a) { return a.id !== b.dataset.delA; }); S.save(); draw(); }; });
+      U.$all('[data-rm]').forEach(function (b) { b.onclick = function () { U.confirm('Remove this student from the class?', 'Remove', true).then(function (ok) { if (ok) SQ.act('classRemoveStudent', { classId: c.id, userId: b.dataset.rm }).then(function (r) { if (r) draw(); }); }); }; });
+      var af = U.$('#af'); if (af) af.onsubmit = function (e) { e.preventDefault(); SQ.act('assignmentAdd', { classId: c.id, worldId: U.$('#af-w').value, due: U.$('#af-d').value, note: U.$('#af-n').value, unlock: U.$('#af-u').checked }).then(function (r) { if (r) { U.toast('World assigned'); draw(); } }); };
+      U.$all('[data-del-a]').forEach(function (b) { b.onclick = function () { SQ.act('assignmentDelete', { id: b.dataset.delA }).then(function (r) { if (r) draw(); }); }; });
       var tf = U.$('#tf'); if (tf) tf.onsubmit = function (e) {
         e.preventDefault();
         var ids = U.$all('input[type=checkbox]:checked', tf).map(function (i) { return i.value; });
         if (ids.length < 2) return U.toast('Pick at least two members.');
-        db.teams.forEach(function (t) { t.memberIds = t.memberIds.filter(function (id) { return ids.indexOf(id) < 0; }); });
-        db.teams.push({ id: S.uid('t'), classId: c.id, name: U.$('#tf-n').value.trim(), memberIds: ids, leaderId: ids[0], done: {} }); S.save(); draw();
+        SQ.act('teamCreate', { classId: c.id, name: U.$('#tf-n').value, memberIds: ids }).then(function (r) { if (r) draw(); });
       };
-      U.$all('[data-del-t]').forEach(function (b) { b.onclick = function () { db.teams = db.teams.filter(function (t) { return t.id !== b.dataset.delT; }); S.save(); draw(); }; });
-      U.$all('[data-lead]').forEach(function (b) { b.onclick = function () { var x = b.dataset.lead.split(':'); db.teams.find(function (t) { return t.id === x[0]; }).leaderId = x[1]; S.save(); draw(); }; });
+      U.$all('[data-del-t]').forEach(function (b) { b.onclick = function () { SQ.act('teamDelete', { id: b.dataset.delT }).then(function (r) { if (r) draw(); }); }; });
+      U.$all('[data-lead]').forEach(function (b) { b.onclick = function () { var x = b.dataset.lead.split(':'); SQ.act('teamLeader', { teamId: x[0], userId: x[1] }).then(function (r) { if (r) draw(); }); }; });
     }
     A.view('<div class="crumbs"><a href="#/teach/classes">Classes</a> › ' + esc(c.name) + '</div><div class="page-head"><div><h1>' + esc(c.name) + '</h1><p>Join code: <code style="font-size:1.05rem">' + esc(c.code) + '</code> <button class="btn sm ghost" id="copy">📋 Copy</button> <button class="btn sm ghost" id="regen">↻ New code</button></p></div><div class="btn-row"><a class="btn primary" href="#/teach/analytics/' + c.id + '">📊 Analytics</a><button class="btn danger" id="delc">Delete class</button></div></div>' +
       U.tabs('ct', [['students', 'Students'], ['assign', 'Assignments'], ['teams', 'Teams']], tab) + '<div id="cv"></div>');
     U.$all('#ct button').forEach(function (b) { b.onclick = function () { tab = b.dataset.tab; U.$all('#ct button').forEach(function (x) { x.classList.toggle('active', x === b); }); draw(); }; });
     U.$('#copy').onclick = function () { try { navigator.clipboard.writeText(c.code); U.toast('Copied ' + c.code); } catch (e) { U.toast(c.code); } };
-    U.$('#regen').onclick = function () { var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', s = ''; for (var i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)]; c.code = s.slice(0, 3) + '-' + s.slice(3); S.save(); A.render(); };
-    U.$('#delc').onclick = function () { U.confirm('Delete this class? Students stay registered but leave the class.', 'Delete', true).then(function (ok) { if (!ok) return; S.users().forEach(function (u) { if (u.classId === c.id) u.classId = null; }); db.classes = db.classes.filter(function (x) { return x.id !== c.id; }); S.save(); A.go('#/teach/classes'); }); };
+    U.$('#regen').onclick = function () { SQ.act('classRegen', { id: c.id }).then(function (r) { if (r) A.render(); }); };
+    U.$('#delc').onclick = function () { U.confirm('Delete this class? Students stay registered but leave the class.', 'Delete', true).then(function (ok) { if (!ok) return; SQ.act('classDelete', { id: c.id }).then(function (r) { if (r) A.go('#/teach/classes'); }); }); };
     draw();
   });
 
@@ -145,8 +145,8 @@ SQ.Teacher = (function () {
       '<div class="card"><h3>Your lessons</h3><div class="table-wrap"><table><thead><tr><th>Title</th><th>Level</th><th>Status</th><th></th></tr></thead><tbody>' +
       (ls.length ? ls.map(function (l) { return '<tr><td><b>' + esc(l.title) + '</b></td><td>' + esc(levelName(l.levelId)) + '</td><td>' + (l.published === false ? '<span class="tag">Draft</span>' : '<span class="tag good">Published</span>') + '</td><td style="text-align:right"><a class="btn sm" href="#/lesson/' + l.levelId + '">Preview</a> <a class="btn sm" href="#/teach/lesson/' + l.id + '">Edit</a> <button class="btn sm danger" data-dell="' + l.id + '">Delete</button></td></tr>'; }).join('') : '<tr><td colspan="4" class="empty">No custom lessons yet.</td></tr>') +
       '</tbody></table></div></div>');
-    U.$all('[data-delc]').forEach(function (b) { b.onclick = function () { U.confirm('Delete this challenge?', 'Delete', true).then(function (ok) { if (ok) { db.customChallenges = db.customChallenges.filter(function (c) { return c.id !== b.dataset.delc; }); S.save(); A.render(); } }); }; });
-    U.$all('[data-dell]').forEach(function (b) { b.onclick = function () { U.confirm('Delete this lesson?', 'Delete', true).then(function (ok) { if (ok) { db.customLessons = db.customLessons.filter(function (c) { return c.id !== b.dataset.dell; }); S.save(); A.render(); } }); }; });
+    U.$all('[data-delc]').forEach(function (b) { b.onclick = function () { U.confirm('Delete this challenge?', 'Delete', true).then(function (ok) { if (ok) SQ.act('challengeDelete', { id: b.dataset.delc }).then(function (r) { if (r) A.render(); }); }); }; });
+    U.$all('[data-dell]').forEach(function (b) { b.onclick = function () { U.confirm('Delete this lesson?', 'Delete', true).then(function (ok) { if (ok) SQ.act('lessonDelete', { id: b.dataset.dell }).then(function (r) { if (r) A.render(); }); }); }; });
   });
 
   A.route('/teach/content/:id', T, function (p, me) {
@@ -201,13 +201,9 @@ SQ.Teacher = (function () {
         if (!o.accept.length) err = 'Give at least one accepted answer.';
       }
       if (err) { U.$('#ferr').innerHTML = '<div class="form-error">' + esc(err) + '</div>'; return; }
-      var finish = function () {
-        if (isNew) { o.id = S.uid('cc'); o.authorId = me.id; o.createdAt = Date.now(); db.customChallenges.push(o); }
-        else Object.assign(c, o);
-        S.save(); U.toast('Challenge saved'); A.go('#/teach/content');
-      };
-      if (o.solution) SQ.Sandbox.run(o.solution).then(function (r) { if (r.error) U.$('#ferr').innerHTML = '<div class="form-error">Solution error: ' + esc(r.error) + '</div>'; else finish(); });
-      else finish();
+      if (!isNew) o.id = c.id;
+      SQ.Backend.act('challengeSave', o).then(function () { U.toast('Challenge saved'); A.go('#/teach/content'); },
+        function (er) { U.$('#ferr').innerHTML = '<div class="form-error">' + esc(er.message) + '</div>'; });
     };
   });
 
@@ -228,8 +224,8 @@ SQ.Teacher = (function () {
       e.preventDefault();
       var o = { levelId: U.$('#l-level').value, title: U.$('#l-title').value.trim(), body: U.$('#l-body').value, example: U.$('#l-ex').value.trim(), published: U.$('#l-pub').checked, custom: true };
       if (o.example && SQ.Grader.safety(o.example, [])) { U.toast('Example must be a SELECT query.'); return; }
-      if (isNew) { o.id = S.uid('cl'); o.authorId = me.id; db.customLessons.push(o); } else Object.assign(l, o);
-      S.save(); U.toast('Lesson saved'); A.go('#/teach/content');
+      if (!isNew) o.id = l.id;
+      SQ.act('lessonSave', o).then(function (r) { if (r) { U.toast('Lesson saved'); A.go('#/teach/content'); } });
     };
   });
 

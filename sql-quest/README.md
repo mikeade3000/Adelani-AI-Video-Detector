@@ -9,15 +9,28 @@ SQLite database compiled to WebAssembly ([sql.js](https://github.com/sql-js/sql.
 
 ![Student dashboard](screenshots/03-student-dashboard.jpg)
 
-## Upload to a website
+## Two ways to run it
 
-1. Upload the **contents of this `sql-quest` folder** (keep the sub-folders) to any web host:
-   Netlify, Vercel, GitHub Pages, cPanel/`public_html`, Hostinger, InfinityFree, etc.
-2. Open the site's address. That's it.
+| | **Server version** (recommended for classes) | **Browser-only version** |
+|---|---|---|
+| Run | `docker compose up -d` from the repository root (Node.js + PostgreSQL) | Upload this `sql-quest/` folder to any static host |
+| Data | PostgreSQL, shared by all devices | Each visitor's browser |
+| Marking | On the server; answers never reach the browser | In the browser |
 
-> Open it through a web address (`https://…` or `http://localhost`), not by double-clicking `index.html`.
-> Browsers block the database engine on `file://` pages. To test on your own computer, run
-> `python3 -m http.server 8000` inside this folder and open http://localhost:8000.
+The same files power both; the page detects which one it is in. Step-by-step instructions are in the
+[Installation Guide](../docs/INSTALLATION-GUIDE.md).
+
+**Browser-only quick start:** upload the contents of this folder (or `sql-quest-upload.zip`) to Netlify, GitHub Pages,
+cPanel, etc. Open it through a web address, not by double-clicking `index.html`. Locally: `python3 -m http.server 8000`.
+
+## User guides
+
+- [Student Guide](../docs/STUDENT-GUIDE.md) ([PDF](../docs/SQL-Quest-STUDENT-GUIDE.pdf))
+- [Teacher Guide](../docs/TEACHER-GUIDE.md) ([PDF](../docs/SQL-Quest-TEACHER-GUIDE.pdf))
+- [Administrator Guide](../docs/ADMIN-GUIDE.md) ([PDF](../docs/SQL-Quest-ADMIN-GUIDE.pdf))
+- [Installation Guide](../docs/INSTALLATION-GUIDE.md) ([PDF](../docs/SQL-Quest-INSTALLATION-GUIDE.pdf))
+
+A short role-specific guide is also built into the app: account menu → **❓ Help**.
 
 ### Demo accounts
 
@@ -27,6 +40,7 @@ SQLite database compiled to WebAssembly ([sql.js](https://github.com/sql-js/sql.
 | Teacher | `teacher` | `teacher123` |
 | Admin | `admin` | `admin123` |
 
+These are created automatically in browser-only mode, and on the server only when it is started with `SEED_DEMO=true`.
 Nine more demo students (`amaka`, `tunde`, `zainab`, `chinedu`, `fatima`, `grace`, `ibrahim`, `ngozi`, `samuel`, password `student123`)
 have progress already, so leaderboards and analytics show data. Demo class codes are **DBQ-201** and **DBQ-202**.
 
@@ -55,17 +69,18 @@ have progress already, so leaderboards and analytics show data. Demo class codes
 | Analytics | Most common errors, pass rate by world, average time per level, weakest topics, students who may need help |
 | Safety | Blocked commands (DROP TABLE/DATABASE, ATTACH, PRAGMA, …; admins can change the list), per-challenge allowed statement types, query time limit (runaway queries are stopped), salted + hashed passwords, role check on every page |
 | Responsive | Works on phones and desktops, with light and dark mode |
+| Server | Node.js API, PostgreSQL storage, server-side marking in sandboxed worker threads, scrypt passwords, HTTP-only sessions, login rate limiting, Docker setup |
 
-## Important: where data is stored
+## Where data is stored
 
-This version keeps all data (accounts, progress, classes) in **each browser's local storage**. It works out of the box
-on any static host, but data is **not shared between devices**: a student on their phone and a teacher on a laptop
-will not see each other's progress. Role checks also run in the browser, which is fine for a classroom or demo but not
-for high-stakes grading.
+- **Server version:** in PostgreSQL. Every change goes through the server, which checks the user's role, marks answers
+  in its own sandbox and stores the result. Students receive the game content with answers removed.
+- **Browser-only version:** in each browser's local storage. That's convenient for demos and self-study, but data isn't
+  shared between devices, and a determined student could read the answers in the page code.
 
-For a real multi-device class, add a backend (for example Node.js + PostgreSQL, as the design document suggests).
-All data access goes through one module, `js/store.js`, so it can be replaced with API calls without touching the game.
-In the meantime, admins can move data between devices with **Settings → Export / Import backup**.
+The rules live in one place, `js/actions.js` (with `engine.js` and `grader.js`). The browser runs them in browser-only
+mode, and the server runs **the same files** in server mode. Admins can move data from browser-only to the server with
+Settings → Export / Import backup.
 
 ## Project structure
 
@@ -74,7 +89,10 @@ sql-quest/
 ├── index.html             App shell
 ├── css/style.css          Styles (light and dark themes, responsive)
 ├── js/content.js          Curriculum: sandbox data, 5 worlds, lessons, 30 challenges, 5 bosses, badges, team missions
-├── js/store.js            Data layer (localStorage), password hashing, demo seed
+├── js/store.js            Data access over the current data set (shared with the server)
+├── js/actions.js          Every change to data: role checks, grading, XP (shared with the server)
+├── js/backend.js          Chooses server mode (API) or browser-only mode (localStorage)
+├── js/help.js             In-app help page
 ├── js/engine.js           Unlocking, XP, levels, badges, analytics
 ├── js/grader.js           Sandbox runner (Web Worker + time limit) and auto-grader
 ├── js/sandbox-worker.js   Runs each query in a fresh SQLite database
@@ -102,4 +120,4 @@ sql-quest/
 | ![](screenshots/14-boss-battle.jpg) Boss battle | ![](screenshots/16-leaderboard.jpg) Leaderboard |
 | ![](screenshots/26-teacher-analytics.jpg) Teacher analytics | ![](screenshots/31-admin-users.jpg) Admin users |
 
-All 37 screens are in [`screenshots/`](screenshots/).
+All screens are in [`screenshots/`](screenshots/).
