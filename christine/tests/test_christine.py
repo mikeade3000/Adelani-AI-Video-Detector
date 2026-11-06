@@ -222,3 +222,76 @@ def test_brain_runs_tools_then_answers(ctx):
     assert tool_result["type"] == "tool_result" and "Tax Return 2025.pdf" in tool_result["content"]
     assert calls[0]["output_config"] == {"effort": "low"}
     assert calls[0]["fallbacks"] == "default"
+
+
+# ---- API errors: clear reasons and automatic retry without optional features ------
+
+def _bad_request(message, status=400):
+    import anthropic
+    import httpx2
+    req = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+    body = {"type": "error", "error": {"type": "invalid_request_error", "message": message}}
+    resp = httpx2.Response(status, json=body, request=req)
+    cls = anthropic.BadRequestError if status == 400 else anthropic.APIStatusError
+    return cls(f"Error code: {status}", response=resp, body=body)
+
+
+def _fake_client(script):
+    """script: list of exceptions or responses, consumed one per API call."""
+    calls = []
+
+    class FakeMessages:
+        def create(self, **kw):
+            calls.append(kw)
+            item = script[len(calls) - 1]
+            if isinstance(item, Exception):
+                raise item
+            return item
+
+    fake = FakeMessages()
+    return SimpleNamespace(beta=SimpleNamespace(messages=fake), messages=fake), calls
+
+
+def _reply(text):
+    return SimpleNamespace(stop_reason="end_turn", content=[SimpleNamespace(type="text", text=text)])
+
+
+def test_brain_retries_without_rejected_features(ctx):
+    from christine.brain import Brain
+    brain = Brain(ctx.config, ctx)
+    err = "Unexpected value(s) `server-side-fallback-2026-07-01` for the `anthropic-beta` header."
+    brain.client, calls = _fake_client([_bad_request(err), _bad_request("tools.0: strict not allowed"),
+                                        _reply("Good morning!")])
+    assert brain.chat("good morning") == "Good morning!"
+    assert "fallbacks" in calls[0] and "fallbacks" not in calls[1]
+    assert "betas" in calls[1]  # compaction still on until it is rejected too
+    assert brain.disabled == {"fallbacks", "compaction"}
+    # The setting sticks for the rest of the session.
+    brain.client, calls = _fake_client([_reply("Hi again")])
+    assert brain.chat("hello") == "Hi again" and "fallbacks" not in calls[0]
+    assert "christine.log" in [p.name for p in ctx.config.data_dir.iterdir()]
+
+
+def test_brain_strips_strict_when_rejected(ctx):
+    from christine.brain import Brain
+    brain = Brain(ctx.config, ctx)
+    brain.disabled = {"fallbacks", "compaction"}
+    brain.client, calls = _fake_client([_bad_request("too many strict tools"), _reply("ok")])
+    assert brain.chat("hi") == "ok"
+    assert all("strict" not in t for t in calls[1]["tools"])
+    assert "betas" not in calls[1]  # plain messages endpoint once no betas are left
+
+
+def test_brain_reports_billing_problem(ctx):
+    from christine.brain import Brain
+    brain = Brain(ctx.config, ctx)
+    msg = "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing."
+    brain.client, calls = _fake_client([_bad_request(msg)])
+    out = brain.chat("hello")
+    assert "credit" in out and len(calls) == 1
+    assert brain.messages == []  # the failed turn is removed so the next one works
+
+
+def test_error_detail_reads_api_message():
+    from christine.brain import error_detail
+    assert error_detail(_bad_request("messages: roles must alternate")) == "messages: roles must alternate"

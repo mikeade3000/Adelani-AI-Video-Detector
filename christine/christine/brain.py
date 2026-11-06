@@ -33,7 +33,7 @@ class Brain:
         self.pending_notes: list[str] = []
         self.turns = 0
         self.use_fallbacks = config.model in FALLBACK_MODELS
-        self.use_compaction = True
+        self.disabled: set[str] = set()   # optional features this account rejected
         self.tools = [t.schema() for t in REGISTRY.values()]
         # Frozen for the whole session so the prompt cache keeps working.
         self.system = [{"type": "text", "text": PERSONA.format(memory=ctx.memory.profile_text()),
@@ -79,8 +79,19 @@ class Brain:
             return self._offline(user_text, prefix="I can't reach the internet right now. ")
         except anthropic.APIStatusError as exc:
             self._drop_dangling_user_turn()
-            print(f"[Christine] API error {exc.status_code}: {exc.message}")
-            return "Something went wrong in my cloud brain. Could you say that again?"
+            detail = error_detail(exc)
+            log_error(self.config, exc, detail)
+            print(f"[Christine] API error {exc.status_code}: {detail}")
+            if is_billing_problem(detail) or exc.status_code == 402:
+                return ("My cloud brain says your Anthropic account has no credit left. Please add credit "
+                        "in the Anthropic Console under Billing, then talk to me again. Until then I can still "
+                        "do the time, battery and websites.")
+            if exc.status_code == 404:
+                return (f"My cloud brain can't use the model {self.config.model} on your account. You can "
+                        "pick another model in my settings file. The exact reason is in the window.")
+            if exc.status_code == 403:
+                return "Your Anthropic account isn't allowed to do that. The exact reason is in the window."
+            return "Something went wrong in my cloud brain. The exact reason is written in the window."
 
     def summarise_session(self) -> str | None:
         if self.client is None or self.turns < 2:
@@ -99,34 +110,49 @@ class Brain:
 
     # ------------------------------------------------------------- internals
     def _create(self):
+        while True:
+            try:
+                return self._send()
+            except anthropic.BadRequestError as exc:
+                detail = error_detail(exc)
+                log_error(self.config, exc, detail)
+                if is_billing_problem(detail):
+                    raise
+                # Some accounts aren't enabled for optional features. Switch the next
+                # one off and try again, so Christine still works without it.
+                feature = next((f for f in OPTIONAL_FEATURES if f not in self.disabled), None)
+                if feature is None:
+                    raise
+                self.disabled.add(feature)
+                print(f"[Christine] Claude rejected the request ({detail}); retrying without '{feature}'.")
+
+    def _send(self):
         betas, extra = [], {}
-        if self.use_fallbacks:
+        if self.use_fallbacks and "fallbacks" not in self.disabled:
             betas.append("server-side-fallback-2026-07-01")
             extra["fallbacks"] = "default"
-        if self.use_compaction:
+        if "compaction" not in self.disabled:
             betas.append("compact-2026-01-12")
             extra["context_management"] = {"edits": [{"type": "compact_20260112"}]}
-        try:
-            return self.client.beta.messages.create(
-                model=self.config.model,
-                max_tokens=16000,
-                system=self.system,
-                tools=self.tools,
-                messages=self.messages,
-                output_config={"effort": self.config.effort},
-                betas=betas,
-                **extra,
-            )
-        except anthropic.BadRequestError as exc:
-            msg = str(exc).lower()
-            # If this account/model doesn't support an optional feature, switch it off and retry once.
-            if self.use_fallbacks and "fallback" in msg:
-                self.use_fallbacks = False
-                return self._create()
-            if self.use_compaction and ("compact" in msg or "context_management" in msg):
-                self.use_compaction = False
-                return self._create()
-            raise
+        tools = self.tools
+        if "strict_tools" in self.disabled:
+            tools = [{k: v for k, v in t.items() if k != "strict"} for t in tools]
+        system = self.system
+        if "prompt_caching" in self.disabled:
+            system = [{"type": "text", "text": self.system[0]["text"]}]
+        if "effort" not in self.disabled:
+            extra["output_config"] = {"effort": self.config.effort}
+        if betas:
+            extra["betas"] = betas
+        api = self.client.beta.messages if betas else self.client.messages
+        return api.create(
+            model=self.config.model,
+            max_tokens=16000,
+            system=system,
+            tools=tools,
+            messages=self.messages,
+            **extra,
+        )
 
     def _run_loop(self) -> str:
         spoken: list[str] = []
@@ -176,6 +202,42 @@ class Brain:
             return prefix + random.choice(OFFLINE_JOKES)
         return prefix + ("Without my cloud brain I can do the basics: battery, time, opening and closing "
                          "websites, and jokes. Ask me again when we're back online for anything else.")
+
+
+OPTIONAL_FEATURES = ["fallbacks", "compaction", "strict_tools", "effort", "prompt_caching"]
+
+
+def error_detail(exc) -> str:
+    """The human-readable reason the API gave for an error."""
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        err = body.get("error", body)
+        if isinstance(err, dict) and err.get("message"):
+            return str(err["message"])
+    response = getattr(exc, "response", None)
+    if response is not None:
+        try:
+            text = response.text.strip()
+            if text:
+                return text[:500]
+        except Exception:
+            pass
+    return getattr(exc, "message", None) or str(exc)
+
+
+def is_billing_problem(detail: str) -> bool:
+    d = detail.lower()
+    return "credit balance" in d or "billing" in d or "purchase credits" in d
+
+
+def log_error(config, exc, detail: str) -> None:
+    try:
+        from datetime import datetime
+        with open(config.data_dir / "christine.log", "a", encoding="utf-8") as f:
+            f.write(f"{datetime.now().isoformat(timespec='seconds')} API {getattr(exc, 'status_code', '?')} "
+                    f"request_id={getattr(exc, 'request_id', None)} model={config.model}: {detail}\n")
+    except OSError:
+        pass
 
 
 def _text_of(resp) -> str:
