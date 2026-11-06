@@ -14,26 +14,59 @@ import sys
 from .config import load_config
 
 
+def _clean_key(raw: str) -> str:
+    # Drop spaces, line breaks and hidden characters (e.g. from pressing Ctrl+V).
+    return "".join(c for c in raw if c.isprintable() and not c.isspace() and ord(c) < 128)
+
+
+def _looks_like_key(key: str) -> bool:
+    return key.startswith("sk-ant-") and len(key) > 40
+
+
+def _clipboard_text() -> str:
+    try:
+        import tkinter
+        root = tkinter.Tk()
+        root.withdraw()
+        try:
+            return root.clipboard_get()
+        finally:
+            root.destroy()
+    except Exception:
+        return ""
+
+
 def setup_key(cfg) -> None:
     print("Christine uses Claude (by Anthropic) as her cloud brain.")
-    print("Create an API key at https://console.anthropic.com/settings/keys and paste it below.")
-    print("(Leave empty to skip; Christine will run in basic offline mode.)")
+    print("1. Open https://console.anthropic.com/settings/keys and create a key.")
+    print("2. Click the copy button next to the key.")
+    print("3. Come back here and just press Enter - Christine reads the key from your clipboard.")
+    print("   (Or paste it with RIGHT-CLICK, then press Enter. Ctrl+V does not work here.)")
+    print("   Type 'skip' to continue without a key (basic offline mode).")
+    import os
+    existing = _clean_key(os.environ.get("ANTHROPIC_API_KEY", ""))
+    if _looks_like_key(existing):
+        print(f"   A key is already saved ({existing[:10]}...). Press Enter to keep it, or copy a new one first.")
     key = ""
     for _ in range(3):
-        raw = getpass.getpass("API key (hidden - paste with right-click, then press Enter): ")
-        # Drop spaces, line breaks and hidden characters (e.g. from pressing Ctrl+V).
-        key = "".join(c for c in raw if c.isprintable() and not c.isspace() and ord(c) < 128)
-        if not raw.strip():
-            print("Skipped.")
+        raw = getpass.getpass("Press Enter to use the copied key (input is hidden): ")
+        if raw.strip().lower() == "skip":
+            print("Skipped. You can add the key later with the 'Christine - set API key' shortcut.")
             return
-        if key.startswith("sk-ant-") and len(key) > 40:
-            if key != raw.strip():
-                print("(Removed some hidden characters from what was pasted.)")
+        key = _clean_key(raw)
+        if not _looks_like_key(key):
+            clip = _clean_key(_clipboard_text())
+            if _looks_like_key(clip):
+                key = clip
+                print(f"Found the key on your clipboard ({key[:10]}..., {len(key)} characters).")
+        if not _looks_like_key(key) and not raw.strip() and _looks_like_key(existing):
+            print("Keeping the key that is already saved.")
+            return
+        if _looks_like_key(key):
             break
-        print(f"That doesn't look like an Anthropic key (it should start with sk-ant-; got "
-              f"'{key[:7]}...', {len(key)} characters). Please try again.")
+        print("I couldn't find an Anthropic key (it starts with sk-ant-). Copy it again and press Enter.")
     else:
-        print("Key not saved. Run install.bat again when you have the key ready.")
+        print("Key not saved. Run the 'Christine - set API key' shortcut when you have it ready.")
         return
     env_path = cfg.data_dir / ".env"
     lines = []

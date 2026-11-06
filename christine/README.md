@@ -12,7 +12,9 @@ long as you like, and remember things about you between sessions.
 2. Double-click **`install.bat`**. The installer:
    - installs Python 3.12 if you don't have it (using winget),
    - sets up Christine in `%LOCALAPPDATA%\Christine`,
-   - asks for your **Claude API key** (create one at <https://console.anthropic.com/settings/keys>),
+   - asks for your **Claude API key**: create one at <https://console.anthropic.com/settings/keys>,
+     click its copy button, then just press **Enter** in the installer (it reads the key from
+     your clipboard; Ctrl+V does not work in that window),
    - puts a **Christine** shortcut on your Desktop and in the Start Menu,
    - can optionally start Christine whenever Windows starts.
 3. Double-click **Christine** on the Desktop. The first launch downloads the speech
@@ -86,8 +88,9 @@ Edit `%APPDATA%\Christine\config.toml` (open it by typing that path into the Fil
 Explorer address bar), then restart Christine. You can change her voice (for example
 `en-GB-SoniaNeural` or `en-US-JennyNeural`), speaking speed, hotkeys, battery warning
 levels, which folders she searches, and how sensitive the microphone is. To change your
-API key, run the Start Menu shortcut "Christine (type instead of talk)" once, or run
-`python -m christine --setup`.
+API key, use the Start Menu shortcut **Christine - set API key**. If Christine says
+something went wrong in her cloud brain, run **Christine connection check** and look at
+what it reports.
 
 Your memories are stored in `%APPDATA%\Christine\memory.db` and stay on your computer.
 Uninstalling keeps them unless you delete that folder.

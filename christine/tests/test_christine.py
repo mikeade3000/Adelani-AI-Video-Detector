@@ -295,3 +295,54 @@ def test_brain_reports_billing_problem(ctx):
 def test_error_detail_reads_api_message():
     from christine.brain import error_detail
     assert error_detail(_bad_request("messages: roles must alternate")) == "messages: roles must alternate"
+
+
+# ---- natural phrasing for the quick local commands ----------------------------------
+
+def test_router_understands_natural_phrasing(ctx, monkeypatch):
+    import christine.router as r
+    ran = []
+    monkeypatch.setattr(r, "run_tool", lambda c, name, args: (ran.append((name, args)), ("Closed x", False))[1])
+
+    assert r.route("What is it by the time?", ctx)[0] == "handled"
+    assert r.route("Tell me the time please", ctx)[0] == "handled"
+    assert r.route("I use my battery", ctx)[0] == "handled"
+    assert r.route("what's today's date", ctx)[0] == "handled"
+
+    assert r.route("Can you open a YouTube page for me?", ctx) == ("handled", "Opening youtube.")
+    assert r.route("Please take me to punchng.com", ctx) == ("handled", "Opening punchng.com.")
+    assert r.route("open google maps", ctx) == ("handled", "Opening google maps.")
+    assert r.route("close YouTube for me", ctx)[0] == "handled"
+    assert r.route("close all the websites", ctx)[0] == "handled"
+    assert ran[-1] == ("close_website", {"site": "all"})
+    assert r.route("close that page", ctx)[0] == "handled"
+    assert ran[-1] == ("close_website", {"site": "last"})
+
+    # These need real understanding, so they go to the brain.
+    assert r.route("how much time do I spend on youtube", ctx)[0] == "brain"
+    assert r.route("open my tax document", ctx)[0] == "brain"
+    assert r.route("what's a good youtube channel for cooking", ctx)[0] == "brain"
+    assert r.route("delete the budget file", ctx)[0] == "brain"
+
+
+def test_setup_reads_key_from_clipboard(tmp_path, monkeypatch):
+    import christine.__main__ as m
+    cfg = load_config(tmp_path / "data")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    key = "sk-ant-api03-" + "a" * 60
+    monkeypatch.setattr(m.getpass, "getpass", lambda prompt="": "\x16")  # what Ctrl+V types
+    monkeypatch.setattr(m, "_clipboard_text", lambda: key + "\r\n")
+    m.setup_key(cfg)
+    assert (cfg.data_dir / ".env").read_text().strip() == f"ANTHROPIC_API_KEY={key}"
+
+
+def test_setup_keeps_existing_key_on_enter(tmp_path, monkeypatch):
+    import christine.__main__ as m
+    cfg = load_config(tmp_path / "data")
+    old = "sk-ant-api03-" + "b" * 60
+    monkeypatch.setenv("ANTHROPIC_API_KEY", old)
+    (cfg.data_dir / ".env").write_text(f"ANTHROPIC_API_KEY={old}\n")
+    monkeypatch.setattr(m.getpass, "getpass", lambda prompt="": "")
+    monkeypatch.setattr(m, "_clipboard_text", lambda: "some other text")
+    m.setup_key(cfg)
+    assert old in (cfg.data_dir / ".env").read_text()
