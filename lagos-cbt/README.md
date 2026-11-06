@@ -34,12 +34,13 @@ The `dist/` files are generated. Edit the sources, then run `node tools/build-si
 
 Checks: `node tools/validate-banks.js` and `node tools/test-backend.js`.
 
-## Question banks (1,937 questions)
+## Question banks (1,961 questions)
 
 | Scope | Questions | Seen by |
 |---|---:|---|
 | COMMON (general papers) | 41 | everyone |
 | Professional Knowledge: one bank per cadre | 20 per cadre (68 cadres) | that cadre only |
+| **Tourism Officer Cadre** | **24** | tourism officers |
 | Information & Communication Technology (ICT) Cadre | 93 | ICT cadre |
 | **Permanent Secretary Cadre** | **257** | PS cadre (GL 17 Directors, Tutors-General) |
 | GROUP: Law Enforcement (all enforcement cadres) | 34 | the four enforcement cadres below |
@@ -49,7 +50,7 @@ Checks: `node tools/validate-banks.js` and `node tools/test-backend.js`.
 | Neighbourhood Safety Corps Cadre (LNSC) | 20 | LNSC |
 | **Fire & Rescue Service Cadre (LSFRS)** | **27** | fire service |
 
-Every one of the 75 cadres now has at least 20 questions of its own. Each practice session is drawn about half from the candidate's own cadre bank and half from the COMMON general papers, spread across subjects within each half.
+Every one of the 76 cadres now has at least 20 questions of its own. Each practice session is drawn about half from the candidate's own cadre bank and half from the COMMON general papers, spread across subjects within each half.
 
 Upgrading a live database is automatic: on the next request (or when you run `diagnostics`), the server adds any seed question whose scope and wording are not already present. It never deletes or duplicates questions.
 

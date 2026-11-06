@@ -176,5 +176,23 @@ const sigSet=new Set(lq.map(q=>q.scope+"||"+q.stem));check(sigSet.size===lq.leng
 ctx.ensureSeed(live);check(live.readAll("Questions").length===lq.length,"upgrade seed is idempotent");
 check(ctx.seedComplete_(live.getConfig()),"all seed flags set after upgrade");
 
+/* ---- upgrade from the previous release (everything seeded except the tourism bank) ---- */
+const rel=memStore();
+const allBanks=ctx.getSeedBanks(),tour=allBanks.find(b=>b.scope==="Tourism Officer Cadre");
+check(!!tour&&tour.data.length>=20,"tourism bank registered with ≥20 questions");
+const relFlags={superSeeded:true,baseSeeded:true,seeded:true,ictSeeded:true,patchV2:true};
+allBanks.filter(b=>b!==tour).forEach(b=>relFlags["seeded_"+b.key]=true);
+rel.setConfig(relFlags);
+rel.appendMany("Questions",[...ctx.SEED_QUESTIONS,...allBanks.filter(b=>b!==tour).flatMap(b=>b.data)].map((q,i)=>({...q,id:"rel"+i})));
+const relBefore=rel.readAll("Questions").length;
+check(!ctx.seedComplete_(rel.getConfig()),"server notices the tourism bank is missing");
+ctx.ensureSeed(rel);
+check(rel.readAll("Questions").length===relBefore+tour.data.length,"exactly the tourism questions are added");
+ctx.ensureSeed(rel);check(rel.readAll("Questions").length===relBefore+tour.data.length,"tourism upgrade is idempotent");
+r=H(s,{action:"createUser",token:adm,rec:{username:"tour1",name:"T",cadre:"Tourism Officer Cadre",targetPost:"Senior Tourism Officer",cadreLocked:true,attemptsAllocated:1},password:"TourPass123"});
+check(r.ok,"tourism candidate created");
+b=H(s,{action:"bootstrap",token:H(s,{action:"login",username:"tour1",password:"TourPass123"}).token});
+check(b.questions.filter(q=>q.scope==="Tourism Officer Cadre").length===tour.data.length,"tourism candidate sees the tourism bank");
+
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail?1:0);

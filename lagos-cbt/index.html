@@ -786,7 +786,8 @@ function renderQuestionInput(q){
     return el("div",{},...q.pairs.map(p=>{
       const sel=el("select",{},el("option",{value:""},"— choose —"),
         ...q.rights.map(r2=>el("option",{value:r2},r2)));
-      sel.onchange=()=>{if(sel.value)EXAM.responses[q.id][p.l]=sel.value;else delete EXAM.responses[q.id][p.l];};
+      sel.onchange=()=>{if(sel.value)EXAM.responses[q.id][p.l]=sel.value;else delete EXAM.responses[q.id][p.l];
+        $$(".qdot")[EXAM.idx]?.classList.toggle("answered",isAnswered(q));};
       if(EXAM.responses[q.id][p.l])sel.value=EXAM.responses[q.id][p.l];
       return el("div",{class:"match-row"},el("div",{class:"left"},p.l),sel);
     }));

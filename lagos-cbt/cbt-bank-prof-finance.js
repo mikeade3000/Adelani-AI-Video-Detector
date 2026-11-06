@@ -335,6 +335,33 @@ var SEED_PROF_FINANCE=(function(){
   m(H,"A youth empowerment programme trains 500 youths, but follow-up shows few started businesses. The most likely gap is:",["Too much training","Lack of post-training support such as start-up capital, mentoring and market access","Too many participants","Training was too short only"],1,"Training alone rarely creates businesses without follow-up support.");
   m(M,"Monitoring a youth programme mainly involves:",["Only photographs","Regularly tracking activities, outputs and participation against the plan","Ending the programme","Recruiting staff only"],1,"Monitoring allows timely corrections.");
 
+  /* ---------------- Tourism ---------------- */
+  cadre("Tourism Officer Cadre");
+  m(M,"Under the UN Tourism (formerly UNWTO) definition, tourism involves people travelling to places outside their usual environment for not more than:",["One week","One month","One consecutive year","Five years"],2,"Trips may be for leisure, business or other purposes, but not for employment by a resident entity in the place visited.");
+  m(M,"A same-day visitor who does not stay overnight at the destination is called an:",["Tourist","Excursionist","Emigrant","Expatriate"],1,"A tourist (overnight visitor) stays at least one night.");
+  x(M,"Match each form of tourism to its description.",[["Domestic tourism","Residents travelling within their own country"],["Inbound tourism","Non-residents visiting the country"],["Outbound tourism","Residents travelling to other countries"],["Ecotourism","Responsible travel to natural areas that conserves the environment"]],"These categories are used in tourism statistics and planning.");
+  m(E,"The UN agency responsible for tourism, renamed UN Tourism in 2024, is headquartered in:",["Geneva","New York","Madrid","Nairobi"],2,"It was formerly called the World Tourism Organization (UNWTO).");
+  m(M,"Nigeria's federal tourism agency, the former Nigerian Tourism Development Corporation, is now the:",["Nigerian Tourism Development Authority (NTDA)","National Council for Arts and Culture","Nigeria Immigration Service","NCAA"],0,"The Nigerian Tourism Development Authority Act 2022 replaced the Corporation.");
+  m(M,"Lagos State's tourism policy and promotion are mainly the responsibility of the:",["Ministry of Tourism, Arts and Culture","Ministry of Transportation","Ministry of Works","LASEPA"],0,"It promotes destinations, festivals and the creative industry.");
+  m(E,"The 'Point of No Return' and the slave-trade relics that attract heritage tourists in Lagos State are in:",["Epe","Badagry","Ikorodu","Ikeja"],1,"Badagry was a major slave-trade port.");
+  m(M,"The Lekki Conservation Centre is a notable attraction because it has:",["A deep-sea port","One of the longest canopy walkways in Africa, within a protected wetland","A theme park","A ski slope"],1,"It is managed by the Nigerian Conservation Foundation.");
+  m(M,"Freedom Park on Lagos Island was developed on the site of a former:",["Airport","Colonial prison (Her Majesty's Broad Street Prison)","Railway station","Stadium"],1,"It is now a centre for arts, culture and recreation.");
+  m(M,"The Eyo Festival, featuring masquerades in white, is traditionally held on:",["Lagos Island","Badagry","Epe","Ikorodu"],0,"It is one of Lagos's best-known cultural festivals.");
+  m(H,"Nigeria's two UNESCO World Heritage Sites are:",["Olumo Rock and Ikogosi Springs","Osun-Osogbo Sacred Grove and Sukur Cultural Landscape","Yankari Game Reserve and Obudu Ranch","Zuma Rock and Idanre Hills"],1,"Sukur was inscribed in 1999 and Osun-Osogbo in 2005.");
+  m(M,"A hotel with 150 rooms sold 3,150 room-nights in a 30-day month. Its occupancy rate was:",["60%","70%","75%","80%"],1,"Rooms available = 150 × 30 = 4,500; 3,150 ÷ 4,500 = 70%.");
+  m(H,"A hotel earned ₦63m in room revenue from 3,150 room-nights sold out of 4,500 available. Its RevPAR (revenue per available room-night) is:",["₦14,000","₦20,000","₦30,000","₦45,000"],0,"RevPAR = 63,000,000 ÷ 4,500 = ₦14,000. (Average daily rate = 63m ÷ 3,150 = ₦20,000.)");
+  m(M,"In tourism, MICE stands for:",["Museums, Islands, Coasts and Events","Meetings, Incentives, Conferences and Exhibitions","Marketing, Investment, Culture and Entertainment","Management of International Cultural Exchange"],1,"Business events are a key segment for a commercial city like Lagos.");
+  m(M,"'Leakage' in tourism economics refers to:",["Water loss in hotels","Tourism spending that leaves the local economy, e.g. through imports or foreign-owned businesses","Visa overstays","Unpaid taxes only"],1,"Local sourcing and ownership reduce leakage and raise the multiplier effect.");
+  m(M,"Carrying capacity in tourism is:",["The number of seats on a tour bus","The maximum number of visitors a destination can take without unacceptable damage to the environment, community or visitor experience","Hotel room count","Airport capacity only"],1,"Exceeding it leads to overtourism.");
+  o(H,"Arrange the stages of Butler's Tourism Area Life Cycle in order.",["Exploration","Involvement","Development","Consolidation","Stagnation","Decline or rejuvenation"],"Destinations need renewal before they stagnate.");
+  m(M,"A Destination Management Organisation (DMO) mainly:",["Owns all hotels","Coordinates the marketing and management of a destination with public and private partners","Issues passports","Runs airlines"],1,"DMOs promote the destination and improve the visitor experience.");
+  m(M,"Under the ECOWAS Protocol on Free Movement, citizens of ECOWAS member states visiting Nigeria for short stays:",["Need a business visa","Do not need a visa (with valid travel documents)","Cannot enter","Need a work permit"],1,"This supports regional tourism.");
+  t(E,"Community-based tourism aims to ensure that local communities participate in and benefit from tourism.",true,"Benefit-sharing builds local support for tourism and conservation.");
+  t(M,"A Tourism Satellite Account measures the economic contribution of tourism using standard national-accounts methods.",true,"It is the UN-recommended framework for measuring tourism's economic impact.");
+  t(M,"Tour guides may give visitors inaccurate history if it makes the tour more entertaining.",false,"Accurate interpretation protects the destination's credibility and cultural heritage.");
+  s(M,"What does the 'E' in MICE stand for?",["exhibitions","exhibition","events"],"MICE: Meetings, Incentives, Conferences, Exhibitions (sometimes Events).");
+  m(M,"International arrivals rose from 40,000 to 52,000 in one year. The growth rate is:",["12%","23%","30%","52%"],2,"(52,000 − 40,000) ÷ 40,000 × 100 = 30%.");
+
   for(var n in out)out[n].forEach(function(z){z.scope=n;});
   return out;
 })();
