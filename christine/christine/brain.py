@@ -222,6 +222,10 @@ def error_detail(exc) -> str:
                 return text[:500]
         except Exception:
             pass
+        if "request-id" not in response.headers:
+            server = response.headers.get("server", "unknown")
+            return (f"empty reply with no Anthropic request id (server: {server}); something on this "
+                    "computer or network may be blocking the connection. Run 'Christine connection check'.")
     return getattr(exc, "message", None) or str(exc)
 
 

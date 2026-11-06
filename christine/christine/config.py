@@ -80,7 +80,11 @@ def _load_env_file(path: Path) -> None:
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+        value = value.strip().strip('"').strip("'")
+        if key.strip() == "ANTHROPIC_API_KEY":
+            # Remove hidden characters that sometimes sneak in when pasting.
+            value = "".join(c for c in value if c.isprintable() and not c.isspace() and ord(c) < 128)
+        os.environ.setdefault(key.strip(), value)
 
 
 @dataclass
