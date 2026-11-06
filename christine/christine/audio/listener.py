@@ -23,9 +23,22 @@ class Listener:
         self._model = None
 
     def load(self) -> None:
+        import os
+        import warnings
+
+        # Harmless Hugging Face notices (no symlink support on Windows, no account token).
+        os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+        warnings.filterwarnings("ignore", module="huggingface_hub")
+        try:
+            from huggingface_hub.utils import logging as hf_logging
+            hf_logging.set_verbosity_error()
+        except Exception:
+            pass
+
         from faster_whisper import WhisperModel
 
-        print(f"[Christine] loading speech model '{self.config.whisper_model}' (first run downloads it)...")
+        print(f"[Christine] loading speech model '{self.config.whisper_model}' "
+              "(the first run downloads about 150 MB, please wait)...")
         self._model = WhisperModel(self.config.whisper_model, device="cpu", compute_type="int8")
         self.calibrate()
 
