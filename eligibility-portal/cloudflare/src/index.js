@@ -117,6 +117,7 @@ class UserError extends Error {}
 async function route(ctx, body) {
   if (VERIFIED_ACTIONS.includes(body.action) || /mdaLink|MdaLink/.test(str(body.action))) await ensureVerifiedSchema(ctx);
   if (/mdaLink|MdaLink/.test(str(body.action))) await ensureMdaLinkSchema(ctx);
+  if (RESULT_ACTIONS.includes(body.action)) { await ensureVerifiedSchema(ctx); await ensureResultsSchema(ctx); }
   switch (body.action) {
     case 'ping': return { success: true, message: 'pong' };
     case 'getAnalytics': return handleGetAnalytics(ctx);
@@ -130,6 +131,11 @@ async function route(ctx, body) {
     case 'mdaLinkLog': return handleMdaLinkLog(ctx, body);
     case 'mdaLinkSignOut': return handleMdaLinkSignOut(ctx, body);
     case 'listMdaLinks': return handleListMdaLinks(ctx, body);
+    case 'listResults': return handleListResults(ctx, body);
+    case 'saveResult': return handleSaveResult(ctx, body);
+    case 'confirmResults': return handleConfirmResults(ctx, body);
+    case 'importResultEmails': return handleImportResultEmails(ctx, body);
+    case 'resultLookup': return handleResultLookup(ctx, body);
     case 'saveMdaLink': return handleSaveMdaLink(ctx, body);
     case 'setMdaLinkActive': return handleSetMdaLinkActive(ctx, body);
     case 'login': return handleLogin(ctx, body);
@@ -336,7 +342,7 @@ async function handleChangePassword(ctx, body) {
 async function handleAdminCreateUser(ctx, body) {
   await requireAdmin(ctx, body.token);
   const email = lower(body.email), name = str(body.name).trim(), mda = str(body.mda).trim();
-  const role = body.role === 'admin' ? 'admin' : 'user';
+  const role = ACCOUNT_ROLES.includes(body.role) ? body.role : 'user';
   if (!email || !name || !mda) return { success: false, message: 'Name, email, and MDA are required.' };
   const existing = await ctx.first('SELECT * FROM users WHERE lower(email) = ?', email);
   if (existing) {
@@ -894,6 +900,154 @@ async function handleRegroupVerifiedMda(ctx, body) {
 }
 
 /* ========================================================================
+   EXAMINATION RESULTS
+   Panels enter each eligible officer's result as it happens (Draft). The
+   Director CMD confirms it; a confirmed result is locked, and only the
+   Permanent Secretary or the super administrator can amend it (with a reason).
+   Officers see their own CONFIRMED result by signing in with their
+   Eligibility/SEAP (examination) number and email address.
+   Every entry, confirmation and amendment is written to the verification log.
+   ======================================================================== */
+const ACCOUNT_ROLES = ['user', 'admin', 'panel', 'director', 'permsec'];
+const RESULT_ACTIONS = ['listResults', 'saveResult', 'confirmResults', 'importResultEmails', 'resultLookup'];
+const RESULT_REMARKS = ['Passed', 'Not passed', 'Absent'];
+const RESULT_TRIES = 5, RESULT_LOCK_MS = 15 * 60 * 1000;
+let resultsSchemaReady = false;
+async function ensureResultsSchema(ctx) {
+  if (resultsSchemaReady) return;
+  await ctx.db.batch([
+    ctx.db.prepare('CREATE TABLE IF NOT EXISTS results (brief_id TEXT PRIMARY KEY, email TEXT, written TEXT, oral TEXT, total TEXT, remark TEXT, comment TEXT, status TEXT, entered_by TEXT, entered_at TEXT, confirmed_by TEXT, confirmed_at TEXT, amended_by TEXT, amended_at TEXT, updated INTEGER)'),
+    ctx.db.prepare('CREATE TABLE IF NOT EXISTS result_tries (seap TEXT PRIMARY KEY, fails INTEGER DEFAULT 0, window_start INTEGER)'),
+  ]);
+  resultsSchemaReady = true;
+}
+// What this account may do with results.
+async function resultRights(ctx, s) {
+  const sup = await isSuperAdminUser(ctx, s);
+  return { enter: sup || ['panel', 'director', 'permsec', 'admin'].includes(s.role), confirm: sup || s.role === 'director', amend: sup || s.role === 'permsec', admin: sup || s.role === 'admin' };
+}
+async function requireResultRole(ctx, token) {
+  const s = await requireUser(ctx, token), rights = await resultRights(ctx, s);
+  if (!rights.enter) throw new UserError('Only examination panels, the Director CMD, the Permanent Secretary and administrators can work with results.');
+  return { s, rights };
+}
+const RESULT_COLS = ['email', 'written', 'oral', 'total', 'remark', 'comment', 'status', 'entered_by', 'entered_at', 'confirmed_by', 'confirmed_at', 'amended_by', 'amended_at'];
+const RESULT_SELECT = `SELECT v.brief_id, v.seap_no, v.surname_first, v.mda, v.oracle_no, v.official_email, ${RESULT_COLS.map(c => 'r.' + c).join(', ')}, r.updated
+  FROM verified v LEFT JOIN results r ON r.brief_id = v.brief_id`;
+function resultOut(r) {
+  const o = { brief_id: str(r.brief_id), seap_no: str(r.seap_no), surname_first: str(r.surname_first), mda: str(r.mda), oracle_no: str(r.oracle_no) };
+  RESULT_COLS.forEach(c => { o[c] = str(r[c]); });
+  if (!o.email) o.email = lower(r.official_email);
+  if (!o.status) o.status = 'Not entered';
+  return o;
+}
+async function handleListResults(ctx, body) {
+  const { rights } = await requireResultRole(ctx, body.token);
+  const since = Math.max(0, Number(body.since) || 0), now = Date.now();
+  const rows = since ? await ctx.all(`${RESULT_SELECT} WHERE r.updated >= ? ORDER BY v.seq`, since) : await ctx.all(`${RESULT_SELECT} ORDER BY v.seq`);
+  return { success: true, now, rights, records: rows.map(resultOut) };
+}
+const scoreOk = v => v === '' || (/^\d{1,3}(\.\d{1,2})?$/.test(v) && Number(v) <= 100);
+async function resultLog(ctx, s, row, status, details) {
+  const log = { id: uuid(), timestamp: lagosNow(), checked_by: `${s.name} (${s.email})`, mda: str(row.mda), source: 'Examination results', file_name: '', officer_name: str(row.surname_first),
+    oracle_no: str(row.oracle_no), csc_file_no: '', record_id: str(row.brief_id), status, match_method: '', fields_compared: '', fields_matched: '', discrepancies: '', discrepancy_details: str(details) };
+  return ctx.db.prepare(VERIFICATION_INSERT).bind(...VERIFICATION_COLUMNS.map(c => str(log[c])));
+}
+async function handleSaveResult(ctx, body) {
+  const { s, rights } = await requireResultRole(ctx, body.token);
+  const row = await ctx.first(`${RESULT_SELECT} WHERE v.brief_id = ?`, str(body.brief_id));
+  if (!row) return { success: false, message: 'This officer is no longer on the eligibility list.' };
+  const cur = resultOut(row);
+  const v = { written: str(body.written).trim(), oral: str(body.oral).trim(), remark: str(body.remark).trim(), comment: str(body.comment).trim().slice(0, 300), email: lower(body.email) };
+  if (!scoreOk(v.written) || !scoreOk(v.oral)) return { success: false, message: 'Scores must be numbers from 0 to 100.' };
+  if (v.remark && !RESULT_REMARKS.includes(v.remark)) return { success: false, message: 'Choose a remark: ' + RESULT_REMARKS.join(', ') + '.' };
+  if (v.email && !EMAIL_RE.test(v.email)) return { success: false, message: `"${v.email}" is not a valid email address.` };
+  if (!v.written && !v.oral && !v.remark && !v.email) return { success: false, message: 'Enter the scores or a remark.' };
+  v.total = (v.written || v.oral) ? String(Math.round(((Number(v.written) || 0) + (Number(v.oral) || 0)) * 100) / 100) : '';
+  const confirmed = cur.status === 'Confirmed';
+  const reason = str(body.reason).trim();
+  if (confirmed && !rights.amend) return { success: false, message: 'This result has been confirmed by the Director CMD. Only the Permanent Secretary or the super administrator can change it.' };
+  if (confirmed && !reason) return { success: false, message: 'Give a reason for changing a confirmed result.' };
+  const changes = ['email', 'written', 'oral', 'total', 'remark', 'comment'].filter(k => v[k] !== cur[k]).map(k => `${k}: "${cur[k]}" → "${v[k]}"`);
+  if (!changes.length) return { success: true, changed: 0, record: cur };
+  const now = lagosNow(), by = `${s.name} (${s.email})`;
+  const hasScores = !!(v.written || v.oral || v.remark);
+  const status = confirmed ? 'Confirmed' : (hasScores ? 'Draft' : '');
+  const out = { ...cur, ...v, status: status || 'Not entered',
+    entered_by: confirmed ? cur.entered_by : (hasScores ? by : cur.entered_by), entered_at: confirmed ? cur.entered_at : (hasScores ? now : cur.entered_at),
+    amended_by: confirmed ? by : cur.amended_by, amended_at: confirmed ? now : cur.amended_at };
+  await ctx.db.batch([
+    ctx.db.prepare(`INSERT OR REPLACE INTO results (brief_id, ${RESULT_COLS.join(', ')}, updated) VALUES (?, ${RESULT_COLS.map(() => '?').join(', ')}, ?)`)
+      .bind(cur.brief_id, ...RESULT_COLS.map(c => c === 'status' ? status : str(out[c])), Date.now()),
+    await resultLog(ctx, s, row, confirmed ? 'Result amended' : (hasScores ? 'Result entered' : 'Result email set'), (confirmed ? `Reason: ${reason}. ` : '') + changes.join('; ')),
+  ]);
+  return { success: true, changed: changes.length, record: out };
+}
+async function handleConfirmResults(ctx, body) {
+  const { s, rights } = await requireResultRole(ctx, body.token);
+  if (!rights.confirm) return { success: false, message: 'Only the Director CMD (or the super administrator) can confirm results.' };
+  const ids = [...new Set((Array.isArray(body.ids) ? body.ids : []).map(String))].slice(0, 500);
+  const now = lagosNow(), by = `${s.name} (${s.email})`, stmts = [];
+  let confirmed = 0, skipped = 0;
+  for (let i = 0; i < ids.length; i += 50) {
+    const chunk = ids.slice(i, i + 50);
+    for (const row of await ctx.all(`${RESULT_SELECT} WHERE v.brief_id IN (${chunk.map(() => '?').join(',')})`, ...chunk)) {
+      if (row.status !== 'Draft' || !(row.remark || row.written || row.oral)) { skipped++; continue; }
+      stmts.push(ctx.db.prepare("UPDATE results SET status = 'Confirmed', confirmed_by = ?, confirmed_at = ?, updated = ? WHERE brief_id = ?").bind(by, now, Date.now(), row.brief_id));
+      stmts.push(await resultLog(ctx, s, row, 'Result confirmed', `written ${str(row.written) || '—'}, oral ${str(row.oral) || '—'}, total ${str(row.total) || '—'}, ${str(row.remark) || 'no remark'}`));
+      confirmed++;
+    }
+  }
+  skipped = ids.length - confirmed;
+  for (let i = 0; i < stmts.length; i += 100) await ctx.db.batch(stmts.slice(i, i + 100));
+  return { success: true, confirmed, skipped };
+}
+// Administrators: candidates' email addresses from an Excel sheet (SEAP No + Email), so they can sign in.
+async function handleImportResultEmails(ctx, body) {
+  const { s, rights } = await requireResultRole(ctx, body.token);
+  if (!rights.admin) return { success: false, message: 'Only administrators can import candidates\' email addresses.' };
+  const rows = Array.isArray(body.rows) ? body.rows.slice(0, 5000) : [];
+  const verified = await ctx.all(`${RESULT_SELECT}`);
+  const bySeap = new Map(verified.filter(r => str(r.seap_no).trim()).map(r => [lower(r.seap_no), r]));
+  const stmts = []; let saved = 0; const notFound = [], invalid = [];
+  for (const x of rows) {
+    const seap = str(x.seap_no).trim(), email = lower(x.email);
+    if (!seap && !email) continue;
+    const r = bySeap.get(lower(seap));
+    if (!r) { notFound.push(seap || '(blank)'); continue; }
+    if (!EMAIL_RE.test(email)) { invalid.push(`${seap}: ${email || '(blank)'}`); continue; }
+    if (lower(r.email) === email) continue;
+    if (r.status) stmts.push(ctx.db.prepare('UPDATE results SET email = ?, updated = ? WHERE brief_id = ?').bind(email, Date.now(), r.brief_id));
+    else stmts.push(ctx.db.prepare("INSERT OR REPLACE INTO results (brief_id, email, status, updated) VALUES (?, ?, '', ?)").bind(r.brief_id, email, Date.now()));
+    saved++;
+  }
+  if (saved) stmts.push(await resultLog(ctx, s, { mda: '', surname_first: '', oracle_no: '', brief_id: '' }, 'Result emails imported', `${saved} email address(es) from ${str(body.fileName) || 'a sheet'}`));
+  for (let i = 0; i < stmts.length; i += 100) await ctx.db.batch(stmts.slice(i, i + 100));
+  return { success: true, saved, notFound, invalid };
+}
+// Public: an officer's own CONFIRMED result, with their Eligibility/SEAP (examination) number and email.
+async function handleResultLookup(ctx, body) {
+  const seap = str(body.seap_no).trim(), email = lower(body.email), key = lower(seap);
+  if (!seap || !EMAIL_RE.test(email)) return { success: false, message: 'Enter your Examination (Eligibility/SEAP) Number and your email address.' };
+  const now = Date.now();
+  const tries = await ctx.first('SELECT * FROM result_tries WHERE seap = ?', key);
+  const fresh = !tries || now - Number(tries.window_start) > RESULT_LOCK_MS, fails = fresh ? 0 : Number(tries.fails) || 0;
+  if (fails >= RESULT_TRIES) return { success: false, message: 'Too many unsuccessful attempts for this Examination Number. Please wait 15 minutes and try again.' };
+  const row = await ctx.first(`${RESULT_SELECT} WHERE lower(trim(v.seap_no)) = ?`, key);
+  const r = row && resultOut(row);
+  if (!r || !r.email || r.email !== email) {
+    await ctx.run('INSERT OR REPLACE INTO result_tries (seap, fails, window_start) VALUES (?, ?, ?)', key, fails + 1, fresh ? now : Number(tries.window_start));
+    return { success: false, message: 'No result matches that Examination Number and email address. Check both and try again.' };
+  }
+  await ctx.run('DELETE FROM result_tries WHERE seap = ?', key);
+  if (r.status !== 'Confirmed') return { success: true, released: false, message: 'Your result has not been released yet. Please check again later.', record: { seap_no: r.seap_no, surname_first: r.surname_first, mda: r.mda } };
+  const ph = await ctx.first("SELECT COALESCE(NULLIF(b.photo, ''), v.photo) AS photo FROM verified v LEFT JOIN briefs b ON b.id = v.brief_id WHERE v.brief_id = ?", r.brief_id);
+  const out = {}; ['seap_no', 'surname_first', 'mda', 'oracle_no', 'written', 'oral', 'total', 'remark', 'comment', 'confirmed_at'].forEach(k => { out[k] = r[k]; });
+  out.photo = str(ph && ph.photo);
+  return { success: true, released: true, record: out };
+}
+
+/* ========================================================================
    FULL BACKUP (super administrator only) — same format as Code.gs's exportTab,
    so a backup taken here can be re-imported with migrate/import-backup.js.
    ======================================================================== */
@@ -903,6 +1057,7 @@ const EXPORT_QUERIES = {
   Briefs: ['SELECT * FROM briefs ORDER BY seq', r => briefOut(r, true)],
   Verifications: ['SELECT * FROM verifications ORDER BY seq', r => { const o = {}; VERIFICATION_COLUMNS.forEach(c => { o[c] = str(r[c]); }); return o; }],
   'Verified and Authentic Data': ['SELECT * FROM verified ORDER BY seq', r => { const o = {}; VERIFIED_COLUMNS.forEach(c => { o[c] = str(r[c]); }); return o; }],
+  Results: ['SELECT * FROM results ORDER BY rowid', r => { const o = { brief_id: str(r.brief_id) }; RESULT_COLS.forEach(c => { o[c] = str(r[c]); }); return o; }],
 };
 async function handleExportTab(ctx, body) {
   const s = await requireAdmin(ctx, body.token);
@@ -915,6 +1070,7 @@ async function handleExportTab(ctx, body) {
   }
   const q = EXPORT_QUERIES[tab];
   if (!q) return { success: false, message: 'Unknown tab: ' + tab };
+  if (tab === 'Results') await ensureResultsSchema(ctx);
   const table = q[0].match(/FROM (\w+)/)[1];
   const total = (await ctx.first(`SELECT COUNT(*) AS n FROM ${table}`)).n;
   const offset = Math.max(0, parseInt(body.offset, 10) || 0);

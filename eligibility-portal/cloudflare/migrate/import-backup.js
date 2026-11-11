@@ -61,7 +61,7 @@ const tab = name => Array.isArray(backup.tabs[name]) ? backup.tabs[name] : [];
 
 const sql = [];
 const counts = {};
-if (replace) ['verified', 'verifications', 'briefs', 'submissions', 'sessions', 'users', 'config'].forEach(t => sql.push(`DELETE FROM ${t};`));
+if (replace) ['results', 'verified', 'verifications', 'briefs', 'submissions', 'sessions', 'users', 'config'].forEach(t => sql.push(`DELETE FROM ${t};`));
 
 // Config: the super-admin email (keeps that account hidden) and the HMAC secret
 // behind per-MDA links and slip QR codes. The old portal URL is not copied, so
@@ -93,6 +93,9 @@ tab('Briefs').forEach(b => {
 });
 counts.verifications = 0;
 tab('Verifications').forEach(r => { sql.push(insert('verifications', VERIFICATION_COLUMNS, VERIFICATION_COLUMNS.map(c => text(c, r[c])))); counts.verifications++; });
+const RESULT_COLUMNS = ['brief_id','email','written','oral','total','remark','comment','status','entered_by','entered_at','confirmed_by','confirmed_at','amended_by','amended_at'];
+counts.results = 0;
+tab('Results').forEach(r => { if (!r.brief_id) return; sql.push(insert('results', RESULT_COLUMNS.concat(['updated']), RESULT_COLUMNS.map(c => text(c, r[c])).concat([String(Date.now())]))); counts.results++; });
 counts.verified = 0;
 tab('Verified and Authentic Data').forEach(r => { if (!r.brief_id) return; sql.push(insert('verified', VERIFIED_COLUMNS, VERIFIED_COLUMNS.map(c => text(c, r[c])))); counts.verified++; });
 

@@ -85,6 +85,11 @@ function doPost(e) {
       case 'mdaLinkLog': return handleMdaLinkLog(body);
       case 'mdaLinkSignOut': return handleMdaLinkSignOut(body);
       case 'listMdaLinks': return handleListMdaLinks(body);
+      case 'listResults': return handleListResults(body);
+      case 'saveResult': return handleSaveResult(body);
+      case 'confirmResults': return handleConfirmResults(body);
+      case 'importResultEmails': return handleImportResultEmails(body);
+      case 'resultLookup': return handleResultLookup(body);
       case 'saveMdaLink': return handleSaveMdaLink(body);
       case 'setMdaLinkActive': return handleSetMdaLinkActive(body);
       case 'login': return handleLogin(body);
@@ -123,7 +128,8 @@ function doPost(e) {
 const WRITE_ACTIONS = ['login','logout','requestPasswordReset','resetPassword','changePassword','submitRecords',
   'adminCreateUser','adminDeleteUser','adminUpdateRecord','adminDeleteRecord','submitBrief','updateBrief',
   'authorizeBrief','saveVerification','saveVerifiedData','updateVerifiedRecord','regroupVerifiedMda',
-  'mdaLinkOpen','mdaLinkLog','mdaLinkSignOut','saveMdaLink','setMdaLinkActive'];
+  'mdaLinkOpen','mdaLinkLog','mdaLinkSignOut','saveMdaLink','setMdaLinkActive',
+  'saveResult','confirmResults','importResultEmails','resultLookup'];
 
 function doGet(e) {
   return jsonOut({ success: true, message: 'Y2027 Eligibility List backend is running.' });
@@ -347,7 +353,7 @@ function handleAdminCreateUser(body) {
   const email = String(body.email || '').trim().toLowerCase();
   const name = String(body.name || '').trim();
   const mda = String(body.mda || '').trim();
-  const role = body.role === 'admin' ? 'admin' : 'user';
+  const role = ACCOUNT_ROLES.indexOf(body.role) > -1 ? body.role : 'user';
   if (!email || !name || !mda) return jsonOut({ success: false, message: 'Name, email, and MDA are required.' });
 
   const usersSheet = getOrCreateUsersSheet();
@@ -1288,7 +1294,7 @@ function briefPhoto(id) {
    download is not used because Excel truncates cells over 32,767 characters,
    which would corrupt passport photographs.)
    ======================================================================== */
-var EXPORT_TABS = ['AdminConfig', USERS_SHEET, SUBMISSIONS_SHEET, 'Briefs', VERIFICATIONS_SHEET, VERIFIED_SHEET];
+var EXPORT_TABS = ['AdminConfig', USERS_SHEET, SUBMISSIONS_SHEET, 'Briefs', VERIFICATIONS_SHEET, VERIFIED_SHEET, 'Results'];
 function handleExportTab(body) {
   const s = requireAdmin(body.token);
   if (s.role !== 'superadmin' && !isSuperAdminEmail(s.email)) return jsonOut({ success: false, message: 'Only the super administrator can download a full backup.' });
@@ -1469,4 +1475,145 @@ function handleRegroupVerifiedMda(body) {
   if (logs.length) writeRowsAsText(vs, vs.getLastRow() + 1, logs, VERIFICATION_COLUMNS.length);
   summary.applied = true; summary.moved = plan.moves.length; summary.duplicatesRemoved = plan.dupes.length;
   return jsonOut(summary);
+}
+
+/* ========================================================================
+   EXAMINATION RESULTS
+   Panels enter each eligible officer's result as it happens (Draft). The
+   Director CMD confirms it; a confirmed result is locked, and only the
+   Permanent Secretary or the super administrator can amend it (with a reason).
+   Officers see their own CONFIRMED result by signing in with their
+   Eligibility/SEAP (examination) number and email address.
+   Every entry, confirmation and amendment is written to the Verifications log.
+   ======================================================================== */
+const ACCOUNT_ROLES = ['user', 'admin', 'panel', 'director', 'permsec'];
+const RESULT_REMARKS = ['Passed', 'Not passed', 'Absent'];
+const RESULT_TRIES = 5, RESULT_LOCK_MS = 15 * 60 * 1000;
+const RESULTS_SHEET = 'Results', RESULT_TRIES_SHEET = 'Result Tries';
+const RESULT_COLS = ['email', 'written', 'oral', 'total', 'remark', 'comment', 'status', 'entered_by', 'entered_at', 'confirmed_by', 'confirmed_at', 'amended_by', 'amended_at'];
+function resultRights(s) {
+  const sup = s.role === 'superadmin' || isSuperAdminEmail(s.email);
+  return { enter: sup || ['panel', 'director', 'permsec', 'admin'].indexOf(s.role) > -1, confirm: sup || s.role === 'director', amend: sup || s.role === 'permsec', admin: sup || s.role === 'admin' };
+}
+function requireResultRole(token) {
+  const s = requireUser(token), rights = resultRights(s);
+  if (!rights.enter) throw new Error('Only examination panels, the Director CMD, the Permanent Secretary and administrators can work with results.');
+  return { s: s, rights: rights };
+}
+// Every officer in Verified and Authentic Data with their result (if any), as in the Cloudflare version.
+function resultRows() {
+  const table = mdaTable(RESULTS_SHEET, ['brief_id'].concat(RESULT_COLS).concat(['updated']));
+  const byId = {}; table.rows.forEach(r => { byId[r.brief_id] = r; });
+  const vs = getOrCreateVerifiedSheet();
+  const vals = vs.getLastRow() >= 2 ? vs.getRange(2, 1, vs.getLastRow() - 1, VERIFIED_COLUMNS.length).getValues() : [];
+  const col = c => VERIFIED_COLUMNS.indexOf(c);
+  const rows = vals.map(v => {
+    const id = String(v[col('brief_id')]), r = byId[id] || {};
+    const o = { brief_id: id, seap_no: String(fmtCell(v[col('seap_no')]) || ''), surname_first: String(v[col('surname_first')] || ''), mda: String(v[col('mda')] || ''), oracle_no: String(fmtCell(v[col('oracle_no')]) || '') };
+    RESULT_COLS.forEach(c => { o[c] = r[c] == null ? '' : String(r[c]); });
+    if (!o.email) o.email = String(v[col('official_email')] || '').trim().toLowerCase();
+    if (!o.status) o.status = 'Not entered';
+    o._r = r._row ? r : null; o.updated = Number(r.updated) || 0;
+    return o;
+  });
+  return { table: table, rows: rows };
+}
+function publicResult(o) { const c = Object.assign({}, o); delete c._r; delete c.updated; return c; }
+function handleListResults(body) {
+  const ctx = requireResultRole(body.token), since = Math.max(0, Number(body.since) || 0), now = Date.now();
+  const rows = resultRows().rows.filter(r => !since || r.updated >= since).map(publicResult);
+  return jsonOut({ success: true, now: now, rights: ctx.rights, records: rows });
+}
+function scoreOk(v) { return v === '' || (/^\d{1,3}(\.\d{1,2})?$/.test(v) && Number(v) <= 100); }
+function resultLogRow(s, row, status, details) {
+  const log = { id: Utilities.getUuid(), timestamp: new Date(), checked_by: s.name + ' (' + s.email + ')', mda: row.mda || '', source: 'Examination results', file_name: '',
+    officer_name: row.surname_first || '', oracle_no: row.oracle_no || '', csc_file_no: '', record_id: row.brief_id || '', status: status, match_method: '', fields_compared: '',
+    fields_matched: '', discrepancies: '', discrepancy_details: String(details || '') };
+  return VERIFICATION_COLUMNS.map(c => log[c] === undefined ? '' : log[c]);
+}
+function appendLog(rows) { if (!rows.length) return; const vs = getOrCreateVerificationsSheet(); writeRowsAsText(vs, vs.getLastRow() + 1, rows, VERIFICATION_COLUMNS.length); }
+function putResult(table, cur, values) {
+  const rec = cur._r || { brief_id: cur.brief_id };
+  RESULT_COLS.forEach(c => { rec[c] = values[c] == null ? '' : String(values[c]); });
+  rec.updated = String(Date.now());
+  table.put(rec);
+}
+function handleSaveResult(body) {
+  const ctx = requireResultRole(body.token), s = ctx.s;
+  const all = resultRows(), cur = all.rows.filter(r => r.brief_id === String(body.brief_id || ''))[0];
+  if (!cur) return jsonOut({ success: false, message: 'This officer is no longer on the eligibility list.' });
+  const t = k => String(body[k] == null ? '' : body[k]).trim();
+  const v = { written: t('written'), oral: t('oral'), remark: t('remark'), comment: t('comment').slice(0, 300), email: t('email').toLowerCase() };
+  if (!scoreOk(v.written) || !scoreOk(v.oral)) return jsonOut({ success: false, message: 'Scores must be numbers from 0 to 100.' });
+  if (v.remark && RESULT_REMARKS.indexOf(v.remark) === -1) return jsonOut({ success: false, message: 'Choose a remark: ' + RESULT_REMARKS.join(', ') + '.' });
+  if (v.email && !EMAIL_RE.test(v.email)) return jsonOut({ success: false, message: '"' + v.email + '" is not a valid email address.' });
+  if (!v.written && !v.oral && !v.remark && !v.email) return jsonOut({ success: false, message: 'Enter the scores or a remark.' });
+  v.total = (v.written || v.oral) ? String(Math.round(((Number(v.written) || 0) + (Number(v.oral) || 0)) * 100) / 100) : '';
+  const confirmed = cur.status === 'Confirmed', reason = t('reason');
+  if (confirmed && !ctx.rights.amend) return jsonOut({ success: false, message: 'This result has been confirmed by the Director CMD. Only the Permanent Secretary or the super administrator can change it.' });
+  if (confirmed && !reason) return jsonOut({ success: false, message: 'Give a reason for changing a confirmed result.' });
+  const changes = ['email', 'written', 'oral', 'total', 'remark', 'comment'].filter(k => v[k] !== cur[k]).map(k => k + ': "' + cur[k] + '" → "' + v[k] + '"');
+  if (!changes.length) return jsonOut({ success: true, changed: 0, record: publicResult(cur) });
+  const now = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm'), by = s.name + ' (' + s.email + ')';
+  const hasScores = !!(v.written || v.oral || v.remark);
+  const status = confirmed ? 'Confirmed' : (hasScores ? 'Draft' : '');
+  const out = Object.assign({}, cur, v, { status: status,
+    entered_by: confirmed ? cur.entered_by : (hasScores ? by : cur.entered_by), entered_at: confirmed ? cur.entered_at : (hasScores ? now : cur.entered_at),
+    amended_by: confirmed ? by : cur.amended_by, amended_at: confirmed ? now : cur.amended_at });
+  putResult(all.table, cur, out);
+  appendLog([resultLogRow(s, cur, confirmed ? 'Result amended' : (hasScores ? 'Result entered' : 'Result email set'), (confirmed ? 'Reason: ' + reason + '. ' : '') + changes.join('; '))]);
+  out.status = status || 'Not entered';
+  return jsonOut({ success: true, changed: changes.length, record: publicResult(out) });
+}
+function handleConfirmResults(body) {
+  const ctx = requireResultRole(body.token), s = ctx.s;
+  if (!ctx.rights.confirm) return jsonOut({ success: false, message: 'Only the Director CMD (or the super administrator) can confirm results.' });
+  const want = {}; (Array.isArray(body.ids) ? body.ids : []).slice(0, 500).forEach(id => { want[String(id)] = true; });
+  const all = resultRows(), now = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm'), by = s.name + ' (' + s.email + ')', logs = [];
+  let confirmed = 0;
+  all.rows.forEach(r => {
+    if (!want[r.brief_id] || r.status !== 'Draft' || !(r.remark || r.written || r.oral)) return;
+    putResult(all.table, r, Object.assign({}, r, { status: 'Confirmed', confirmed_by: by, confirmed_at: now }));
+    logs.push(resultLogRow(s, r, 'Result confirmed', 'written ' + (r.written || '—') + ', oral ' + (r.oral || '—') + ', total ' + (r.total || '—') + ', ' + (r.remark || 'no remark')));
+    confirmed++;
+  });
+  appendLog(logs);
+  return jsonOut({ success: true, confirmed: confirmed, skipped: Object.keys(want).length - confirmed });
+}
+function handleImportResultEmails(body) {
+  const ctx = requireResultRole(body.token);
+  if (!ctx.rights.admin) return jsonOut({ success: false, message: "Only administrators can import candidates' email addresses." });
+  const all = resultRows(), bySeap = {};
+  all.rows.forEach(r => { if (r.seap_no.trim()) bySeap[r.seap_no.trim().toLowerCase()] = r; });
+  let saved = 0; const notFound = [], invalid = [];
+  (Array.isArray(body.rows) ? body.rows.slice(0, 5000) : []).forEach(x => {
+    const seap = String(x.seap_no || '').trim(), email = String(x.email || '').trim().toLowerCase();
+    if (!seap && !email) return;
+    const r = bySeap[seap.toLowerCase()];
+    if (!r) { notFound.push(seap || '(blank)'); return; }
+    if (!EMAIL_RE.test(email)) { invalid.push(seap + ': ' + (email || '(blank)')); return; }
+    if (r.email === email) return;
+    const vals = Object.assign({}, r, { email: email }); if (r.status === 'Not entered') vals.status = '';
+    putResult(all.table, r, vals); saved++;
+  });
+  if (saved) appendLog([resultLogRow(ctx.s, {}, 'Result emails imported', saved + ' email address(es) from ' + (body.fileName || 'a sheet'))]);
+  return jsonOut({ success: true, saved: saved, notFound: notFound, invalid: invalid });
+}
+function handleResultLookup(body) {
+  const seap = String(body.seap_no || '').trim(), email = String(body.email || '').trim().toLowerCase(), key = seap.toLowerCase();
+  if (!seap || !EMAIL_RE.test(email)) return jsonOut({ success: false, message: 'Enter your Examination (Eligibility/SEAP) Number and your email address.' });
+  const now = Date.now(), triesTab = mdaTable(RESULT_TRIES_SHEET, ['seap', 'fails', 'window_start']);
+  const tries = triesTab.rows.filter(r => r.seap === key)[0] || { seap: key, fails: '0', window_start: '0' };
+  const fresh = now - Number(tries.window_start) > RESULT_LOCK_MS, fails = fresh ? 0 : Number(tries.fails) || 0;
+  if (fails >= RESULT_TRIES) return jsonOut({ success: false, message: 'Too many unsuccessful attempts for this Examination Number. Please wait 15 minutes and try again.' });
+  const r = resultRows().rows.filter(x => x.seap_no.trim().toLowerCase() === key)[0];
+  if (!r || !r.email || r.email !== email) {
+    tries.fails = String(fails + 1); if (fresh) tries.window_start = String(now); triesTab.put(tries);
+    return jsonOut({ success: false, message: 'No result matches that Examination Number and email address. Check both and try again.' });
+  }
+  triesTab.remove(x => x.seap === key);
+  if (r.status !== 'Confirmed') return jsonOut({ success: true, released: false, message: 'Your result has not been released yet. Please check again later.', record: { seap_no: r.seap_no, surname_first: r.surname_first, mda: r.mda } });
+  const out = {}; ['seap_no', 'surname_first', 'mda', 'oracle_no', 'written', 'oral', 'total', 'remark', 'comment', 'confirmed_at'].forEach(k => { out[k] = r[k]; });
+  out.photo = briefPhoto(r.brief_id) || (mdaVerifiedRows(r.mda).filter(x => String(x.brief_id) === r.brief_id).map(x => String(x.photo || ''))[0] || '');
+  return jsonOut({ success: true, released: true, record: out });
 }

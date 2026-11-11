@@ -162,6 +162,32 @@ The **MDA Print Links** tab (administrators) lists every MDA in Verify & Print S
 
 These links replace the old per-MDA download links, which now say they have been replaced.
 
+### Examination Results
+
+**Accounts.** On the Admin Dashboard, an administrator creates accounts with one of three new roles:
+* **Examination panel:** enters results.
+* **Director CMD:** enters and **confirms** results.
+* **Permanent Secretary:** enters results and **amends confirmed** results.
+
+These accounts see only the **Results** tab. The super administrator can do everything.
+
+**Entering and confirming (Results tab)**
+1. Every officer in Verify & Print Slips is listed with their SEAP/Exam No, filtered by MDA, status or search.
+2. A panel types the candidate's email, Written and Oral scores (0–100) and remark (Passed / Not passed / Absent). The total adds up automatically.
+3. **Save** stores the result as **Draft**.
+4. The **Director CMD** clicks **✓ Confirm** on a row, or **Confirm all Draft results shown**. A confirmed result is locked.
+5. Only the **Permanent Secretary** or the **super administrator** can change a confirmed result: **✎ Amend**, edit, **Save**, and give a reason.
+
+The list refreshes itself every 20 seconds, and at once when you come back to the window. Everyone sees new entries live without losing what they are typing.
+Every entry, confirmation and amendment is recorded in the log with who did it, when, and (for amendments) why.
+Administrators can **Import candidate emails (.xlsx)** from a sheet with an Eligibility/SEAP Number column and an Email column, and **Download Results (.xlsx)**.
+
+**Officers: Check My Result.** On the portal's front page, the **Check My Result** tab (or the address ending `?result`) asks for:
+* the **Examination Number**, which is the Eligibility/SEAP Number on the slip;
+* the officer's **email address** recorded with the result.
+
+It shows the officer's photograph, scores, total and remark, with a **Print** button. Only **confirmed** results are shown; before that it says the result has not been released. 5 wrong attempts on one number lock it for 15 minutes.
+
 ### Reports on Verified and Authentic Data
 
 The **Reports** tab (administrators) has a **Report on** choice:

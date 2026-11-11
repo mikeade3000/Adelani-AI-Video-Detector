@@ -233,6 +233,16 @@
   .ml-actions .btn{font-size:11.5px;padding:5px 10px;}
   .ml-step{max-width:420px;margin:0 auto;}
   #ml-send-ways a.btn{text-decoration:none;display:inline-flex;align-items:center;}
+  .res-table input,.res-table select{font-size:12.5px;padding:5px 6px;}
+  .res-table input.sc{width:62px;} .res-table input.em{width:190px;} .res-table td{vertical-align:middle;}
+  .res-table select[data-f="remark"]{width:auto;min-width:112px;} #res-mda,#res-status{width:auto;} #res-search{width:280px;}
+  .res-table tr.dirty td{background:#FFF8E6;} .res-table tr.flash td{background:#E7F3EC;transition:background 1.2s;}
+  .res-live{font-size:12px;color:var(--slate);} .res-live b{color:#1E7145;}
+  .rs-card{border:2px solid var(--gold);border-radius:8px;padding:18px;margin-top:14px;background:#fff;}
+  .rs-head{display:flex;gap:16px;align-items:flex-start;} .rs-head img{width:110px;height:132px;object-fit:cover;border:2px solid var(--navy);border-radius:4px;}
+  .rs-score{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:14px;}
+  .rs-score div{border:1px solid var(--paper-line);border-radius:6px;padding:10px;text-align:center;} .rs-score b{display:block;font-size:24px;color:var(--navy);}
+  .rs-remark{margin-top:14px;text-align:center;font-size:20px;font-weight:700;padding:10px;border-radius:6px;}
   .slip-allbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#FBF7EE;border:1px solid var(--gold);border-radius:6px;padding:12px 14px;margin-top:6px;}
   .slip-allbar b{color:var(--navy);font-size:14px;}
   .mda-group-head .tools .btn-print{background:var(--gold);color:#2A1D00;border:none;}
@@ -257,11 +267,13 @@
   </div>
   <nav class="tabbar" id="tabbar">
     <button class="tabbtn" data-tab="login" id="tab-login">Sign In</button>
+    <button class="tabbtn" data-tab="result" id="tab-result">Check My Result</button>
     <button class="tabbtn" data-tab="single" id="tab-single" hidden>Single Entry</button>
     <button class="tabbtn" data-tab="bulk" id="tab-bulk" hidden>Bulk Upload</button>
     <button class="tabbtn" data-tab="review" id="tab-review" hidden>Form A Review</button>
     <button class="tabbtn" data-tab="verify" id="tab-verify" hidden>Verify &amp; Print Slips</button>
     <button class="tabbtn" data-tab="mdalinks" id="tab-mdalinks" hidden>MDA Print Links</button>
+    <button class="tabbtn" data-tab="results" id="tab-results" hidden>Results</button>
     <button class="tabbtn" data-tab="reports" id="tab-reports" hidden>Reports</button>
     <button class="tabbtn" data-tab="admin" id="tab-admin" hidden>Admin Dashboard</button>
   </nav>
@@ -604,7 +616,7 @@
         <div class="field"><label class="req">Email</label><input type="text" id="nu-email"></div>
         <div class="field"><label class="req">Department/Ministry (MDA)</label><select id="nu-mda"></select></div>
         <div class="field"><label class="req">Role</label>
-          <select id="nu-role"><option value="user">User (MDA staff)</option><option value="admin">Administrator</option></select>
+          <select id="nu-role"><option value="user">User (MDA staff)</option><option value="admin">Administrator</option><option value="panel">Examination panel</option><option value="director">Director CMD</option><option value="permsec">Permanent Secretary</option></select>
         </div>
       </div>
       <div class="btnbar"><button class="btn btn-primary" id="nu-create-btn">Create Account</button></div>
@@ -739,6 +751,51 @@
   </section>
 
   <!-- =================== REPORTS =================== -->
+  <!-- =================== EXAMINATION RESULTS (panels, Director CMD, Permanent Secretary, admins) =================== -->
+  <section class="panel" id="panel-results">
+    <div class="card">
+      <div class="staging-toolbar">
+        <h2 style="margin:0"><span class="idx">📝</span>Examination Results</h2>
+        <div class="btnbar" style="margin:0">
+          <button class="btn btn-ghost" id="res-refresh">Refresh</button>
+          <button class="btn btn-ghost" id="res-import-btn" hidden>Import candidate emails (.xlsx)</button>
+          <input type="file" id="res-import" accept=".xlsx,.xls,.csv" style="display:none;">
+          <button class="btn btn-gold" id="res-download">Download Results (.xlsx)</button>
+        </div>
+      </div>
+      <p class="hint" id="res-role-hint"></p>
+      <div id="res-msg" class="msgbox"></div>
+      <div class="kpi-row" id="res-kpis"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:4px 0 10px;">
+        <select id="res-mda" style="max-width:340px;"><option value="">All MDAs</option></select>
+        <select id="res-status"><option value="">All results</option><option>Not entered</option><option>Draft</option><option>Confirmed</option></select>
+        <input type="text" id="res-search" placeholder="Find: SEAP No, name or Oracle No" style="max-width:300px;">
+        <button class="btn btn-primary" id="res-confirm-all" hidden>Confirm all Draft results shown</button>
+        <span class="res-live" id="res-live"></span>
+      </div>
+      <div class="tablewrap"><table class="res-table" id="res-table"><thead><tr><th>#</th><th>SEAP / Exam No</th><th>Name</th><th>MDA</th><th>Candidate email</th><th>Written</th><th>Oral</th><th>Total</th><th>Remark</th><th>Status</th><th>Action</th></tr></thead><tbody></tbody></table></div>
+      <p class="hint" id="res-count" style="margin-top:6px;"></p>
+    </div>
+  </section>
+
+  <!-- =================== CHECK MY RESULT (officers: Exam/SEAP No + email) =================== -->
+  <section class="panel" id="panel-result">
+    <div class="card" style="max-width:680px;margin:0 auto;">
+      <div style="text-align:center;border-bottom:2px solid var(--gold);padding-bottom:14px;margin-bottom:14px;">
+        <div style="font-family:var(--serif);font-weight:700;color:var(--navy);font-size:15px;">LAGOS STATE GOVERNMENT · CIVIL SERVICE COMMISSION<br>YEAR 2027 PROMOTION EXERCISE</div>
+        <div style="font-family:var(--serif);font-weight:700;color:var(--navy);font-size:19px;margin-top:8px;">Check My Examination Result</div>
+      </div>
+      <div id="rs-form">
+        <p class="hint">Enter your <b>Examination Number</b> (the Eligibility/SEAP Number on your slip, e.g. CSC/SEAP/2027/GL16/SPC/001) and the <b>email address</b> registered for you.</p>
+        <div class="field"><label for="rs-seap">Examination (Eligibility/SEAP) Number</label><input type="text" id="rs-seap" autocomplete="off" placeholder="CSC/SEAP/2027/…"></div>
+        <div class="field"><label for="rs-email">Email address</label><input type="email" id="rs-email" autocomplete="email"></div>
+        <div class="btnbar"><button class="btn btn-primary" id="rs-view">View My Result</button></div>
+      </div>
+      <div id="rs-msg" class="msgbox"></div>
+      <div id="rs-body"></div>
+    </div>
+  </section>
+
   <section class="panel" id="panel-reports">
     <div class="card">
       <h2><span class="idx">📄</span>Reports</h2>
@@ -1313,6 +1370,9 @@ function showMsg(id,type,text){ const el=document.getElementById(id); el.classNa
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 // Both 'admin' and the hidden 'superadmin' get administrator privileges in the UI.
 function isAdminRole(){ return !!CURRENT_USER && (CURRENT_USER.role==='admin' || CURRENT_USER.role==='superadmin'); }
+// Examination-only accounts see just the Results tab.
+function isExamRole(){ return !!CURRENT_USER && ['panel','director','permsec'].includes(CURRENT_USER.role); }
+const ROLE_LABEL = { user:'MDA staff', admin:'Administrator', superadmin:'Super Admin', panel:'Examination panel', director:'Director CMD', permsec:'Permanent Secretary' };
 async function callScript(payload){
   if (!SCRIPT_URL) throw new Error('No Apps Script URL configured — the system administrator must complete first-time setup.');
   const res = await fetch(SCRIPT_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(payload) });
@@ -1336,6 +1396,7 @@ document.getElementById('tabbar').addEventListener('click', e=>{
   if (btn.dataset.tab==='reports') loadReportsData();
   if (btn.dataset.tab==='verify') initVerifyPanel();
   if (btn.dataset.tab==='mdalinks') loadMdaLinks();
+  if (btn.dataset.tab==='results') loadResults();
 });
 
 /* =========================================================================
@@ -1343,11 +1404,13 @@ document.getElementById('tabbar').addEventListener('click', e=>{
    ========================================================================= */
 function updateAuthUI(){
   const loggedIn = !!CURRENT_USER;
-  const admin = isAdminRole();
-  document.getElementById('tab-single').hidden = !loggedIn;
-  document.getElementById('tab-bulk').hidden = !loggedIn;
-  document.getElementById('tab-review').hidden = !loggedIn;
-  document.getElementById('tab-verify').hidden = !loggedIn;
+  const admin = isAdminRole(), examOnly = isExamRole();
+  document.getElementById('tab-single').hidden = !loggedIn || examOnly;
+  document.getElementById('tab-bulk').hidden = !loggedIn || examOnly;
+  document.getElementById('tab-review').hidden = !loggedIn || examOnly;
+  document.getElementById('tab-verify').hidden = !loggedIn || examOnly;
+  document.getElementById('tab-results').hidden = !(loggedIn && (admin || examOnly));
+  document.getElementById('tab-result').hidden = loggedIn;
   document.getElementById('tab-reports').hidden = !(loggedIn && admin);
   document.getElementById('tab-mdalinks').hidden = !(loggedIn && admin);
   document.getElementById('tab-admin').hidden = !(loggedIn && admin);
@@ -1356,7 +1419,7 @@ function updateAuthUI(){
   const hr = document.getElementById('header-right');
   if (loggedIn){
     hr.innerHTML = `<div class="user-chip">
-      <div class="who"><b>${escapeHtml(CURRENT_USER.name)}</b><span>${escapeHtml(CURRENT_USER.email)} · ${escapeHtml(CURRENT_USER.mda)} ${admin?'· <b style=\"color:#E9D9B6\">ADMIN</b>':''}</span></div>
+      <div class="who"><b>${escapeHtml(CURRENT_USER.name)}</b><span>${escapeHtml(CURRENT_USER.email)} · ${escapeHtml(CURRENT_USER.mda)} ${admin?'· <b style=\"color:#E9D9B6\">ADMIN</b>':''}${examOnly?`· <b style=\"color:#E9D9B6\">${escapeHtml(ROLE_LABEL[CURRENT_USER.role].toUpperCase())}</b>`:''}</span></div>
       <button class="btn-logout" id="logout-btn">Sign out</button>
     </div>`;
     document.getElementById('logout-btn').addEventListener('click', doLogout);
@@ -1392,7 +1455,7 @@ document.getElementById('login-btn').addEventListener('click', async ()=>{
     if (res.success){
       CURRENT_USER = res.user; AUTH_TOKEN = res.token;
       updateAuthUI();
-      showPanel('single');
+      if (isExamRole()){ showPanel('results'); loadResults(); } else showPanel('single');
       document.getElementById('login-password').value='';
       document.getElementById('login-msg').className='msgbox';
     } else {
@@ -2404,7 +2467,7 @@ async function loadUsers(){
     const visibleUsers = (res.users||[]).filter(u=>u.role!=='superadmin');
     table.querySelector('tbody').innerHTML = visibleUsers.map(u=>`
       <tr><td>${escapeHtml(u.name)}</td><td>${escapeHtml(u.email)}</td><td>${escapeHtml(u.mda)}</td>
-      <td><span class="pill ${u.role==='admin'?'admin':'ok'}">${u.role}</span></td>
+      <td><span class="pill ${u.role==='admin'?'admin':'ok'}">${escapeHtml(ROLE_LABEL[u.role]||u.role)}</span></td>
       <td>${escapeHtml(String(u.createdAt).slice(0,10))}</td>
       <td><button class="btn btn-danger" style="padding:4px 9px;font-size:11px" onclick="deleteUser('${u.email.replace(/'/g,"\\'")}')">Remove</button></td></tr>
     `).join('');
@@ -2787,6 +2850,7 @@ document.getElementById('chart-bracket').addEventListener('click', ()=>{
   if (nuMda) nuMda.innerHTML = mdaOptionsHTML('');
   updateAuthUI();
   if (params.get('reset') && params.get('email')) showPanel('reset');
+  else if (params.has('result')) showPanel('result');
   else if (!isConfigured()) showPanel('settings');   // one-time setup, only when no backend URL yet
   else showPanel('login');
 })();
@@ -3100,6 +3164,210 @@ document.getElementById('mdl-table').addEventListener('click', e => {
   if (kind === 'print') mdlPrint([r]); else if (kind === 'pdf') mdlPdf([r], `Slip_${slipFileStem(r)}.pdf`);
   else if (kind === 'forma-print') mdlFormAPrint([r]); else if (kind === 'forma-pdf') mdlFormAPdf([r], `Form_A_${slipFileStem(r)}.pdf`);
 });
+/* =========================================================================
+   EXAMINATION RESULTS
+   Panels enter results as the examination goes on (Draft); the Director CMD
+   confirms them; only the Permanent Secretary or the super administrator can
+   change a confirmed result. The list refreshes itself every 20 seconds, so
+   everyone sees new entries live, without losing what they are typing.
+   ========================================================================= */
+const RES = { records:[], byId:{}, rights:{}, since:0, dirty:new Set(), amend:new Set(), timer:null };
+const RES_REMARKS = ['Passed','Not passed','Absent'];
+const RES_SHOW_MAX = 300;
+async function loadResults(){
+  if (!CURRENT_USER) return;
+  showMsg('res-msg','warn','Loading results…');
+  try{
+    const res = await callScript({action:'listResults', token:AUTH_TOKEN});
+    if (!res || !res.success){ showMsg('res-msg','err',(res&&res.message)||'Could not load results.'); return; }
+    RES.records = res.records; RES.byId = {}; res.records.forEach(r => { RES.byId[r.brief_id] = r; });
+    RES.rights = res.rights || {}; RES.since = res.now; RES.dirty.clear(); RES.amend.clear();
+    document.getElementById('res-msg').className = 'msgbox';
+    const sel = document.getElementById('res-mda'), keep = sel.value;
+    const mdas = [...new Set(RES.records.map(r => r.mda).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+    sel.innerHTML = '<option value="">All MDAs</option>' + mdas.map(m => `<option>${escapeHtml(m)}</option>`).join('');
+    if (mdas.includes(keep)) sel.value = keep;
+    const r = RES.rights, who = ROLE_LABEL[CURRENT_USER.role] || CURRENT_USER.role;
+    document.getElementById('res-role-hint').innerHTML = `Signed in as <b>${escapeHtml(who)}</b>. `
+      + (r.amend ? 'You can enter results, and you can <b>amend confirmed results</b> (a reason is required and recorded).' : r.confirm ? 'You can enter results and <b>confirm</b> them. Once confirmed, only the Permanent Secretary or the super administrator can change a result.' : 'Enter each officer’s scores and remark, then click <b>Save</b>. The Director CMD confirms them; a confirmed result is locked.')
+      + ' Officers see their result only after it is confirmed, at <b>Check My Result</b> (Examination No + email).';
+    document.getElementById('res-confirm-all').hidden = !r.confirm;
+    document.getElementById('res-import-btn').hidden = !r.admin;
+    renderResults();
+    if (RES.timer) clearInterval(RES.timer);
+    RES.timer = setInterval(pollResults, 20000);
+  }catch(err){ showMsg('res-msg','err','Could not load results: '+err.message); }
+}
+function resFiltered(){
+  const mda = document.getElementById('res-mda').value, st = document.getElementById('res-status').value, q = document.getElementById('res-search').value.trim().toLowerCase();
+  return RES.records.filter(r => (!mda || r.mda === mda) && (!st || r.status === st) && (!q || [r.seap_no, r.surname_first, r.oracle_no].some(v => String(v||'').toLowerCase().includes(q))));
+}
+function resEditable(r){ return r.status === 'Confirmed' ? RES.amend.has(r.brief_id) : !!RES.rights.enter; }
+function resStatusPill(r){
+  const st = r.status;
+  return st === 'Confirmed' ? `<span class="pill ok" title="${escapeHtml(r.confirmed_by + ' · ' + r.confirmed_at)}">Confirmed</span>${r.amended_at?'<div class="hint" style="margin:2px 0 0;">amended</div>':''}`
+    : st === 'Draft' ? '<span class="pill" style="background:var(--warn-bg);color:var(--warn);">Draft</span>' : '<span class="pill" style="background:#EEF1F5;color:var(--slate);">Not entered</span>';
+}
+function resRowInner(r, i){
+  const ed = resEditable(r), v = k => escapeHtml(String(r[k]||'')), dis = ed ? '' : ' disabled';
+  const act = [];
+  if (ed) act.push(`<button class="btn btn-primary" data-res="save">Save</button>`);
+  if (r.status === 'Draft' && RES.rights.confirm) act.push(`<button class="btn btn-ghost" data-res="confirm">✓ Confirm</button>`);
+  if (r.status === 'Confirmed' && RES.rights.amend && !RES.amend.has(r.brief_id)) act.push(`<button class="btn btn-ghost" data-res="amend">✎ Amend</button>`);
+  if (RES.amend.has(r.brief_id)) act.push(`<button class="btn btn-ghost" data-res="cancel">Cancel</button>`);
+  return `<td>${i+1}</td><td style="font-family:var(--mono);white-space:nowrap;font-size:12px;">${v('seap_no')||'—'}</td><td><b>${v('surname_first')}</b></td><td style="font-size:12px;">${v('mda')}</td>
+    <td><input class="em" data-f="email" type="email" value="${v('email')}" placeholder="candidate email"${dis}></td>
+    <td><input class="sc" data-f="written" inputmode="decimal" value="${v('written')}"${dis}></td>
+    <td><input class="sc" data-f="oral" inputmode="decimal" value="${v('oral')}"${dis}></td>
+    <td data-total><b>${v('total')||'—'}</b></td>
+    <td><select data-f="remark"${dis}><option value=""></option>${RES_REMARKS.map(x=>`<option${x===r.remark?' selected':''}>${x}</option>`).join('')}</select></td>
+    <td>${resStatusPill(r)}</td><td><span class="action-btns">${act.join('')}</span></td>`;
+}
+function renderResults(){
+  const list = resFiltered(), shown = list.slice(0, RES_SHOW_MAX);
+  const c = st => RES.records.filter(r => r.status === st).length;
+  document.getElementById('res-kpis').innerHTML = [[RES.records.length,'Officers'],[c('Not entered'),'Not entered'],[c('Draft'),'Draft (awaiting confirmation)'],[c('Confirmed'),'Confirmed']]
+    .map(([n,l]) => `<div class="kpi"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+  document.querySelector('#res-table tbody').innerHTML = shown.map((r,i) => `<tr data-id="${escapeHtml(r.brief_id)}"${RES.dirty.has(r.brief_id)?' class="dirty"':''}>${resRowInner(r,i)}</tr>`).join('')
+    || '<tr><td colspan="11" class="hint">No officers match. Upload eligibility lists in Verify &amp; Print Slips first.</td></tr>';
+  document.getElementById('res-count').textContent = list.length > RES_SHOW_MAX ? `Showing the first ${RES_SHOW_MAX} of ${list.length} — choose an MDA or search to narrow the list.` : `${list.length} officer(s) shown.`;
+  const drafts = list.filter(r => r.status === 'Draft').length;
+  const ca = document.getElementById('res-confirm-all'); ca.textContent = `✓ Confirm all Draft results shown (${drafts})`; ca.disabled = !drafts;
+  document.getElementById('res-live').innerHTML = `<b>●</b> Live — updated ${new Date().toLocaleTimeString('en-GB')}`;
+}
+// New entries from other panels arrive every 20 s; rows being edited here are left alone.
+async function pollResults(){
+  if (!CURRENT_USER || !document.getElementById('panel-results').classList.contains('active')) return;
+  try{
+    const res = await callScript({action:'listResults', token:AUTH_TOKEN, since:RES.since});
+    if (!res || !res.success) return;
+    RES.since = res.now;
+    res.records.forEach(r => {
+      const old = RES.byId[r.brief_id]; if (old) Object.assign(old, r); else { RES.records.push(r); RES.byId[r.brief_id] = r; }
+      const tr = document.querySelector(`#res-table tr[data-id="${CSS.escape(r.brief_id)}"]`);
+      if (tr && !RES.dirty.has(r.brief_id) && !tr.contains(document.activeElement)){ tr.innerHTML = resRowInner(RES.byId[r.brief_id], [...tr.parentNode.children].indexOf(tr)); tr.classList.add('flash'); setTimeout(()=>tr.classList.remove('flash'), 1500); }
+    });
+    const c = st => RES.records.filter(r => r.status === st).length;
+    document.getElementById('res-kpis').innerHTML = [[RES.records.length,'Officers'],[c('Not entered'),'Not entered'],[c('Draft'),'Draft (awaiting confirmation)'],[c('Confirmed'),'Confirmed']]
+      .map(([n,l]) => `<div class="kpi"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+    document.getElementById('res-live').innerHTML = `<b>●</b> Live — updated ${new Date().toLocaleTimeString('en-GB')}` + (res.records.length ? ` · ${res.records.length} change(s)` : '');
+  }catch(e){ /* try again on the next tick */ }
+}
+// Coming back to the window or tab brings the list up to date at once.
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pollResults(); });
+window.addEventListener('focus', pollResults);
+const resRowValues = tr => { const o = {}; tr.querySelectorAll('[data-f]').forEach(el => { o[el.dataset.f] = el.value.trim(); }); return o; };
+document.getElementById('res-table').addEventListener('input', e => {
+  const tr = e.target.closest('tr[data-id]'); if (!tr) return;
+  RES.dirty.add(tr.dataset.id); tr.classList.add('dirty');
+  const v = resRowValues(tr), w = parseFloat(v.written), o = parseFloat(v.oral);
+  tr.querySelector('[data-total]').innerHTML = `<b>${(v.written||v.oral) ? Math.round(((w||0)+(o||0))*100)/100 : '—'}</b>`;
+});
+document.getElementById('res-table').addEventListener('change', e => { if (e.target.matches('select[data-f]')) e.target.dispatchEvent(new Event('input', {bubbles:true})); });
+document.getElementById('res-table').addEventListener('click', async e => {
+  const btn = e.target.closest('button[data-res]'); if (!btn) return;
+  const tr = btn.closest('tr[data-id]'), id = tr.dataset.id, r = RES.byId[id], act = btn.dataset.res;
+  if (act === 'amend'){ RES.amend.add(id); tr.innerHTML = resRowInner(r, [...tr.parentNode.children].indexOf(tr)); return; }
+  if (act === 'cancel'){ RES.amend.delete(id); RES.dirty.delete(id); tr.classList.remove('dirty'); tr.innerHTML = resRowInner(r, [...tr.parentNode.children].indexOf(tr)); return; }
+  btn.disabled = true;
+  try{
+    if (act === 'save'){
+      const body = Object.assign({action:'saveResult', token:AUTH_TOKEN, brief_id:id}, resRowValues(tr));
+      if (r.status === 'Confirmed'){ const reason = prompt(`Reason for changing the confirmed result of ${r.surname_first}:`); if (!reason){ btn.disabled = false; return; } body.reason = reason; }
+      const res = await callScript(body);
+      if (!res || !res.success){ showMsg('res-msg','err',(res&&res.message)||'Could not save.'); btn.disabled = false; return; }
+      Object.assign(r, res.record); RES.dirty.delete(id); RES.amend.delete(id);
+      showMsg('res-msg','ok', res.changed ? `Saved: ${r.surname_first} — ${r.status === 'Confirmed' ? 'confirmed result amended' : 'awaiting confirmation by the Director CMD'}.` : 'No changes to save.');
+    } else if (act === 'confirm'){
+      const res = await callScript({action:'confirmResults', token:AUTH_TOKEN, ids:[id]});
+      if (!res || !res.success || !res.confirmed){ showMsg('res-msg','err',(res&&res.message)||'Save the result before confirming it.'); btn.disabled = false; return; }
+      r.status = 'Confirmed'; r.confirmed_by = `${CURRENT_USER.name} (${CURRENT_USER.email})`;
+      showMsg('res-msg','ok',`Confirmed: ${r.surname_first}. The officer can now see this result.`);
+    }
+    tr.classList.remove('dirty'); tr.innerHTML = resRowInner(r, [...tr.parentNode.children].indexOf(tr)); renderResultKpis();
+  }catch(err){ showMsg('res-msg','err',err.message); btn.disabled = false; }
+});
+function renderResultKpis(){ const c = st => RES.records.filter(r => r.status === st).length;
+  document.getElementById('res-kpis').innerHTML = [[RES.records.length,'Officers'],[c('Not entered'),'Not entered'],[c('Draft'),'Draft (awaiting confirmation)'],[c('Confirmed'),'Confirmed']]
+    .map(([n,l]) => `<div class="kpi"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+  const drafts = resFiltered().filter(r => r.status === 'Draft').length, ca = document.getElementById('res-confirm-all'); ca.textContent = `✓ Confirm all Draft results shown (${drafts})`; ca.disabled = !drafts; }
+document.getElementById('res-confirm-all').addEventListener('click', async () => {
+  const ids = resFiltered().filter(r => r.status === 'Draft').map(r => r.brief_id);
+  if (!ids.length || !confirm(`Confirm ${ids.length} result(s)? Once confirmed, the officers can see them and only the Permanent Secretary or the super administrator can change them.`)) return;
+  let done = 0;
+  for (let i = 0; i < ids.length; i += 500){ const res = await callScript({action:'confirmResults', token:AUTH_TOKEN, ids:ids.slice(i, i+500)}); if (!res || !res.success){ showMsg('res-msg','err',(res&&res.message)||'Could not confirm.'); break; } done += res.confirmed; }
+  await loadResults(); showMsg('res-msg','ok',`${done} result(s) confirmed.`);
+});
+['res-mda','res-status'].forEach(id => document.getElementById(id).addEventListener('change', renderResults));
+document.getElementById('res-search').addEventListener('input', renderResults);
+document.getElementById('res-refresh').addEventListener('click', loadResults);
+document.getElementById('res-download').addEventListener('click', () => {
+  const rows = resFiltered().map((r,i) => ({ 'S/N':i+1, 'Examination/SEAP No':r.seap_no, 'Name':r.surname_first, 'MDA':r.mda, 'Oracle No':r.oracle_no, 'Candidate email':r.email,
+    'Written':r.written, 'Oral':r.oral, 'Total':r.total, 'Remark':r.remark, 'Status':r.status, 'Entered by':r.entered_by, 'Entered at':r.entered_at,
+    'Confirmed by':r.confirmed_by, 'Confirmed at':r.confirmed_at, 'Amended by':r.amended_by, 'Amended at':r.amended_at }));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length?rows:[{Note:'No results'}]), 'Results');
+  XLSX.writeFile(wb, `Examination_Results_${safeFileName(document.getElementById('res-mda').value || 'All_MDAs')}.xlsx`);
+});
+// Administrators: candidates' email addresses from a sheet with SEAP/Exam No and Email columns.
+document.getElementById('res-import-btn').addEventListener('click', () => document.getElementById('res-import').click());
+document.getElementById('res-import').addEventListener('change', async e => {
+  const file = e.target.files && e.target.files[0]; e.target.value = ''; if (!file) return;
+  try{
+    const wb = XLSX.read(await file.arrayBuffer(), {type:'array'}); const grid = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:''});
+    const h = grid.findIndex(row => row.some(c => /seap|exam/i.test(String(c))) && row.some(c => /e-?mail/i.test(String(c))));
+    if (h < 0){ showMsg('res-msg','err','The sheet needs a heading row with an “Eligibility/SEAP Number” (or Exam No) column and an “Email” column.'); return; }
+    const sc = grid[h].findIndex(c => /seap|exam/i.test(String(c))), ec = grid[h].findIndex(c => /e-?mail/i.test(String(c)));
+    const rows = grid.slice(h+1).map(r => ({seap_no:String(r[sc]||'').trim(), email:String(r[ec]||'').trim()})).filter(r => r.seap_no || r.email);
+    const res = await callScript({action:'importResultEmails', token:AUTH_TOKEN, rows, fileName:file.name});
+    if (!res || !res.success){ showMsg('res-msg','err',(res&&res.message)||'Could not import.'); return; }
+    await loadResults();
+    showMsg(res.notFound.length || res.invalid.length ? 'res-msg' : 'res-msg', res.notFound.length || res.invalid.length ? 'warn' : 'ok',
+      `${res.saved} candidate email address(es) saved.` + (res.notFound.length ? ` Not on the eligibility lists: ${res.notFound.slice(0,10).join(', ')}${res.notFound.length>10?'…':''}.` : '') + (res.invalid.length ? ` Not valid: ${res.invalid.slice(0,10).join('; ')}.` : ''));
+  }catch(err){ showMsg('res-msg','err','Could not read that file: '+err.message); }
+});
+
+// ---- Check My Result (public): Examination/SEAP No + email → the officer's confirmed result ----
+let RS_RECORD = null;
+async function viewMyResult(){
+  const seap_no = document.getElementById('rs-seap').value.trim(), email = document.getElementById('rs-email').value.trim();
+  if (!seap_no || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showMsg('rs-msg','err','Enter your Examination Number and a valid email address.'); return; }
+  const btn = document.getElementById('rs-view'); btn.disabled = true; document.getElementById('rs-body').innerHTML = '';
+  try{
+    const res = await callScript({action:'resultLookup', seap_no, email});
+    if (!res || !res.success){ showMsg('rs-msg','err',(res&&res.message)||'No result found.'); return; }
+    if (!res.released){ showMsg('rs-msg','warn',`${res.record.surname_first}: ${res.message}`); return; }
+    document.getElementById('rs-msg').className = 'msgbox'; RS_RECORD = res.record;
+    document.getElementById('rs-body').innerHTML = resultCardHTML(res.record) + `<div class="btnbar" style="margin-top:12px;"><button class="btn btn-primary" id="rs-print">🖨 Print</button><button class="btn btn-ghost" id="rs-again">Check another result</button></div>`;
+    document.getElementById('rs-form').style.display = 'none';
+    document.getElementById('rs-print').onclick = printMyResult;
+    document.getElementById('rs-again').onclick = () => { RS_RECORD = null; document.getElementById('rs-body').innerHTML = ''; document.getElementById('rs-form').style.display = ''; document.getElementById('rs-email').value = ''; };
+  }catch(err){ showMsg('rs-msg','err','Could not check the result: '+err.message); }
+  finally{ btn.disabled = false; }
+}
+function resultCardHTML(r){
+  const good = r.remark === 'Passed';
+  return `<div class="rs-card"><div class="rs-head">${r.photo?`<img src="${r.photo}" alt="Photograph">`:''}<div>
+      <div style="font-family:var(--serif);font-size:19px;font-weight:700;color:var(--navy);">${escapeHtml(r.surname_first)}</div>
+      <div style="margin-top:4px;">${escapeHtml(r.mda)}</div>
+      <div style="margin-top:6px;font-family:var(--mono);font-size:13px;">Examination No: <b>${escapeHtml(r.seap_no)}</b></div>
+      ${r.oracle_no?`<div style="font-size:13px;">Oracle No: ${escapeHtml(r.oracle_no)}</div>`:''}</div></div>
+    <div class="rs-score"><div>Written<b>${escapeHtml(r.written||'—')}</b></div><div>Oral<b>${escapeHtml(r.oral||'—')}</b></div><div>Total<b>${escapeHtml(r.total||'—')}</b></div></div>
+    <div class="rs-remark" style="background:${good?'#E7F3EC':(r.remark==='Absent'?'#EEF1F5':'#FCEDEB')};color:${good?'#1E6B3A':(r.remark==='Absent'?'#3B4654':'#A3271F')};">${escapeHtml(r.remark||'—')}</div>
+    ${r.comment?`<p style="margin:10px 0 0;">${escapeHtml(r.comment)}</p>`:''}
+    <p class="hint" style="margin:12px 0 0;">Result confirmed by the Director CMD${r.confirmed_at?` on ${escapeHtml(String(r.confirmed_at).slice(0,10))}`:''}. Lagos State Civil Service Commission · Y2027 Promotion Exercise.</p></div>`;
+}
+function printMyResult(){
+  if (!RS_RECORD) return;
+  const w = window.open('', '_blank'); if (!w){ showMsg('rs-msg','err','Please allow pop-ups to print.'); return; }
+  const css = [...document.querySelectorAll('style')].map(x => x.textContent).join('\n');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Examination Result — ${escapeHtml(RS_RECORD.seap_no)}</title><style>${css} body{background:#fff;padding:24px;} .rs-card{max-width:640px;margin:0 auto;}</style></head><body>
+    <div style="text-align:center;font-family:Georgia,serif;font-weight:700;color:#0F2C4C;">LAGOS STATE GOVERNMENT · CIVIL SERVICE COMMISSION<br>YEAR 2027 PROMOTION EXERCISE — EXAMINATION RESULT</div>
+    ${resultCardHTML(RS_RECORD)}<script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script></body></html>`);
+  w.document.close();
+}
+document.getElementById('rs-view').addEventListener('click', viewMyResult);
+document.getElementById('rs-email').addEventListener('keydown', e => { if (e.key === 'Enter') viewMyResult(); });
+
 /* =========================================================================
    VERIFICATION — the MDA uploads an Excel sheet of its officers' details and
    every detail the officers submitted online is checked against it. The

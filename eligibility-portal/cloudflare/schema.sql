@@ -93,3 +93,15 @@ CREATE TABLE IF NOT EXISTS mda_link_tries (   -- wrong email addresses typed; 5 
 CREATE TABLE IF NOT EXISTS mda_link_sessions (
   token TEXT PRIMARY KEY, link_id TEXT, mda TEXT, email TEXT, expiry INTEGER
 );
+
+-- Examination results: entered by panels (Draft), confirmed by the Director CMD, amended only by the
+-- Permanent Secretary or the super administrator. Officers view their confirmed result with their
+-- Eligibility/SEAP number and email. (Also created by the Worker on first use.)
+CREATE TABLE IF NOT EXISTS results (
+  brief_id TEXT PRIMARY KEY, email TEXT, written TEXT, oral TEXT, total TEXT, remark TEXT, comment TEXT,
+  status TEXT, entered_by TEXT, entered_at TEXT, confirmed_by TEXT, confirmed_at TEXT,
+  amended_by TEXT, amended_at TEXT, updated INTEGER
+);
+CREATE TABLE IF NOT EXISTS result_tries (   -- unsuccessful candidate sign-ins; 5 lock that number for 15 minutes
+  seap TEXT PRIMARY KEY, fails INTEGER DEFAULT 0, window_start INTEGER
+);
