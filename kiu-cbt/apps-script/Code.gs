@@ -3732,10 +3732,10 @@ function changeProgrammes_(d) {
 
 // ---------------- answer review (Answer review tab)
 // How students answered each question, against the answer key held for the course unit. Read-only.
-// The examinations office sees every course unit; a lecturer sees the units they teach and their own students.
+// Superadmin only: it shows every student's answers and the answer keys of every course unit.
 // Answers are stored by the option's original letter, so a shuffled display never changes what is shown here.
 function reviewUnits_(d) {
-  var t = authAny_(d.token), data = candidateData_(), settings = settingsMap_(), units = {};
+  var t = requireSuper_(d.token), data = candidateData_(), settings = settingsMap_(), units = {};
   var unit = function (code, title, prog) {
     var k = courseKey_(code); if (!k) return null;
     var u = units[k] || (units[k] = { course: String(code).trim(), title: '', programmes: [], sittings: 0, started: 0, completed: 0, questions: 0, practice: false });
@@ -3754,7 +3754,7 @@ function reviewUnits_(d) {
   return { ok: true, units: Object.keys(units).sort().map(function (k) { return units[k]; }) };
 }
 function answerReview_(d) {
-  var t = authAny_(d.token), data = candidateData_(), settings = settingsMap_(), names = staffNames_();
+  var t = requireSuper_(d.token), data = candidateData_(), settings = settingsMap_(), names = staffNames_();
   var k = courseKey_(d.course);
   if (!k) return { error: 'Choose a course unit.' };
   var rows = allCandidateRows_().filter(function (c) { return courseKey_(c.course) === k && canSee_(t, c); });

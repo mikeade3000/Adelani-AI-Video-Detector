@@ -41,7 +41,7 @@ See `cloudflare/DEPLOY.md` for first-time set-up, email, LMS sign-in and mainten
 - **Uploads**: the KIU registration workbook, candidates, question bank, assignments, Section B files, the
   practice test, **Change students' programme**, and **Course units not in the system**.
 - **Results**: scores (CSV download) and the activity log.
-- **Answer review**: how each student answered, question by question, against the answer key (see below).
+- **Answer review** (superadmin only): how each student answered, question by question, against the answer key (see below).
 - **Theory marking**: Section B pages and marks.
 - **Timetable**: each course unit's duration, opening time and last start.
 - **Settings**: duration, opening time, last start, questions per paper, marks per question, proctoring, LMS.
@@ -62,7 +62,7 @@ examination is over (answers are kept with each sitting):
 - **Downloads** (CSV): all answers (a row per student, a column per question, with the key in the first row), the
   question analysis, and the answer key.
 
-The examinations office sees every course unit; a lecturer sees only the units they teach. Students never see it.
+**Superadmin only**: the tab is hidden for admins and lecturers, and the server refuses their requests. Students never see it.
 Answers are shown by the option's original letter, so shuffled options on the students' screens do not affect it.
 
 ## Running an examination (summary)

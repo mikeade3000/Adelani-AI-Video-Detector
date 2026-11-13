@@ -17,10 +17,12 @@ const res = []; const check = (n, ok, d) => { res.push(!!ok); console.log((ok ? 
   check('R4 each student\'s answers are exactly what they chose (options were shuffled on screen)', ['S1', 'S2', 'S6', 'S7'].every(a => JSON.stringify(Object.keys(chosen[a]).sort().map(k => k + chosen[a][k])) === JSON.stringify(Object.keys(by[a].answers).sort().map(k => k + by[a].answers[k]))), JSON.stringify({ S2: by.S2.answers, chose: chosen.S2 }));
   check('R5 scores agree with Results (S1 10/10, S2 4/10: 2 right, 2 wrong, 1 blank)', r.students.every(x => { const y = results.find(z => z.id === x.exam_taker_id); return y && y.score === x.score && y.max === x.max; }) && by.S1.score === 10 && by.S2.score === 4 && by.S2.answered === 4, JSON.stringify(r.students.map(x => x.exam_taker_id + ' ' + x.score + '/' + x.max)));
   check('R6 statuses: submitted ×4, writing (S3), not started (S4)', ['S1', 'S2', 'S6', 'S7'].every(a => by[a].status === 'submitted') && by.S3.status === 'writing' && by.S4.status === 'not started', r.students.map(x => x.exam_taker_id + ':' + x.status).join(' '));
-  const lu = (await api('reviewUnits', { token: lec })).units.map(u => u.course), le = await api('answerReview', { token: lec, course: 'ENG102' }), lm = await api('answerReview', { token: lec, course: 'MTH101' });
-  check('R7 a lecturer sees only their own unit (MTH101), with all its students; ENG102 is refused', lu.join() === 'MTH101' && !!le.error && lm.ok && lm.students.length === 6, lu.join() + ' | ' + le.error);
-  const l2 = await api('answerReview', { token: lec2, course: 'MTH101' });
-  check('R8 another lecturer cannot open MTH101', !!l2.error, l2.error);
+  const lu = await api('reviewUnits', { token: lec }), lm = await api('answerReview', { token: lec, course: 'MTH101' });
+  check('R7 superadmin only: the unit\'s own lecturer is refused (list and answers)', !!lu.error && !!lm.error && !lu.units && !lm.key, lu.error + ' | ' + lm.error);
+  await api('createAdmin', { token: t, username: 'adm', full_name: 'Exams Admin', password: 'TempPass2026x' });
+  let a = await api('adminLogin', { username: 'adm', password: 'TempPass2026x' }); await api('changePassword', { token: a.token, current: 'TempPass2026x', next: 'Kiu2026exam9x' }); a = (await api('adminLogin', { username: 'adm', password: 'Kiu2026exam9x' })).token;
+  const au = await api('reviewUnits', { token: a }), am = await api('answerReview', { token: a, course: 'MTH101' });
+  check('R8 superadmin only: an admin (examinations office) is refused too', !!au.error && !!am.error && !am.key, au.error + ' | ' + am.error);
   const s = await api('candidateLogin', { username: 'S1', password: 'pw' }), stu = await api('answerReview', { token: s.student_token, course: 'MTH101' }), none = await api('answerReview', { course: 'MTH101' });
   check('R9 students and anyone not signed in cannot see answers or the key', !!stu.error && !!none.error, stu.error + ' | ' + none.error);
   check('R10 looking changes nothing (results identical before and after)', JSON.stringify((await api('results', { token: t })).rows) === resBefore, '');
