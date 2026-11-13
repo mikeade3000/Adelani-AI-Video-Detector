@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#034a27">
+<title>KIU Online Examination</title>
+<link rel="icon" href="assets/mark.png">
+<script src="assets/protect.js"></script>
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  /* exam integrity: no text selection / copying, form fields stay usable */
+  body{-webkit-user-select:none;-moz-user-select:none;user-select:none}
+  input,textarea{-webkit-user-select:text;-moz-user-select:text;user-select:text}
+  img{-webkit-user-drag:none;user-drag:none;pointer-events:none}
+</style>
+</head>
+<body>
+
+<!-- 1. USERNAME -->
+<section id="s-username" class="stage">
+  <div class="panel">
+    <img class="crest" src="assets/logo.png" alt="Kampala International University">
+    <p class="exam-name js-title">Online Examination</p>
+    <h1>Sign in</h1>
+    <p class="note">Enter the username given to you by the examinations office.</p>
+    <label class="big-label" for="u">Username</label>
+    <input id="u" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" autofocus>
+    <div id="e-username" class="error hidden" role="alert"></div>
+    <button id="b-username" class="btn">Continue</button>
+  </div>
+</section>
+
+<!-- 2. PASSWORD -->
+<section id="s-password" class="stage hidden">
+  <div class="panel">
+    <img class="crest" src="assets/logo.png" alt="Kampala International University">
+    <p class="exam-name js-title">Online Examination</p>
+    <h1>Enter your password</h1>
+    <p class="note" id="pw-hello"></p>
+    <label class="big-label" for="p">Password</label>
+    <input id="p" type="password" autocomplete="off">
+    <div id="e-password" class="error hidden" role="alert"></div>
+    <button id="b-password" class="btn">Sign in</button>
+    <button id="b-back" class="link" type="button">Change username</button>
+  </div>
+</section>
+
+<!-- 2b. CHOOSE A COURSE UNIT (students registered for several course units) -->
+<section id="s-choose" class="stage hidden">
+  <div class="panel">
+    <img class="crest" src="assets/logo.png" alt="Kampala International University">
+    <p class="exam-name js-title">Online Examination</p>
+    <h1>Choose your course unit</h1>
+    <p class="note" id="ch-hello"></p>
+    <div id="ch-list" class="choose-list"></div>
+    <div id="e-choose" class="error hidden" role="alert"></div>
+    <button id="ch-out" class="link" type="button">Sign out</button>
+  </div>
+</section>
+
+<!-- 3. INSTRUCTIONS + LOCATION + TERMS -->
+<section id="s-instructions" class="stage hidden">
+  <div class="panel">
+    <img class="crest" src="assets/logo.png" alt="Kampala International University">
+    <p class="exam-name js-title">Online Examination</p>
+    <h1>Before you begin</h1>
+    <div id="ins-html" class="content-html"></div>
+    <div id="geo" class="geo-status wait">Requesting your location…</div>
+    <div class="checkrow">
+      <input id="agree" type="checkbox">
+      <label for="agree">I have read the instructions and I accept the terms below.</label>
+    </div>
+    <div id="terms-html" class="content-html" style="margin-top:12px;font-size:18px;color:var(--muted)"></div>
+    <div id="e-instructions" class="error hidden" role="alert"></div>
+    <button id="b-instructions" class="btn" disabled>Continue</button>
+  </div>
+</section>
+
+<!-- 4. IDENTITY PHOTO + CAMERA CHECK -->
+<section id="s-photo" class="stage hidden">
+  <div class="panel">
+    <img class="crest" src="assets/logo.png" alt="Kampala International University">
+    <p class="exam-name js-title">Online Examination</p>
+    <h1 id="ph-title">Take your photo</h1>
+    <p class="note" id="ph-lead">Sit facing the light, look straight at the camera and fit your face inside the oval. Remove caps and sunglasses.</p>
+    <div class="shot" id="shot">
+      <video id="ph-video" autoplay muted playsinline class="hidden"></video>
+      <img id="ph-preview" class="hidden" alt="Your photo">
+      <div class="guide hidden" id="ph-guide"></div>
+      <div class="shot-msg" id="ph-msg">Your camera is off.</div>
+    </div>
+    <div id="e-photo" class="error hidden" role="alert"></div>
+    <div class="shot-actions">
+      <button id="b-cam-on" class="btn">Turn on camera</button>
+      <button id="b-snap" class="btn gold hidden">Take photo</button>
+      <button id="b-retake" class="btn ghost hidden">Retake</button>
+      <button id="b-usephoto" class="btn hidden">Use this photo</button>
+      <button id="b-cam-continue" class="btn hidden">Continue</button>
+    </div>
+    <p class="note" id="ph-foot" style="margin-top:14px">Your camera stays on and records you for the whole examination.</p>
+  </div>
+</section>
+
+<!-- 5. CONFIRM DETAILS -->
+<section id="s-confirm" class="stage hidden">
+  <div class="panel">
+    <img class="crest" src="assets/logo.png" alt="Kampala International University">
+    <p class="exam-name js-title">Online Examination</p>
+    <h1>Confirm your details</h1>
+    <p class="note">Check your details. Correct your name, programme or year if they are wrong.</p>
+    <label class="editk" for="c-id">Registration number</label>
+    <input class="editv" id="c-id" type="text" readonly>
+    <label class="editk" for="c-name">Full name</label>
+    <input class="editv" id="c-name" type="text">
+    <label class="editk" for="c-prog">Programme</label>
+    <input class="editv" id="c-prog" type="text" readonly title="Your programme is set by the examinations office">
+    <label class="editk" for="c-year">Year of study</label>
+    <input class="editv" id="c-year" type="text">
+    <label class="editk" for="c-course">Course / paper</label>
+    <input class="editv" id="c-course" type="text" readonly>
+    <div id="e-confirm" class="error hidden" role="alert"></div>
+    <button id="b-confirm" class="btn">My details are correct</button>
+  </div>
+</section>
+
+<!-- 6. PAPER INFO + COUNTDOWN -->
+<section id="s-info" class="stage hidden">
+  <div class="panel">
+    <img class="crest" src="assets/logo.png" alt="Kampala International University">
+    <p class="exam-name js-title">Online Examination</p>
+    <h1>Your paper</h1>
+    <div class="areas" id="i-areas"></div>
+    <div class="detail"><span class="k">Questions</span><span class="v" id="i-count"></span></div>
+    <div class="detail"><span class="k">Time allowed</span><span class="v" id="i-duration"></span></div>
+    <div class="detail" id="i-theoryrow"><span class="k">Section B (theory)</span><span class="v" id="i-theory"></span></div>
+    <div id="i-countwrap" class="hidden">
+      <p class="big-label" style="text-align:center">The examination opens in</p>
+      <div class="countdown" id="i-countdown">--:--</div>
+      <p class="note" id="i-opens" style="text-align:center"></p>
+    </div>
+    <div id="e-info" class="error hidden" role="alert"></div>
+    <button id="b-start" class="btn gold" disabled>Start examination</button>
+  </div>
+</section>
+
+<!-- 7. EXAM (Section A) -->
+<section id="s-exam" class="hidden">
+  <div class="topbar">
+    <img class="topbar-logo" src="assets/logo.png" alt="KIU">
+    <div class="who"><b id="x-name"></b><span id="x-id"></span></div>
+    <div id="x-timer" class="timer" aria-live="off">--:--</div>
+    <button id="x-submit" class="submit-btn">Submit</button>
+  </div>
+  <div class="examwrap">
+    <div id="x-warn" class="warnbanner hidden" role="status"></div>
+    <div class="qcard">
+      <div class="qarea" id="x-area"></div>
+      <div class="qnum" id="x-num"></div>
+      <div class="qtext" id="x-text"></div>
+      <div id="x-opts" role="radiogroup"></div>
+      <div class="navrow">
+        <button id="x-prev" class="btn ghost">Previous</button>
+        <button id="x-next" class="btn">Next</button>
+      </div>
+    </div>
+    <div class="palette" id="x-palette"></div>
+    <div class="palette-legend" id="x-legend"></div>
+  </div>
+</section>
+
+<!-- 8. SECTION A SUBMITTED -> SECTION B -->
+<section id="s-mcqdone" class="stage hidden">
+  <div class="panel" style="text-align:center">
+    <div class="done-mark">✓</div>
+    <h1>Section A submitted</h1>
+    <p class="note">Your multiple-choice answers have been recorded.</p>
+    <p class="note" style="margin-top:14px">Next is <b>Section B (Theory)</b>. Its timer starts as soon as you open it.</p>
+    <button id="b-to-theory" class="btn gold">Open Section B</button>
+  </div>
+</section>
+
+<!-- 9. THEORY (Section B) -->
+<section id="s-theory" class="hidden">
+  <div class="topbar">
+    <img class="topbar-logo" src="assets/logo.png" alt="KIU">
+    <div class="who"><b>Section B — Theory</b><span id="th-id"></span></div>
+    <div id="th-timer" class="timer">--:--</div>
+    <button id="th-submit" class="submit-btn">Submit</button>
+  </div>
+  <div class="examwrap">
+    <div id="th-warn" class="warnbanner hidden" role="status"></div>
+    <div class="qcard">
+      <div id="th-html" class="content-html"></div>
+      <button id="b-sheet" class="btn ghost" style="margin-top:10px;display:none">Print the answer sheet</button>
+    </div>
+    <div class="qcard">
+      <h2 style="margin-top:0">Questions</h2>
+      <div id="th-questions" class="content-html"></div>
+    </div>
+    <div class="qcard" id="th-uploadcard" style="display:none">
+      <h2 style="margin-top:0">Upload your answer pages</h2>
+      <p class="note">Photograph each written page clearly and upload it. You can add pages until time runs out.</p>
+      <input id="th-file" type="file" accept="image/*" capture="environment" multiple style="font-size:18px">
+      <div id="th-progress" class="uploadprog hidden">
+        <div class="uploadbar"><div id="th-bar" class="uploadbar-fill"></div></div>
+        <div id="th-proglbl" class="hint"></div>
+      </div>
+      <div id="th-scans" class="scanwrap"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. DONE -->
+<section id="s-done" class="stage hidden">
+  <div class="panel" style="text-align:center">
+    <img class="crest" src="assets/logo.png" alt="Kampala International University">
+    <div class="done-mark">✓</div>
+    <h1 id="done-title">Examination complete</h1>
+    <div id="done-score" class="scorebox hidden"></div>
+    <p class="note" id="done-msg"></p>
+    <div id="done-flush" class="flushbox hidden" role="status"></div>
+    <button id="b-more" class="btn hidden" type="button" style="margin-top:16px">Back to my course units</button>
+  </div>
+</section>
+
+<!-- camera lost during the exam -->
+<div id="camblock" class="camblock hidden" role="alertdialog" aria-modal="true">
+  <div class="panel">
+    <img class="crest" src="assets/logo.png" alt="Kampala International University">
+    <h1>Your camera is off</h1>
+    <p class="note" id="cb-msg">The camera must stay on for the whole examination. Your timer is still running.</p>
+    <div id="e-camblock" class="error hidden"></div>
+    <button id="b-camblock" class="btn">Turn camera back on</button>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="assets/common.js"></script>
+<script src="assets/proctor.js"></script>
+<script>
+(function(){
+  var A = window.KIU, P = window.KIUProctor;
+  if(!A || !P){ document.body.innerHTML='<div style="font-family:Times New Roman,serif;max-width:640px;margin:60px auto;padding:24px;background:#fff;border-radius:12px;text-align:center"><h2>Could not finish loading</h2><p>A required file did not load. Refresh this page (Ctrl+Shift+R). If it keeps happening, the administrator should check that the <b>assets</b> folder is uploaded.</p></div>'; return; }
+  var esc = A.esc;
+
+  /* ---------- exam-integrity lockdown ---------- */
+  // right-click, developer tools, view source and save page are blocked on every page by assets/protect.js
+  ['copy','cut','paste'].forEach(function(ev){ document.addEventListener(ev, function(e){ if(!/^(INPUT|TEXTAREA)$/.test(e.target.tagName) || phase==='mcq') e.preventDefault(); }); });
+  document.addEventListener('dragstart', function(e){ e.preventDefault(); });
+  document.addEventListener('keydown', function(e){
+    var K = (e.key || '').toUpperCase();
+    if ((e.ctrlKey || e.metaKey) && ['P','C','X','A'].indexOf(K) >= 0 && !/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) { e.preventDefault(); }
+  });
+
+  var S = {}, LS_KEY = 'kiu_session', phase = 'login';
+  var ctx = { token: function(){ return S.token; }, phase: function(){ return phase; } };
+  var SECTIONS = ['username','password','choose','instructions','photo','confirm','info','exam','mcqdone','theory','done'];
+  function show(id){ SECTIONS.forEach(function(k){ document.getElementById('s-'+k).classList.toggle('hidden', k!==id); }); window.scrollTo(0,0); }
+  function err(id,msg){ var el=document.getElementById('e-'+id); el.textContent=msg; el.classList.remove('hidden'); }
+  function clearErr(id){ document.getElementById('e-'+id).classList.add('hidden'); }
+  function nowMs(){ return Date.now() + (S.clockOffset || 0); }     // server-corrected clock
+  // Spread of simultaneous actions (everyone's time running out together): the server's setting once signed in.
+  function burstDelay(){ var s=(S.pacing&&S.pacing.burst_s!=null)?S.pacing.burst_s:(A.CFG.BURST_SPREAD_SECONDS||0); return Math.floor(Math.random()*s*1000); }
+  function fmt(s){ s=Math.max(0,Math.floor(s)); var dd=Math.floor(s/86400), h=Math.floor(s%86400/3600), m=Math.floor(s%3600/60), ss=s%60; return (dd?dd+(dd>1?' days ':' day ')+(h<10?'0':''):'')+((h||dd)?h+':':'')+(m<10?'0':'')+m+':'+(ss<10?'0':'')+ss; }
+  function persist(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({ username:S.username, id:(S.profile&&S.profile.exam_taker_id)||'', answers:S.answers })); }catch(e){} }
+  function proctorOpts(){ return S.proctor || {}; }
+  function needCamera(){ var o=proctorOpts(); return !!(o.require_camera || o.record_video); }
+  function needPhoto(){ return !!proctorOpts().require_photo; }
+
+  if (A.needsBackend()) { A.backendChooser(document.getElementById('s-username')); return; }
+  // A small notice while the service is busy and calls are being retried.
+  (function(){
+    var bar=document.createElement('div'); bar.setAttribute('role','status');
+    bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#fff4d6;color:#5c4400;text-align:center;padding:8px 12px;font:16px "Times New Roman",serif;display:none;border-bottom:1px solid #e6c46a';
+    bar.textContent='The examination service is busy — retrying automatically. Please wait; your answers are kept on this device.';
+    document.addEventListener('DOMContentLoaded',function(){ document.body.appendChild(bar); }); if(document.body) document.body.appendChild(bar);
+    A.onBusy(function(n){ bar.style.display = n>1 ? 'block' : 'none'; });
+  })();
+  if (!A.configured()) { document.getElementById('s-username').innerHTML =
+    '<div class="panel"><img class="crest" src="assets/logo.png" alt="KIU"><h1>Not set up yet</h1><p class="note">This examination link has not been connected to its server (config.js has no API URL). Please contact the examinations office.</p></div>'; return; }
+
+  // Finish uploading any recording left over from an earlier visit on this device.
+  P.pendingCount().then(function(n){ if(n) P.pump(); });
+
+  /* ---------- 1. username ---------- */
+  document.getElementById('b-username').onclick = function(){
+    var u = document.getElementById('u').value.trim();
+    if(!u){ err('username','Enter your username.'); return; }
+    clearErr('username'); S.username = u;
+    document.getElementById('pw-hello').textContent = 'Signing in as “'+u+'”.';
+    show('password'); document.getElementById('p').focus();
+  };
+  document.getElementById('u').addEventListener('keydown',function(e){ if(e.key==='Enter') document.getElementById('b-username').click(); });
+  // Personal exam link from a lecturer: index.html?u=<username> fills the username and goes to the password page.
+  (function(){
+    var m=/[?&]u=([^&#]*)/.exec(location.search);
+    if(!m) return;
+    var u=''; try{ u=decodeURIComponent(m[1].replace(/\+/g,' ')).trim(); }catch(e){}
+    if(!u) return;
+    document.getElementById('u').value=u;
+    document.getElementById('b-username').click();
+  })();
+  document.getElementById('b-back').onclick=function(){ show('username'); };
+
+  /* ---------- 2. password ---------- */
+  document.getElementById('b-password').onclick=function(){
+    var p=document.getElementById('p').value, btn=this;
+    if(!p){ err('password','Enter your password.'); return; }
+    clearErr('password'); btn.disabled=true; btn.textContent='Signing in…';
+    setTimeout(function(){
+      A.api('candidateLogin',{username:S.username,password:p,ua:navigator.userAgent}).then(function(r){
+        if(r && r.choose){ showChoose(r); return; }
+        onLogin(r);
+      }).catch(function(e){ err('password', e.message); })
+        .finally(function(){ btn.disabled=false; btn.textContent='Sign in'; });
+    }, burstDelay());
+  };
+  document.getElementById('p').addEventListener('keydown',function(e){ if(e.key==='Enter') document.getElementById('b-password').click(); });
+
+  function onLogin(r){
+    if(r && r.attempted){ showAttempted(r); return; }
+    var local = {}; try{ local = JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }catch(e){}
+    var stu = S.student;
+    S = Object.assign({username:S.username}, r);
+    S.student = stu;
+    S.clockOffset = r.server_now ? (new Date(r.server_now).getTime() - Date.now()) : 0;
+    A.setZone(r.time_zone);
+    // keep answers the browser saved after the last sync (same examination only)
+    var mine = r.profile && local.id ? (local.id===r.profile.exam_taker_id) : (local.username===S.username);
+    S.answers = Object.assign({}, r.saved_answers || {}, (mine && local.answers) ? local.answers : {});
+    P.opts = S.proctor || {};
+    document.querySelectorAll('.js-title').forEach(function(el){ el.textContent = S.exam_title || 'Online Examination'; });
+    document.title = (S.exam_title || 'Online Examination') + ' — KIU';
+    persist();
+    enterFromStep(r.step || 'instructions');
+  }
+
+  /* ---------- 2b. choose a course unit ---------- */
+  var STU_KEY='kiu_student';
+  function showChoose(r){
+    S.student = { token:r.student_token, name:r.full_name, username:S.username };
+    try{ sessionStorage.setItem(STU_KEY, JSON.stringify(S.student)); }catch(e){}
+    document.querySelectorAll('.js-title').forEach(function(el){ el.textContent = r.exam_title || 'Online Examination'; });
+    document.getElementById('ch-hello').textContent='Welcome, '+(r.full_name||'')+'. '+(r.programme?r.programme+'. ':'')+'Pick the course unit you are writing now. Each one is timed and recorded separately.';
+    A.setZone(r.time_zone);
+    var off0 = r.server_now ? (new Date(r.server_now).getTime() - Date.now()) : 0, now=function(){ return Date.now()+off0; };
+    var LBL={ready:['Start','on'],started:['Continue','mid'],done:['Completed','sub'],not_ready:['Not available yet','off'],closed:['Closed','off']};
+    // Times: the university's official time (with its zone), then the student's own time if their device is elsewhere,
+    // and "Opens in …" — the same moment for everyone, wherever they are.
+    var times=function(x, tz){ return A.examWindow(x.opens_at, x.last_start_at, x.duration_minutes, {tz:tz, now:now()}).join(' · '); };
+    document.getElementById('ch-list').innerHTML=(r.sittings||[]).map(function(x){
+      var l=LBL[x.status]||LBL.ready, off=(x.status==='done'||x.status==='not_ready'||x.status==='closed');
+      // not open yet: say when it opens instead of a green "Start" (it can still be opened to read the instructions and see the countdown)
+      var early=x.status==='ready' && x.opens_at && new Date(x.opens_at).getTime()>now();
+      if(early) l=['Opens '+A.fmtIn(new Date(x.opens_at).getTime()-now()),'mid'];
+      var lines=[];
+      if(x.status==='not_ready') lines.push('Questions not uploaded yet');
+      else if(x.status==='closed') lines.push('Closed for new starts');
+      else if(x.status==='ready'){
+        var t=times(x), ref=x.opens_at||x.last_start_at;
+        lines.push([x.duration_minutes?x.duration_minutes+' minutes':'', t?t+' ('+A.zoneLabel(A.zone(), ref?new Date(ref):null)+')':''].filter(String).join(' · '));
+        if(t && A.otherZone(ref)) lines.push('Your time: '+times(x, Intl.DateTimeFormat().resolvedOptions().timeZone));
+      }
+      return '<button type="button" class="choose-item'+(off?' off':'')+'" data-sit="'+A.esc(x.id)+'"'+(off?' disabled':'')+'>'+
+        '<span><b>'+A.esc(x.course)+'</b> '+A.esc(x.title||'')+lines.map(function(t){ return '<br><small>'+A.esc(t)+'</small>'; }).join('')+'</span>'+
+        '<span class="pill '+l[1]+'"'+(early?' data-opens="'+A.esc(x.opens_at)+'"':'')+'>'+A.esc(l[0])+'</span></button>';
+    }).join('')||'<p class="note">No examination is registered for you yet.</p>';
+    // keep "Opens in …" current while the list is open; at the opening time it turns into Start
+    if(window._opensTick) clearInterval(window._opensTick);
+    window._opensTick=setInterval(function(){
+      document.querySelectorAll('#ch-list .pill[data-opens]').forEach(function(pl){
+        var left=new Date(pl.dataset.opens).getTime()-now();
+        if(left<=0){ pl.textContent='Start'; pl.className='pill on'; pl.removeAttribute('data-opens'); }
+        else pl.textContent='Opens '+A.fmtIn(left);
+      });
+    }, 20000);
+    document.querySelectorAll('[data-sit]').forEach(function(b){ b.onclick=function(){
+      clearErr('choose'); b.disabled=true;
+      A.api('candidateLogin',{student_token:S.student.token, sitting:b.dataset.sit, ua:navigator.userAgent}).then(onLogin)
+        .catch(function(e){ err('choose', e.message); b.disabled=false; });
+    }; });
+    show('choose');
+  }
+  document.getElementById('ch-out').onclick=function(){ try{ sessionStorage.removeItem(STU_KEY); }catch(e){} location.href='index.html'; };
+  document.getElementById('b-more').onclick=function(){ location.href='index.html'; };   // reload → back to the list (recording upload resumes by itself)
+  (function(){
+    var saved=null; try{ saved=JSON.parse(sessionStorage.getItem(STU_KEY)||'null'); }catch(e){}
+    if(!saved || !saved.token || /[?&]u=/.test(location.search) || /[#&]lti=/.test(location.hash)) return;
+    S.username=saved.username; S.student=saved;
+    A.api('candidateLogin',{student_token:saved.token}).then(function(r){ if(r && r.choose) showChoose(r); })
+      .catch(function(){ try{ sessionStorage.removeItem(STU_KEY); }catch(e){} });
+  })();
+  // Opened from the LMS (Moodle, LTI 1.3): index.html#lti=<one-time code> signs the student in with no password.
+  (function(){
+    var m=/[#&]lti=([a-f0-9]{64})/.exec(location.hash||'');
+    if(!m) return;
+    try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
+    document.getElementById('pw-hello').textContent='Signing you in from the LMS…';
+    A.api('ltiRedeem',{code:m[1], ua:navigator.userAgent},{tries:1}).then(function(r){
+      S.username=r.username||'';
+      if(r && r.choose){ showChoose(r); return; }
+      if(r && r.student_token){ S.student={token:r.student_token, name:r.full_name, username:S.username}; try{ sessionStorage.setItem(STU_KEY, JSON.stringify(S.student)); }catch(e){} }
+      onLogin(r);
+    }).catch(function(e){ show('username'); err('username', e.message+' You can also sign in here with your username and password.'); });
+  })();
+
+  function showAttempted(r){
+    try{ localStorage.removeItem(LS_KEY); }catch(e){}
+    document.getElementById('done-title').textContent='You have already taken this examination';
+    var box=document.getElementById('done-score');
+    if(r.reveal && r.score!=null){ box.textContent='Section A: '+r.score+' / '+r.max_score; box.classList.remove('hidden'); } else box.classList.add('hidden');
+    document.getElementById('done-msg').textContent='Our records show you have completed this examination, so you cannot sit it again.'+(S.student?'':' You may close this window.');
+    show('done');
+    if(S.student) document.getElementById('b-more').classList.remove('hidden');
+  }
+
+  function cameraPageNeeded(){ return needCamera() || (needPhoto() && !S.has_photo); }
+  function enterFromStep(step){
+    if(step==='submitted'){ afterMcq(true); return; }
+    if(step==='exam'){ prepExam(); startExam(); ensureProctoring(); return; }
+    if(step==='photo' || step==='confirm' || step==='exam_info'){
+      if(cameraPageNeeded()){ openPhoto(); return; }
+      if(step==='exam_info'){ fillInfo(); show('info'); return; }
+      fillConfirm(); show('confirm'); return;
+    }
+    fillInstructions(); show('instructions');
+  }
+
+  /* ---------- 3. instructions + location + terms ---------- */
+  function fillInstructions(){
+    document.getElementById('ins-html').innerHTML = S.instructions_html || '';
+    document.getElementById('terms-html').innerHTML = S.terms_html || '';
+    if (S.require_location === false){ setGeoOK(null); } else requestGeo();
+    refreshContinue();
+  }
+  function setGeoOK(pos){
+    S.geo = pos && pos.coords ? {lat:pos.coords.latitude, lng:pos.coords.longitude, acc:Math.round(pos.coords.accuracy||0), status:'granted'} : {status:'not_required'};
+    var g=document.getElementById('geo'); g.className='geo-status ok';
+    g.textContent = S.geo.status==='granted' ? 'Location is on. Thank you.' : 'Location is not required for this examination.';
+    g.onclick=null; refreshContinue();
+  }
+  function requestGeo(){
+    var g=document.getElementById('geo');
+    if(!navigator.geolocation){ g.className='geo-status bad'; g.textContent='This device cannot share its location. Use a phone or laptop with location services.'; return; }
+    g.className='geo-status wait'; g.textContent='Requesting your location — tap “Allow” when asked.'; g.onclick=null;
+    navigator.geolocation.getCurrentPosition(setGeoOK, function(e){
+      g.className='geo-status bad';
+      g.textContent = (e && e.code===1) ? 'Location is blocked. Allow location for this site in your browser settings, then tap here to try again.'
+                                        : 'Your location could not be found. Switch on location (GPS), then tap here to try again.';
+      g.onclick=requestGeo;
+    }, {enableHighAccuracy:true, timeout:20000, maximumAge:60000});
+  }
+  document.getElementById('agree').addEventListener('change', refreshContinue);
+  function geoReady(){ return S.require_location===false || (S.geo && (S.geo.status==='granted'||S.geo.status==='not_required')); }
+  function refreshContinue(){ document.getElementById('b-instructions').disabled = !(document.getElementById('agree').checked && geoReady()); }
+  document.getElementById('b-instructions').onclick=function(){
+    if(!(document.getElementById('agree').checked && geoReady())){ err('instructions','Switch on your location and accept the terms to continue.'); return; }
+    clearErr('instructions');
+    if(cameraPageNeeded()){ sync({step:'photo'}); openPhoto(); }
+    else { sync({step:'confirm'}); fillConfirm(); show('confirm'); }
+  };
+
+  /* ---------- 4. photo + camera check ---------- */
+  var captured = null;
+  var $ = function(id){ return document.getElementById(id); };
+  function phButtons(state){
+    // state: off | live | captured | busy
+    var takeNow = needPhoto() && !S.has_photo;
+    $('b-cam-on').classList.toggle('hidden', state!=='off');
+    $('b-snap').classList.toggle('hidden', !(state==='live' && needPhoto()));
+    $('b-snap').textContent = S.has_photo ? 'Retake photo' : 'Take photo';
+    $('b-snap').className = 'btn ' + (S.has_photo ? 'ghost' : 'gold') + ((state==='live' && needPhoto()) ? '' : ' hidden');
+    $('b-retake').classList.toggle('hidden', state!=='captured');
+    $('b-usephoto').classList.toggle('hidden', state!=='captured');
+    $('b-cam-continue').classList.toggle('hidden', !(state==='live' && !takeNow));
+    $('ph-video').classList.toggle('hidden', !(state==='live'));
+    $('ph-guide').classList.toggle('hidden', !(state==='live' && needPhoto()));
+    $('ph-preview').classList.toggle('hidden', state!=='captured');
+  }
+  function openPhoto(){
+    var takeNow = needPhoto() && !S.has_photo;
+    $('ph-title').textContent = takeNow ? 'Take your photo' : 'Camera check';
+    $('ph-lead').textContent = takeNow
+      ? 'Sit facing the light, look straight at the camera and fit your face inside the oval. Remove caps and sunglasses.'
+      : (S.has_photo ? 'Your photo is already saved. Turn on your camera and check that your face is clearly visible.' : 'Turn on your camera and check that your face is clearly visible.');
+    $('ph-foot').textContent = proctorOpts().record_video ? 'Your camera stays on and records you for the whole examination.' : 'Your camera stays on for the whole examination.';
+    clearErr('photo'); show('photo');
+    var problem = P.support(!!proctorOpts().record_video);
+    if(problem){ err('photo', problem); $('ph-msg').textContent='Camera not available.'; $('b-cam-on').classList.add('hidden'); return; }
+    if(P.isLive()){ camLive(); return; }
+    phButtons('off'); $('ph-msg').textContent='Your camera is off.'; $('ph-msg').classList.remove('hidden');
+    turnOnCamera();   // the Continue tap that brought us here counts as a user gesture
+  }
+  function turnOnCamera(){
+    clearErr('photo'); $('ph-msg').textContent='Starting camera — tap “Allow” when asked…'; $('ph-msg').classList.remove('hidden');
+    $('b-cam-on').disabled=true;
+    P.acquire(proctorOpts()).then(camLive).catch(function(e){
+      $('ph-msg').textContent='Your camera is off.'; phButtons('off'); err('photo', e.message);
+      $('b-cam-on').textContent='Try again';
+    }).finally(function(){ $('b-cam-on').disabled=false; });
+  }
+  function camLive(){
+    P.attach($('ph-video')); $('ph-msg').classList.add('hidden'); phButtons('live');
+  }
+  $('b-cam-on').onclick = turnOnCamera;
+  $('b-snap').onclick = function(){
+    var shot = P.capturePhoto($('ph-video'));
+    if(!shot){ err('photo','The camera is still starting. Wait a moment and try again.'); return; }
+    captured = shot; $('ph-preview').src = shot.image; phButtons('captured');
+    if(shot.dark) err('photo','This photo is very dark. Move to a brighter place or face a window, then retake it.'); else clearErr('photo');
+  };
+  $('b-retake').onclick = function(){ captured=null; clearErr('photo'); camLive(); };
+  $('b-usephoto').onclick = function(){
+    if(!captured) return;
+    var b=this; b.disabled=true; b.textContent='Saving photo…'; $('b-retake').disabled=true;
+    A.apiUpload('photoUpload',{token:S.token, image:captured.image, thumb:captured.thumb}).then(function(){
+      S.has_photo = true; captured=null; P.lowerResolution();
+      sync({step:'confirm'}); fillConfirm(); show('confirm');
+    }).catch(function(e){ err('photo','Your photo was not saved: '+e.message+' Tap “Use this photo” again.'); })
+      .finally(function(){ b.disabled=false; b.textContent='Use this photo'; $('b-retake').disabled=false; });
+  };
+  $('b-cam-continue').onclick = function(){
+    if(needCamera() && !P.isLive()){ err('photo','Turn on your camera to continue.'); phButtons('off'); return; }
+    P.lowerResolution(); sync({step:'confirm'}); fillConfirm(); show('confirm');
+  };
+
+  /* ---------- 5. confirm (editable) ---------- */
+  function fillConfirm(){
+    var p=S.profile||{};
+    $('c-id').value = p.student_id||p.exam_taker_id||''; $('c-name').value = p.full_name||'';
+    $('c-prog').value = p.programme||''; $('c-year').value = p.year_of_study||''; $('c-course').value = (p.course||'')+(p.course_title?' — '+p.course_title:'');
+  }
+  $('b-confirm').onclick=function(){
+    var prof = { full_name:$('c-name').value.trim(), programme:$('c-prog').value.trim(), year_of_study:$('c-year').value.trim() };
+    if(!prof.full_name){ err('confirm','Your name cannot be empty.'); return; }
+    clearErr('confirm'); S.profile = Object.assign(S.profile||{}, prof);
+    var b=this; b.disabled=true; b.textContent='Saving…';
+    A.api('updateProfile',{token:S.token, profile:prof}).catch(function(){}).finally(function(){
+      b.disabled=false; b.textContent='My details are correct';
+      sync({step:'exam_info'}); fillInfo(); show('info');
+    });
+  };
+
+  /* ---------- 6. paper info + countdown ---------- */
+  var countTick=null;
+  function fillInfo(){
+    var box=$('i-areas'); box.innerHTML='';
+    (S.areas||[]).forEach(function(a){ var t=document.createElement('span'); t.className='tag'; t.textContent=a.area+' · '+a.count; box.appendChild(t); });
+    $('i-count').textContent = (S.questions||[]).length + ' multiple choice';
+    $('i-duration').textContent = (S.duration_minutes||60) + ' minutes';
+    $('i-theoryrow').classList.toggle('hidden', !S.theory_enabled);
+    $('i-theory').textContent = 'Follows Section A';
+    var startBtn=$('b-start');
+    var sched = S.scheduled_start ? new Date(S.scheduled_start).getTime() : 0;
+    if(countTick) clearInterval(countTick);
+    if(sched && sched > nowMs()){
+      $('i-countwrap').classList.remove('hidden'); startBtn.disabled=true;
+      $('i-opens').textContent='Opens at '+A.fmtExam(S.scheduled_start,'at');
+      var countStep=function(){
+        var left=Math.floor((sched-nowMs())/1000);
+        if(left<=0){ clearInterval(countTick); $('i-countdown').textContent='00:00'; startBtn.disabled=false; }
+        else $('i-countdown').textContent = fmt(left);
+      };
+      countTick=setInterval(countStep,1000); countStep();
+    } else { $('i-countwrap').classList.add('hidden'); startBtn.disabled=false; }
+  }
+  $('b-start').onclick=function(){
+    var b=this; b.disabled=true; b.textContent='Starting…'; clearErr('info');
+    ensureProctoring(true).then(function(){
+      return A.api('candidateStart',{token:S.token});
+    }).then(function(r){
+      S.started_at=r.started_at;
+      // the paper the server fixed at start (it may differ from the list shown at sign-in if "questions per paper" changed since)
+      if(r.questions && r.questions.length){
+        var ids={}; r.questions.forEach(function(q){ ids[q.id]=1; });
+        S.questions=r.questions;
+        Object.keys(S.answers||{}).forEach(function(k){ if(!ids[k]) delete S.answers[k]; });
+      }
+      prepExam(); startExam();
+    }).catch(function(e){ err('info', e.message); })
+      .finally(function(){ b.disabled=false; b.textContent='Start examination'; });
+  };
+
+  /* ---------- proctoring: camera frame + recording ---------- */
+  function ensureProctoring(strict){
+    if(!needCamera()) return Promise.resolve();
+    return P.acquire(proctorOpts()).then(function(){
+      P.lowerResolution(); P.mountFrame(); P.startRecording(ctx); hideCamBlock();
+    }).catch(function(e){
+      if(strict) throw e;                 // before the exam: show the error on the page
+      showCamBlock(e.message);            // during the exam: block until it is back
+    });
+  }
+  P.onLost = function(){
+    if(!needCamera() || ['mcq','mcqdone','theory'].indexOf(phase)<0) return;
+    showCamBlock('');
+    setTimeout(function(){ if(!P.isLive()) ensureProctoring(false); }, 1500);   // quiet automatic retry
+  };
+  function showCamBlock(msg){
+    if(!needCamera()) return;
+    $('camblock').classList.remove('hidden');
+    var e=$('e-camblock'); if(msg){ e.textContent=msg; e.classList.remove('hidden'); } else e.classList.add('hidden');
+  }
+  function hideCamBlock(){ $('camblock').classList.add('hidden'); }
+  $('b-camblock').onclick=function(){
+    var b=this; b.disabled=true; b.textContent='Starting camera…';
+    ensureProctoring(false).finally(function(){ b.disabled=false; b.textContent='Turn camera back on'; });
+  };
+
+  /* ---------- 7. exam ---------- */
+  var idx=0, focusLoss=0, syncTimer=null, tickTimer=null, remaining=0, submitting=false;
+  function prepExam(){
+    var p=S.profile||{};
+    $('x-name').textContent=p.full_name||''; $('x-id').textContent=(p.student_id||p.exam_taker_id||'')+(p.course?' · '+p.course+(p.course_title?' '+p.course_title:''):'');
+    S.answers = S.answers || {};
+  }
+  function startExam(){
+    phase='mcq'; show('exam');
+    var dur=(S.duration_minutes||60)*60;
+    remaining = S.started_at ? Math.floor((new Date(S.started_at).getTime()+dur*1000-nowMs())/1000) : dur;
+    if(!(S.questions||[]).length){ $('x-text').textContent='No questions have been set for you. Please contact the invigilator.'; return; }
+    renderQ(); renderPalette();
+    if(tickTimer) clearInterval(tickTimer);
+    tickTimer=setInterval(tick,1000); tick();
+    startSyncLoop(); bindFocus();
+    setTimeout(function(){ sync({}); }, 4000);   // first live snapshot soon after starting
+  }
+  function renderQ(){
+    var q=S.questions[idx];
+    $('x-area').textContent=q.area||'';
+    $('x-num').textContent='Question '+(idx+1)+' of '+S.questions.length;
+    $('x-text').textContent=q.text||'';
+    var box=$('x-opts'); box.innerHTML='';
+    var order = (q.order && q.order.length) ? q.order : ['A','B','C','D'].filter(function(k){ return q.opts[k]!=null && String(q.opts[k])!==''; });
+    order.forEach(function(k, i){
+      var label='ABCD'.charAt(i);
+      var d=document.createElement('div'); d.className='opt'+(S.answers[q.id]===k?' sel':'');
+      d.setAttribute('role','radio'); d.setAttribute('aria-checked', S.answers[q.id]===k ? 'true':'false'); d.tabIndex=0;
+      d.innerHTML='<span class="k">'+label+'</span><span>'+esc(q.opts[k])+'</span>';
+      d.onclick=function(){ S.answers[q.id]=k; persist(); renderQ(); renderPalette(); };
+      d.onkeydown=function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); d.onclick(); } };
+      box.appendChild(d);
+    });
+    $('x-prev').style.visibility = idx===0?'hidden':'visible';
+    $('x-next').style.visibility = idx===S.questions.length-1?'hidden':'visible';
+  }
+  function renderPalette(){
+    var pal=$('x-palette'); pal.innerHTML=''; var done=0;
+    S.questions.forEach(function(q,i){
+      if(S.answers[q.id]) done++;
+      var b=document.createElement('button'); b.className='p'+(S.answers[q.id]?' done':'')+(i===idx?' cur':''); b.textContent=i+1;
+      b.setAttribute('aria-label','Question '+(i+1)+(S.answers[q.id]?', answered':''));
+      b.onclick=function(){ idx=i; renderQ(); renderPalette(); }; pal.appendChild(b);
+    });
+    $('x-legend').textContent = done+' of '+S.questions.length+' answered';
+  }
+  $('x-prev').onclick=function(){ if(idx>0){idx--;renderQ();renderPalette();} };
+  $('x-next').onclick=function(){ if(idx<S.questions.length-1){idx++;renderQ();renderPalette();} };
+
+  function tick(){
+    remaining--;
+    var t=$('x-timer'); t.textContent=fmt(Math.max(0,remaining)); t.classList.toggle('warn', remaining<=300);
+    if(remaining<=0){ clearInterval(tickTimer); doSubmit(true); }
+  }
+
+  var focusBound=false;
+  function bindFocus(){
+    if(focusBound) return; focusBound=true;
+    var lastLoss=0;
+    function lost(){
+      if(phase!=='mcq' && phase!=='theory') return;
+      if(!$('camblock').classList.contains('hidden')) return;      // camera prompt, not cheating
+      if(Date.now()-lastLoss < 1500) return;                        // blur + visibilitychange fire together
+      lastLoss=Date.now(); focusLoss++;
+      P.logEvent('left_exam_window', phase);
+      var box = $(phase==='theory'?'th-warn':'x-warn');
+      box.classList.remove('hidden'); box.textContent='Stay on this window. Leaving the examination is recorded ('+focusLoss+').';
+      sync({});
+    }
+    if(window.KIUProtect) window.KIUProtect.onDetect(function(open){
+      if(!open || (phase!=='mcq' && phase!=='theory')) return;
+      P.logEvent('devtools_opened', phase); sync({});
+    });
+    document.addEventListener('visibilitychange', function(){ if(document.hidden) lost(); });
+    window.addEventListener('blur', lost);
+  }
+
+  // Save interval comes from the server (Settings → Load), so it can be eased off during a sitting.
+  // A save never overlaps the previous one, so a slow server is not flooded with queued saves.
+  var syncBusy=false;
+  function startSyncLoop(){
+    if(syncTimer) return;
+    (function next(){
+      var secs=(S.pacing&&S.pacing.sync_s)||A.CFG.SYNC_SECONDS||30, base=secs*1000, jitter=Math.floor(Math.random()*Math.max(6000, base*0.2));
+      syncTimer=setTimeout(function(){
+        if(['mcq','mcqdone','theory'].indexOf(phase)>=0 && !syncBusy){ syncBusy=true; sync({}).then(function(){ syncBusy=false; }, function(){ syncBusy=false; }); }
+        next();
+      }, base+jitter);
+    })();
+  }
+  function camLabel(){ try{ var t=P.stream && P.stream.getVideoTracks()[0]; return t ? String(t.label||'').slice(0,80) : ''; }catch(e){ return ''; } }
+  function sync(extra){
+    if(!S.token) return Promise.resolve();
+    var events = P.takeEvents();
+    var payload=Object.assign({token:S.token, answers:S.answers, focus_loss:focusLoss, events:events,
+      cam:{ status: needCamera() ? (P.isLive() ? 'on' : 'off') : 'not_required', events:P.camEvents, label:camLabel() },
+      screens:(window.screen && window.screen.isExtended===true) ? 2 : 1}, extra);
+    if(phase==='mcq') payload.step='exam';
+    if(S.geo) payload.geo=S.geo;
+    if(['mcq','mcqdone','theory'].indexOf(phase)>=0){ var s=P.dueSnapshot(); if(s){ payload.snap=s.data; payload.dark=s.dark; } }
+    return A.api('candidateSync',payload,{tries:2}).then(function(r){
+      if(r && r.sync_s){ S.pacing=S.pacing||{}; S.pacing.sync_s=r.sync_s; }
+      if(phase!=='mcq') return;
+      if(r && typeof r.remaining==='number' && Math.abs(r.remaining-remaining)>5) remaining=r.remaining;
+      if(r && r.remaining===0) doSubmit(true);
+    }).catch(function(){ P.putBackEvents(events); });
+  }
+
+  $('x-submit').onclick=function(){
+    var left = S.questions.filter(function(q){ return !S.answers[q.id]; }).length;
+    var msg = (left ? 'You have '+left+' unanswered question'+(left>1?'s':'')+'. ' : '') + 'Submit Section A now? You cannot change your answers afterwards.';
+    if(confirm(msg)) doSubmit(false);
+  };
+  function doSubmit(auto){
+    if(submitting) return; submitting=true;
+    clearInterval(tickTimer);
+    var wait = auto ? burstDelay() : 0;
+    var t=$('x-timer'); t.textContent='Submitting…'; t.classList.add('warn');
+    setTimeout(function attempt(){
+      A.api('candidateSubmit',{token:S.token, answers:S.answers, focus_loss:focusLoss, auto:!!auto}).then(function(){
+        try{ localStorage.removeItem(LS_KEY); }catch(e){}
+        submitting=false; afterMcq(false);
+      }).catch(function(e){
+        if(auto){ setTimeout(attempt, 4000); return; }   // time is up: keep trying until it lands
+        submitting=false; alert('Submit failed: '+e.message+' Check your connection and tap Submit again.');
+        tickTimer=setInterval(tick,1000);
+      });
+    }, wait);
+  }
+
+  /* ---------- 8. Section A done -> Section B ---------- */
+  function afterMcq(resumed){
+    phase='mcqdone'; clearInterval(tickTimer);
+    if(!S.theory_enabled){ showFinal('mcqonly'); return; }
+    show('mcqdone');
+    if(resumed){ startSyncLoop(); bindFocus(); ensureProctoring(false); }
+  }
+  $('b-to-theory').onclick=function(){
+    if(!confirm('Open Section B (Theory) now? Its timer starts immediately and cannot be paused.')) return;
+    var b=this; b.disabled=true; b.textContent='Opening…';
+    A.api('theoryInfo',{token:S.token}).then(function(r){
+      S.theory=r;
+      if(r.theory_step==='theory_submitted'){ showFinal('theory'); return; }
+      return A.api('theoryStart',{token:S.token}).then(function(t){ S.theory.theory_started_at=t.started_at; if(t.questions) S.theory.questions=t.questions; startTheory(); });
+    }).catch(function(e){ alert(e.message); }).finally(function(){ b.disabled=false; b.textContent='Open Section B'; });
+  };
+  $('b-sheet').onclick=function(){ printAnswerSheet(); };
+
+  /* ---------- 9. Section B ---------- */
+  var thTick=null, thRemaining=0, thScans=[], theorySubmitting=false;
+  function startTheory(){
+    phase='theory'; bindFocus(); show('theory');
+    var p=(S.theory.profile)||{};
+    $('th-id').textContent = p.exam_taker_id||'';
+    $('th-html').innerHTML = S.theory.instructions_html||'';
+    $('th-questions').innerHTML=(S.theory.questions||[]).map(function(q){
+      if(Number(q.max_marks)===0) return '<div class="th-instructions"><div class="th-ins-label">Instructions</div><div>'+esc(q.prompt)+'</div></div>';
+      return '<p><b>Question '+esc(q.number)+'.</b> '+esc(q.prompt)+' <span class="hint">('+q.max_marks+' marks)</span></p>';
+    }).join('') || '<p class="hint">Use the question paper given by the invigilator.</p>';
+    $('b-sheet').style.display = (S.theory.sheet_enabled===true) ? '' : 'none';
+    $('th-uploadcard').style.display = (S.theory.upload_enabled===true) ? '' : 'none';
+    thScans=(S.theory.scans||[]).slice(); renderScans();
+    var dur=(S.theory.duration_minutes||60)*60;
+    thRemaining = S.theory.theory_started_at ? Math.floor((new Date(S.theory.theory_started_at).getTime()+dur*1000-nowMs())/1000) : dur;
+    if(thTick) clearInterval(thTick);
+    thTick=setInterval(thTick_,1000); thTick_();
+  }
+  function thTick_(){
+    thRemaining--; var t=$('th-timer');
+    t.textContent=fmt(Math.max(0,thRemaining)); t.classList.toggle('warn', thRemaining<=300);
+    if(thRemaining<=0){ clearInterval(thTick); doTheorySubmit(true); }
+  }
+  function renderScans(){
+    var box=$('th-scans'); box.innerHTML='';
+    if(!thScans.length){ box.innerHTML='<p class="hint">No pages uploaded yet.</p>'; return; }
+    thScans.forEach(function(s,i){
+      var d=document.createElement('div'); d.className='scan';
+      d.innerHTML='<span class="pg">Page '+esc(s.page||(i+1))+'</span><a href="#" data-view-scan="'+esc(s.fileId)+'">view</a><button class="rm" data-fid="'+esc(s.fileId)+'">remove</button>';
+      box.appendChild(d);
+    });
+    // pages are private: fetch them through this session
+    box.querySelectorAll('[data-view-scan]').forEach(function(a){ a.onclick=function(e){
+      e.preventDefault(); var win=window.open('', '_blank');
+      A.api('scanMedia',{token:S.token, fileId:a.dataset.viewScan}).then(function(m){ var u=URL.createObjectURL(A.b64ToBlob(m.data, m.mime)); if(win) win.location.href=u; else location.href=u; })
+        .catch(function(err){ if(win) win.close(); alert(err.message); });
+    }; });
+    box.querySelectorAll('.rm').forEach(function(btn){
+      btn.onclick=function(){ A.api('theoryDeleteScan',{token:S.token, fileId:btn.dataset.fid}).then(function(r){ thScans=r.scans||[]; renderScans(); }).catch(function(e){ alert(e.message); }); };
+    });
+  }
+  $('th-file').onchange=function(e){
+    var files=Array.prototype.slice.call(e.target.files||[]); if(!files.length) return;
+    var prog=$('th-progress'), bar=$('th-bar'), lbl=$('th-proglbl'), total=files.length, done=0, page=thScans.length;
+    prog.classList.remove('hidden'); bar.style.width='0%'; bar.classList.remove('err');
+    function setBar(v,text){ bar.style.width=Math.max(2,Math.round(v*100))+'%'; lbl.textContent=text; }
+    (function next(){
+      if(!files.length){ setBar(1, total>1?('All '+total+' pages uploaded'):'Page uploaded'); setTimeout(function(){ prog.classList.add('hidden'); },1000); $('th-file').value=''; return; }
+      var f=files.shift(); page++; done++;
+      setBar((done-1)/total,'Preparing page '+done+' of '+total+'…');
+      compressImage(f, function(dataUrl){
+        setBar((done-0.5)/total,'Uploading page '+done+' of '+total+'…'); bar.classList.add('busy');
+        A.api('theoryUpload',{token:S.token, page:page, image:dataUrl}).then(function(r){
+          bar.classList.remove('busy'); thScans=r.scans||[]; renderScans(); setBar(done/total,'Saved page '+done+' of '+total); next();
+        }).catch(function(er){ bar.classList.remove('busy'); bar.classList.add('err'); lbl.textContent='Upload failed: '+er.message; $('th-file').value=''; });
+      });
+    })();
+  };
+  function compressImage(file, cb){
+    var img=new Image(), url=URL.createObjectURL(file);
+    img.onload=function(){
+      var max=1600, w=img.width, h=img.height;
+      if(w>max||h>max){ if(w>h){ h=Math.round(h*max/w); w=max; } else { w=Math.round(w*max/h); h=max; } }
+      var cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url); cb(cv.toDataURL('image/jpeg',0.75));
+    };
+    img.onerror=function(){ URL.revokeObjectURL(url); var rd=new FileReader(); rd.onload=function(){ cb(rd.result); }; rd.readAsDataURL(file); };
+    img.src=url;
+  }
+  $('th-submit').onclick=function(){
+    var uploadOn = !!(S.theory && S.theory.upload_enabled===true);
+    if(uploadOn && !thScans.length && !confirm('You have not uploaded any pages. Submit anyway?')) return;
+    if(confirm('Submit Section B now? You cannot add pages afterwards.')) doTheorySubmit(false);
+  };
+  function doTheorySubmit(auto){
+    if(theorySubmitting) return; theorySubmitting=true;
+    if(thTick) clearInterval(thTick);
+    var wait = auto ? burstDelay() : 0;
+    $('th-timer').textContent='Submitting…';
+    setTimeout(function attempt(){
+      A.api('theorySubmit',{token:S.token, auto:!!auto}).then(function(){ showFinal('theory'); })
+        .catch(function(e){ if(auto){ setTimeout(attempt,4000); return; } theorySubmitting=false; alert('Submit failed: '+e.message); });
+    }, wait);
+  }
+
+  /* ---------- 10. done: score + finish sending the recording ---------- */
+  function showFinal(context){
+    var endingPhase = phase;
+    phase='done';
+    if(thTick) clearInterval(thTick); if(syncTimer){ clearTimeout(syncTimer); syncTimer=null; }
+    $('done-title').textContent='Examination complete';
+    var box=$('done-score'), msg=$('done-msg'), fl=$('done-flush');
+    box.classList.add('hidden'); msg.textContent='Recording your submission…';
+    hideCamBlock(); show('done');
+    if(S.student) document.getElementById('b-more').classList.remove('hidden');
+    A.api('mcqScore',{token:S.token}).then(function(r){
+      if(r && r.reveal && r.score!=null){ box.textContent='Section A: '+r.score+' / '+r.max_score; box.classList.remove('hidden'); }
+      msg.textContent = context==='theory'
+        ? 'Your Section B pages have been received and will be marked. Final results are released by the examinations office.'
+        : 'Your examination has been recorded. Results are released by the examinations office.';
+    }).catch(function(){ msg.textContent='Your examination has been recorded.'; });
+
+    if(!needCamera()){ return; }
+    // Close the last recording segment, stop the camera, then send what is left.
+    P.logEvent('exam_finished', endingPhase);
+    P.stopRecording().then(function(){
+      sync({});                     // last camera events
+      P.stopCamera(); P.hideFrame();
+      fl.classList.remove('hidden');
+      var guard=function(e){ e.preventDefault(); e.returnValue=''; };
+      window.addEventListener('beforeunload', guard);
+      P.flush(function(n){
+        fl.textContent = n ? ('Sending your exam recording… '+n+' part'+(n>1?'s':'')+' left. Keep this page open and stay online.') : '';
+      }, 10*60000).then(function(left){
+        if(!left){ window.removeEventListener('beforeunload', guard); fl.textContent='Your exam recording has been saved. You may now close this window.'; }
+        else fl.textContent='Part of your recording is still being sent. Keep this page open with the internet on — it will finish by itself.';
+      });
+    });
+  }
+
+  function printAnswerSheet(){
+    if(!(S.theory && S.theory.sheet_enabled===true)) return;
+    var p=(S.theory&&S.theory.profile)||{}, title=(S.theory&&S.theory.exam_title)||'KIU Examination';
+    var lines=(S.theory.questions||[]).map(function(q){
+      if(Number(q.max_marks)===0) return '<div class="q" style="border-bottom:1px solid #c9a227;padding-bottom:8px"><b>Instructions:</b> '+esc(q.prompt)+'</div>';
+      return '<div class="q"><b>Question '+esc(q.number)+'.</b> '+esc(q.prompt)+' <i>('+q.max_marks+' marks)</i><div class="ans"></div></div>';
+    }).join('');
+    var w=window.open('','_blank');
+    if(!w){ alert('Allow pop-ups for this site to print the answer sheet.'); return; }
+    var logo=new URL('assets/logo.png', location.href).href;
+    w.document.write('<html><head><title>KIU Answer Sheet</title><style>body{font-family:"Times New Roman",Times,serif;margin:24px;color:#10231a}'+
+      '.hd{border-bottom:3px solid #c9a227;padding-bottom:10px;margin-bottom:14px;text-align:center}.hd img{height:70px}'+
+      '.meta{margin:10px 0;font-size:15px}.meta b{display:inline-block;min-width:170px}.q{margin:14px 0;font-size:15px}'+
+      '.ans{border:1px solid #999;height:160px;margin-top:6px;border-radius:4px}@media print{.q{page-break-inside:avoid}}</style></head><body>'+
+      '<div class="hd"><img src="'+logo+'" alt="KIU"><div><b>'+esc(title)+'</b> — Section B answer sheet</div></div>'+
+      '<div class="meta"><div><b>Name:</b> '+esc(p.full_name||'')+'</div><div><b>Registration no.:</b> '+esc(p.exam_taker_id||'')+'</div>'+
+      '<div><b>Course:</b> '+esc(p.course||'')+'</div><div><b>Signature:</b> ______________________</div></div>'+
+      (lines||'<div class="ans" style="height:600px"></div>')+
+      '<script>window.onload=function(){setTimeout(function(){window.print();},300);}<\/script></body></html>');
+    w.document.close();
+  }
+
+  // Warn before leaving while a paper is open.
+  window.addEventListener('beforeunload', function(e){ if(phase==='mcq'||phase==='theory'){ e.preventDefault(); e.returnValue=''; } });
+})();
+</script>
+<footer class="site-foot">ALL RIGHTS RESERVED (2026): DESIGNED AND DEVELOPED BY <b>DR. MICHAEL ADELANI ADEWUSI</b> FOR KAMPALA INTERNATIONAL UNIVERSITY</footer>
+</body>
+</html>

@@ -1,0 +1,51 @@
+# KIU CBT on Cloudflare: one Worker (website + /api), one Durable Object (the exam engine, with its own SQLite
+# database) and one R2 bucket (photos, recordings, Section B pages). See DEPLOY.md.
+name = "kiu-cbt"
+main = "src/index.js"
+compatibility_date = "2025-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+html_handling = "none"
+
+[[durable_objects.bindings]]
+name = "ENGINE"
+class_name = "CbtEngine"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["CbtEngine"]
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "kiu-cbt-media"
+
+[vars]
+TIME_ZONE = "Africa/Kampala"     # how dates and times are written in messages and exports
+LOCATION_HINT = "afr"            # keep the engine close to Uganda
+MAIL_FROM = ""                   # Email Service sender, e.g. "exams@portals.com.ng" (see DEPLOY.md → Email)
+MAIL_NAME = "KIU Examinations Office"
+
+# Cloudflare Email Service (Exam links → Email exam details). Uncomment once the sending domain is set up.
+# [[send_email]]
+# name = "EMAIL"
+
+[observability]
+enabled = true
+
+# A separate test installation: npx wrangler deploy --env test
+[env.test]
+name = "kiu-cbt-test"
+[[env.test.durable_objects.bindings]]
+name = "ENGINE"
+class_name = "CbtEngine"
+[[env.test.r2_buckets]]
+binding = "MEDIA"
+bucket_name = "kiu-cbt-media-test"
+[env.test.vars]
+TIME_ZONE = "Africa/Kampala"
+LOCATION_HINT = "afr"
+MAIL_FROM = ""
+MAIL_NAME = "KIU Examinations Office (test)"

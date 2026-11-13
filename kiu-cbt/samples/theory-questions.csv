@@ -1,0 +1,3 @@
+theory_id,number,prompt,model_answer,max_marks
+TH001,1,"Explain the difference between an array and a linked list. Give one situation where each is the better choice.","Array: contiguous, O(1) index access, fixed/costly resize. Linked list: nodes with pointers, O(1) insert/delete at known position, O(n) access. Array for random access; linked list for frequent insertions.",10
+TH002,2,"Trace merge sort on the list 38, 27, 43, 3, 9, 82, 10 and state its time complexity.","Correct split/merge steps; final 3 9 10 27 38 43 82; O(n log n) in all cases, O(n) extra space.",7.5

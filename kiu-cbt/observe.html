@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KIU CBT — Observer</title>
+<link rel="icon" href="assets/mark.png">
+<script src="assets/protect.js"></script>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="topnav">
+  <img class="nav-logo" src="assets/logo.png" alt="KIU">
+  <span class="brand">CBT observer</span>
+  <button class="tab active" data-otab="overview">Overview</button>
+  <button class="tab" data-otab="online">Online now</button>
+  <button class="tab" data-otab="candidates">All students</button>
+  <button class="tab" data-otab="lecturers">Lecturers</button>
+  <button class="tab" data-otab="uploads">Exam uploads</button>
+  <button class="tab" data-otab="courses">Programmes &amp; courses</button>
+  <span class="right"><span class="badge">Read-only</span></span>
+</div>
+<div class="container">
+  <div id="obad" class="hidden"><div class="card"><h1>This link does not work</h1><p class="hint">The observer link is incomplete or has been revoked. Ask the examinations office for a new one.</p></div></div>
+  <div id="obody" class="hidden">
+    <h1 id="otitle">Live observation</h1>
+    <p class="hint">Refreshes automatically · updated <span id="ots">—</span></p>
+
+    <div class="opage" id="op-overview">
+      <div class="stat-grid" id="o-stats"></div>
+      <div class="card" style="margin-top:16px"><h2>Lecturers at a glance</h2>
+        <div style="overflow-x:auto"><table id="o-lsum"><thead><tr><th>Lecturer</th><th>Department</th><th>Students</th><th>Online now</th><th>Writing</th><th>Submitted</th><th>Courses</th><th>Questions</th></tr></thead><tbody></tbody></table></div></div>
+    </div>
+
+    <div class="opage hidden" id="op-online">
+      <div class="card">
+        <div class="toolbar" style="justify-content:space-between"><h2 style="margin:0"><span class="online-dot"></span>Online now — attempting the examination</h2>
+          <select id="on-lect" class="panel-input" style="width:auto"><option value="">All lecturers</option></select></div>
+        <div style="overflow-x:auto;margin-top:12px"><table id="o-online"><thead><tr>
+          <th>Name</th><th>Reg. no.</th><th>Lecturer</th><th>Programme</th><th>Course</th><th>Status</th><th>Answered</th><th>Camera</th><th>Left window</th><th>Last seen</th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <div class="opage hidden" id="op-candidates">
+      <div class="card">
+        <div class="toolbar" style="justify-content:space-between"><h2 style="margin:0">All students</h2>
+          <div class="toolbar">
+            <input id="o-q" class="panel-input" placeholder="Search name or reg. no.">
+            <select id="o-lect" class="panel-input"><option value="">All lecturers</option></select>
+            <select id="o-course" class="panel-input"><option value="">All courses</option></select>
+            <select id="o-show" class="panel-input"><option value="all">Everyone</option><option value="online">Online now</option><option value="writing">Attempting now</option><option value="submitted">Submitted</option><option value="notin">Not signed in</option></select>
+            <button class="btn small gold" id="o-dl">Download list (CSV)</button>
+          </div></div>
+        <div style="overflow-x:auto;margin-top:12px"><table id="o-tbl"><thead><tr>
+          <th>Name</th><th>Reg. no.</th><th>Lecturer</th><th>Programme</th><th>Course</th><th>Status</th><th>Answered</th><th class="sc">Section A</th><th class="sc">Section B</th><th class="sc">Total</th><th>Online</th><th>Camera</th><th>Left window</th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <div class="opage hidden" id="op-lecturers">
+      <div class="card"><h2>Lecturers</h2>
+        <div style="overflow-x:auto"><table id="o-ltbl"><thead><tr><th>Lecturer</th><th>Username</th><th>Department</th><th>Status</th><th>Programmes</th><th>Courses</th><th>Questions</th><th>Students</th><th>Online now</th><th>Writing</th><th>Submitted</th><th>Last sign-in</th></tr></thead><tbody></tbody></table></div></div>
+    </div>
+
+    <div class="opage hidden" id="op-uploads">
+      <div class="stat-grid" id="eu-stats"></div>
+      <div class="card" style="margin-top:16px">
+        <div class="toolbar" style="justify-content:space-between"><h2 style="margin:0">Exam uploads by lecturer, programme and course unit</h2>
+          <div class="toolbar"><select id="eu-lect" class="panel-input"><option value="">All lecturers</option></select>
+            <select id="eu-prog" class="panel-input"><option value="">All programmes</option></select>
+            <select id="eu-status" class="panel-input"><option value="">Any status</option><option value="uploaded">Uploaded</option><option value="covered">Uploaded by co-lecturer</option><option value="pending">Not uploaded</option><option value="no_lecturer">No lecturer assigned</option><option value="no_course">No course set up</option></select>
+            <button class="btn small gold" id="eu-dl">Download (CSV)</button></div></div>
+        <div style="overflow-x:auto;margin-top:12px"><table id="eu-tbl"><thead><tr><th>Lecturer</th><th>Programme</th><th>Course unit</th><th>Status</th><th>Questions</th><th>Marks</th><th>Students</th><th>Students with a paper</th><th>Last upload</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <div class="opage hidden" id="op-courses">
+      <div class="card"><h2>Programmes</h2>
+        <div style="overflow-x:auto"><table id="o-ptbl"><thead><tr><th>Programme</th><th>Course units</th><th>Units with questions</th><th>Lecturers</th></tr></thead><tbody></tbody></table></div></div>
+      <div class="card"><h2>Courses</h2>
+        <div style="overflow-x:auto"><table id="o-ctbl"><thead><tr><th>Code</th><th>Title</th><th>Programme</th><th>Lecturer(s)</th><th>Students</th><th>Questions</th></tr></thead><tbody></tbody></table></div></div>
+    </div>
+  </div>
+</div>
+
+<footer class="site-foot">ALL RIGHTS RESERVED (2026): DESIGNED AND DEVELOPED BY <b>DR. MICHAEL ADELANI ADEWUSI</b> FOR KAMPALA INTERNATIONAL UNIVERSITY</footer>
+
+<script src="config.js"></script>
+<script src="assets/common.js"></script>
+<script>
+(function(){
+  var A=window.KIU;
+  if(!A){ document.body.innerHTML='<p style="font-family:Times New Roman,serif;padding:40px;color:#fff">A required file (assets/common.js) did not load. Refresh the page.</p>'; return; }
+  // The link carries its key after '#', so it is never sent to the web server or kept in its logs.
+  var esc=A.esc, token=(new URLSearchParams(location.hash.slice(1)).get('t'))||new URLSearchParams(location.search).get('t')||'';
+  if(token && /[?&]t=/.test(location.search)) try{ history.replaceState(null,'',location.pathname+'#t='+token); }catch(e){}
+  var $=function(id){ return document.getElementById(id); };
+  if(!A.configured() || !token){ $('obad').classList.remove('hidden'); return; }
+  var REFRESH=(A.CFG.MONITOR_REFRESH_SECONDS||15)*1000;
+
+  document.querySelectorAll('[data-otab]').forEach(function(b){ b.onclick=function(){
+    document.querySelectorAll('[data-otab]').forEach(function(x){ x.classList.toggle('active', x===b); });
+    document.querySelectorAll('.opage').forEach(function(p){ p.classList.add('hidden'); });
+    $('op-'+b.dataset.otab).classList.remove('hidden');
+  }; });
+
+  function statCard(n,l,alert){ return '<div class="stat'+(alert?' alert':'')+'"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>'; }
+  function pill(t,c){ return '<span class="pill '+c+'">'+esc(t)+'</span>'; }
+  function statusText(c){
+    if(c.theory_step==='theory_submitted') return ['Completed (A+B)','sub'];
+    if(c.theory_step==='theory') return c.online?['Writing Section B','mid']:['Away (Section B)','left'];
+    if(c.step==='submitted') return ['Section A submitted','sub'];
+    if(c.step==='exam') return c.online?['Writing Section A','mid']:['Away (Section A)','left'];
+    var ready={instructions:'Reading instructions',photo:'Taking photo',confirm:'Confirming details',exam_info:'Ready to start'};
+    if(ready[c.step]) return c.online?[ready[c.step],'on']:['Away','left'];
+    return ['Not signed in','off'];
+  }
+  function camCell(c){ return !c.cam_status?'\u2014':(c.cam_status==='on'?pill('On','on'):c.cam_status==='not_required'?'\u2014':pill('Off','bad'))+(c.cam_events?' '+pill(String(c.cam_events),'mid'):''); }
+  function lectName(c){ return c.owner_name||'No lecturer assigned'; }
+  function match(c, show){
+    var writing=c.online && (c.step==='exam'||c.theory_step==='theory');
+    if(show==='online') return !!c.online;
+    if(show==='writing') return writing;
+    if(show==='submitted') return c.step==='submitted';
+    if(show==='notin') return !c.step || c.step==='password';
+    return true;
+  }
+  function byLect(c, v){
+    if(!v) return true; var l=c.lects||[];
+    if(v==='__none') return !c.owner && !l.length;
+    v=v.toLowerCase(); return String(c.owner||'').toLowerCase()===v || l.indexOf(v)>=0;
+  }
+  function fill(id, items){
+    var el=$(id), cur=el.value, first=el.options[0].outerHTML;
+    el.innerHTML=first+items.map(function(o){ return '<option value="'+esc(o.v)+'">'+esc(o.t)+'</option>'; }).join('');
+    if([].some.call(el.options,function(o){ return o.value===cur; })) el.value=cur;
+  }
+
+  var last=null;
+  function load(){
+    A.api('observeData',{token:token}).then(function(r){
+      last=r;
+      document.querySelectorAll('#o-tbl .sc').forEach(function(th){ th.style.display=r.show_scores?'':'none'; });
+      $('o-dl').textContent=r.show_scores?'Download scores (CSV)':'Download list (CSV)';
+      $('obody').classList.remove('hidden'); $('obad').classList.add('hidden');
+      if(r.title) $('otitle').textContent=r.title;
+      var s=r.stats;
+      $('o-stats').innerHTML=(s.students!=null&&s.students!==s.total?statCard(s.students,'Students')+statCard(s.total,'Exam entries (student × course unit)'):statCard(s.total,'Registered students'))+statCard(s.logged_in,'Signed in')+statCard(s.online,'Online now')+
+        statCard(s.in_progress,'Writing Section A')+statCard(s.submitted,'Section A submitted')+statCard(s.theory||0,'Writing Section B')+
+        statCard(s.completed||0,'Completed')+statCard(s.left||0,'Left mid-way',s.left>0)+statCard(s.lecturers||0,'Lecturers')+
+        statCard((r.courses||[]).length,'Courses')+statCard((r.programmes||[]).length,'Programmes');
+      var lects=(r.lecturers||[]).map(function(l){ return {v:l.username,t:l.full_name}; });
+      var lsel=[{v:'__none',t:'No lecturer assigned'}].concat(lects);
+      fill('o-lect', lsel); fill('on-lect', lsel);
+      var cs={}; r.rows.forEach(function(c){ if(c.course) cs[c.course]=1; });
+      fill('o-course', Object.keys(cs).sort().map(function(c){ return {v:c,t:c}; }));
+      $('o-lsum').querySelector('tbody').innerHTML=(r.lecturers||[]).map(function(l){
+        return '<tr><td><b>'+esc(l.full_name)+'</b></td><td>'+esc(l.department||'\u2014')+'</td><td>'+l.students+'</td><td>'+(l.online?pill(String(l.online),'on'):'0')+'</td><td>'+(l.writing?pill(String(l.writing),'mid'):'0')+'</td><td>'+l.submitted+'</td><td>'+l.courses+'</td><td>'+l.questions+'</td></tr>';
+      }).join('')||'<tr><td colspan="8" class="hint">No lecturers yet.</td></tr>';
+      $('o-ltbl').querySelector('tbody').innerHTML=(r.lecturers||[]).map(function(l){
+        return '<tr><td><b>'+esc(l.full_name)+'</b></td><td>'+esc(l.username)+'</td><td>'+esc(l.department||'\u2014')+'</td><td>'+(l.active?pill('Active','on'):pill('Disabled','off'))+'</td>'+
+          '<td>'+l.programmes+'</td><td>'+l.courses+'</td><td>'+l.questions+'</td><td>'+l.students+'</td><td>'+(l.online?pill(String(l.online),'on'):'0')+'</td><td>'+(l.writing?pill(String(l.writing),'mid'):'0')+'</td><td>'+l.submitted+'</td><td>'+esc(A.fmtTime(l.last_login)||'never')+'</td></tr>';
+      }).join('')||'<tr><td colspan="12" class="hint">No lecturers yet.</td></tr>';
+      $('o-ptbl').querySelector('tbody').innerHTML=(r.programmes||[]).map(function(p){ return '<tr><td><b>'+esc(p.programme)+'</b></td><td>'+(p.units||0)+'</td><td>'+(p.units_ready?pill(p.units_ready+' / '+p.units,p.units_ready===p.units?'on':'mid'):pill('0 / '+(p.units||0),'bad'))+'</td><td>'+(p.lecturers||0)+'</td></tr>'; }).join('')||'<tr><td colspan="4" class="hint">No programmes yet.</td></tr>';
+      $('o-ctbl').querySelector('tbody').innerHTML=(r.courses||[]).map(function(c){ return '<tr><td><b>'+esc(c.course_code)+'</b></td><td>'+esc(c.course_title||'\u2014')+'</td><td>'+esc(c.programme||'\u2014')+'</td><td>'+esc(c.owner_name)+'</td><td>'+c.students+'</td><td>'+c.questions+'</td></tr>'; }).join('')||'<tr><td colspan="6" class="hint">No courses yet.</td></tr>';
+      var U=r.uploads||{summary:{},rows:[]}, us=U.summary;
+      $('eu-stats').innerHTML=statCard(us.units||0,'Course units (programme × code)')+statCard(us.units_uploaded||0,'Units with questions')+statCard(us.units_pending||0,'Units waiting for questions',us.units_pending>0)+
+        statCard(us.units_no_lecturer||0,'Units with no lecturer',us.units_no_lecturer>0)+statCard(us.lecturers||0,'Lecturers')+
+        statCard(us.lecturers_complete||0,'Lecturers fully covered')+statCard(us.lecturers_none||0,'Lecturers who uploaded nothing',us.lecturers_none>0);
+      var ul={}, up={}; U.rows.forEach(function(x){ ul[x.owner]=x.owner_name; if(x.programme) up[x.programme]=1; });
+      fill('eu-lect', Object.keys(ul).sort(function(a,b){ return ul[a].localeCompare(ul[b]); }).map(function(k){ return {v:k,t:ul[k]}; }));
+      fill('eu-prog', Object.keys(up).sort().map(function(p){ return {v:p,t:p}; }));
+      draw(); drawUploads();
+      $('ots').textContent=new Date().toLocaleTimeString();
+    }).catch(function(){
+      if(!last){ $('obad').classList.remove('hidden'); $('obody').classList.add('hidden'); }
+    });
+  }
+  function draw(){
+    if(!last) return;
+    var q=$('o-q').value.trim().toLowerCase(), lect=$('o-lect').value, course=$('o-course').value, show=$('o-show').value;
+    var rows=last.rows.filter(function(c){
+      if(!byLect(c, lect) || !match(c, show)) return false;
+      if(course && c.course!==course) return false;
+      return !q || (String(c.full_name)+' '+c.exam_taker_id).toLowerCase().indexOf(q)>=0;
+    });
+    $('o-tbl').querySelector('tbody').innerHTML=rows.map(function(c){
+      var st=statusText(c);
+      return '<tr><td>'+(c.online?'<span class="online-dot"></span>':'')+'<b>'+esc(c.full_name)+'</b></td><td class="nowrap">'+esc(c.exam_taker_id)+'</td><td>'+esc(lectName(c))+'</td><td>'+esc(c.programme||'\u2014')+'</td><td>'+esc(c.course||'\u2014')+'</td><td>'+pill(st[0],st[1])+'</td>'+
+        '<td>'+(c.answered||0)+' / '+(c.total_q||0)+'</td>'+
+        (last.show_scores?'<td><b>'+c.score+'</b> / '+c.max_score+'</td><td>'+(c.theory_total===''?'<span class="hint">\u2014</span>':'<b>'+c.theory_total+'</b>')+'</td><td><b>'+c.grand_total+'</b></td>':'')+
+        '<td>'+(c.online?pill('yes','on'):pill('no','off'))+'</td><td>'+camCell(c)+'</td><td>'+(c.focus_loss>0?pill(String(c.focus_loss),'mid'):'0')+'</td></tr>';
+    }).join('')||'<tr><td colspan="13" class="hint">No students match.</td></tr>';
+    var ol=$('on-lect').value;
+    var on=last.rows.filter(function(c){ return c.online && c.theory_step!=='theory_submitted' && (c.step!=='submitted'||c.theory_step==='theory') && byLect(c, ol); });
+    $('o-online').querySelector('tbody').innerHTML=on.map(function(c){
+      var st=statusText(c);
+      return '<tr><td><span class="online-dot"></span><b>'+esc(c.full_name)+'</b></td><td>'+esc(c.exam_taker_id)+'</td><td>'+esc(lectName(c))+'</td><td>'+esc(c.programme||'\u2014')+'</td><td>'+esc(c.course||'\u2014')+'</td>'+
+        '<td>'+pill(st[0],st[1])+'</td><td>'+(c.answered||0)+' / '+(c.total_q||0)+'</td><td>'+camCell(c)+'</td><td>'+(c.focus_loss>0?pill(String(c.focus_loss),'mid'):'0')+'</td><td>'+esc(A.ago(c.last_seen))+'</td></tr>';
+    }).join('')||'<tr><td colspan="10" class="hint">Nobody is online right now.</td></tr>';
+  }
+  function upPill(r){
+    if(r.status==='uploaded') return pill(r.owner?'Uploaded':'Uploaded by exams office','on')+(r.registered?'':' '+pill('course not registered','mid'));
+    if(r.status==='covered') return pill('Uploaded by co-lecturer','sub');
+    if(r.status==='pending') return pill('Not uploaded','bad');
+    if(r.status==='no_lecturer') return pill('No lecturer assigned','left');
+    return pill('No course set up','off');
+  }
+  function euRows(){
+    if(!last||!last.uploads) return [];
+    var l=$('eu-lect').value, p=$('eu-prog').value, st=$('eu-status').value;
+    return last.uploads.rows.filter(function(x){ return (!l||x.owner===l) && (!p||x.programme===p) && (!st||x.status===st); });
+  }
+  function drawUploads(){
+    $('eu-tbl').querySelector('tbody').innerHTML=euRows().map(function(x){
+      return '<tr><td><b>'+esc(x.owner_name)+'</b>'+(x.department?'<br><span class="hint">'+esc(x.department)+'</span>':'')+'</td><td>'+esc(x.programme||'—')+'</td>'+
+        '<td>'+(x.course_code?'<b>'+esc(x.course_code)+'</b> '+esc(x.course_title||''):'<span class="hint">—</span>')+'</td><td>'+upPill(x)+'</td>'+
+        '<td>'+x.questions+'</td><td>'+x.marks+'</td><td>'+x.students+'</td><td>'+(x.students?x.students_ready+' / '+x.students:'—')+'</td><td>'+esc(A.fmtTime(x.last_upload)||'—')+'</td></tr>';
+    }).join('')||'<tr><td colspan="9" class="hint">Nothing to show yet.</td></tr>';
+  }
+  ['eu-lect','eu-prog','eu-status'].forEach(function(id){ $(id).onchange=drawUploads; });
+  $('eu-dl').onclick=function(){
+    A.download('kiu-cbt-exam-uploads-'+new Date().toISOString().slice(0,10)+'.csv', A.toCSV(['Lecturer','Department','Programme','Course Code','Course Title','Status','Questions','Marks','Students','Students With Paper','Last Upload'],
+      euRows().map(function(x){ return [x.owner_name,x.department,x.programme,x.course_code,x.course_title,{uploaded:'Uploaded',covered:'Uploaded by co-lecturer',pending:'Not uploaded',no_lecturer:'No lecturer assigned',no_course:'No course set up'}[x.status],x.questions,x.marks,x.students,x.students_ready,x.last_upload]; })));
+  };
+  ['o-q'].forEach(function(id){ $(id).oninput=draw; });
+  ['o-lect','o-course','o-show','on-lect'].forEach(function(id){ $(id).onchange=draw; });
+  $('o-dl').onclick=function(){
+    if(!last) return;
+    var sc=!!last.show_scores;
+    var head=['Registration No','Full Name','Lecturer','Programme','Course','Status','Answered','Questions'].concat(sc?['Section A','Section A Max','Section B','Total']:[]).concat(['Online','Camera','Camera Issues','Left Window','Signed In']);
+    A.download('kiu-cbt-observer-'+new Date().toISOString().slice(0,10)+'.csv', A.toCSV(head, last.rows.map(function(x){
+      return [x.exam_taker_id,x.full_name,lectName(x),x.programme,x.course,statusText(x)[0],x.answered,x.total_q].concat(sc?[x.score,x.max_score,x.theory_total,x.grand_total]:[])
+        .concat([x.online?'yes':'no',x.cam_status,x.cam_events,x.focus_loss,x.logged_in_at]);
+    })));
+  };
+  load(); setInterval(load, REFRESH);
+})();
+</script>
+</body>
+</html>

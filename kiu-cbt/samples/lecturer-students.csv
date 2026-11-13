@@ -1,0 +1,4 @@
+exam_taker_id,full_name,username,password,programme,course,year_of_study,exam_venue,email,phone
+2024-01-00201,Kato Ivan,,,BSc Computer Science,CSC 2201,Year 2,Online (remote),kato.ivan@example.com,256700000201
+2024-01-00202,Nabirye Joan,nabirye202,Exam@2026,BSc Computer Science,CSC 2201,Year 2,Online (remote),,256700000202
+2024-01-00203,Ssemanda Paul,,,BSc Information Technology,CSC 2201,Year 2,Main Campus ICT Lab 1,ssemanda@example.com,

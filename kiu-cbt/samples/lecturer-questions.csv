@@ -1,0 +1,5 @@
+question_id,area,question_text,option_a,option_b,option_c,option_d,correct_answer,marks,course
+,Stacks,"Which operation removes the top element of a stack?",Pop,Push,Peek,Enqueue,A,1,CSC 2201
+,Queues,"In a queue, elements are removed from the:",Front,Rear,Middle,Top,A,0.5,CSC 2201
+,Trees,"A binary tree node can have at most how many children?",2,1,3,Unlimited,A,1,CSC 2201
+,Complexity,"What is the time complexity of accessing an array element by index?",O(1),O(log n),O(n),O(n^2),A,2,CSC 2201

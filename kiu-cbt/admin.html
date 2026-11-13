@@ -1,0 +1,1917 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KIU CBT — Staff &amp; Lecturer Portal</title>
+<link rel="icon" href="assets/mark.png">
+<script src="assets/protect.js"></script>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="auth">
+  <div class="authcard">
+    <img class="crest" src="assets/logo.png" alt="Kampala International University">
+    <h1 style="text-align:center;font-size:28px" id="login-title">CBT staff sign in</h1>
+    <p class="hint" style="text-align:center;margin-top:0" id="login-sub">Exams office, administrators and lecturers</p>
+    <div id="bk-box" class="hidden"><label class="fld" for="bk-sel">Examination centre (backend)</label><select id="bk-sel" class="panel-input"></select></div>
+    <div id="login-err" class="error hidden"></div>
+    <label class="fld" for="lu">Username</label><input id="lu" class="panel-input" autocomplete="username">
+    <label class="fld" for="lp">Password</label><input id="lp" class="panel-input" type="password" autocomplete="current-password">
+    <button id="lb" class="btn" style="margin-top:20px">Sign in</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <div class="topnav">
+    <img class="nav-logo" src="assets/logo.png" alt="KIU">
+    <span class="brand">CBT</span>
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="monitor">Live monitor</button>
+    <button class="tab" data-tab="wall">Live proctoring</button>
+    <button class="tab adm hidden" data-tab="lecturers">Lecturers</button>
+    <button class="tab adm hidden" data-tab="uploads">Exam uploads</button>
+    <button class="tab" data-tab="students">Students</button>
+    <button class="tab lec hidden" data-tab="catalog">Programmes &amp; courses</button>
+    <button class="tab lec hidden" data-tab="questions">My questions</button>
+    <button class="tab lec hidden" data-tab="assign">Assign questions</button>
+    <button class="tab" data-tab="links">Exam links</button>
+    <button class="tab adm hidden" data-tab="upload">Uploads</button>
+    <button class="tab" data-tab="results">Results</button>
+    <button class="tab adm hidden" data-tab="marking">Theory marking</button>
+    <button class="tab" data-tab="timetable">Timetable</button>
+    <button class="tab adm hidden" data-tab="settings">Settings</button>
+    <button class="tab super hidden" data-tab="admins">Admins</button>
+    <button class="tab super hidden" data-tab="observers">Observer links</button>
+    <button class="tab" data-tab="account">My account</button>
+    <span class="right">
+      <span class="badge" id="role-badge"></span>
+      <span id="who" style="color:#cfeadb"></span>
+      <a href="#" id="logout">Sign out</a>
+    </span>
+  </div>
+  <div class="container">
+    <div id="pw-warn" class="error hidden" style="margin-top:0;margin-bottom:16px">You are still using the default password. Change it now under <b>My account</b>.</div>
+
+    <div id="t-dashboard" class="tabpage">
+      <h1>Dashboard</h1>
+      <div class="card"><h2 id="d-title">Examination</h2><p class="hint" id="d-meta"></p></div>
+      <div class="stat-grid" id="d-stats"></div>
+      <div class="stat-grid" id="d-counts" style="margin-top:12px"></div>
+      <div class="card" style="margin-top:16px">
+        <div class="flex" style="justify-content:space-between"><h2 style="margin:0"><span class="online-dot"></span>Online now — attempting the examination</h2><span class="hint">Updated <span id="d-ts">—</span></span></div>
+        <div style="overflow-x:auto;margin-top:10px"><table id="d-online"><thead><tr><th>Name</th><th>Reg. no.</th><th class="adm-col">Lecturer</th><th>Course</th><th>Status</th><th>Answered</th><th>Camera</th><th>Last seen</th><th></th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <div id="t-monitor" class="tabpage hidden">
+      <h1>Live monitor</h1>
+      <div class="stat-grid" id="m-stats"></div>
+      <div class="card" style="margin-top:16px">
+        <div class="flex" style="justify-content:space-between">
+          <h2 style="margin:0">Candidates</h2>
+          <div class="toolbar"><select id="m-show" class="panel-input"><option value="all">Everyone</option><option value="online">Online now</option><option value="writing">Attempting now (online)</option><option value="submitted">Submitted</option><option value="notin">Not signed in</option><option value="flagged">Integrity alerts</option></select>
+            <select id="m-lect" class="panel-input adm-only hidden"><option value="">All lecturers</option></select>
+            <input id="m-q" class="panel-input" style="width:220px" placeholder="Search name or reg. no."><span class="hint">Updated <span id="m-ts">—</span></span></div>
+        </div>
+        <div style="overflow-x:auto;margin-top:12px"><table id="m-tbl"><thead><tr>
+          <th>Name</th><th>Reg. no.</th><th class="adm-col">Lecturer</th><th>Course</th><th>Status</th><th>Answered</th><th>Online</th><th>Camera</th><th>Recording</th><th>Left window</th><th>Location</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <div id="t-wall" class="tabpage hidden">
+      <h1>Live proctoring</h1>
+      <p class="hint">The latest camera picture from every candidate, refreshed automatically. The small inset is the identity photo taken at sign-in. A red border means the camera is off or dark, or the candidate left the exam window. Click a candidate to watch recordings.</p>
+      <div class="card flex" style="justify-content:space-between">
+        <div class="flex">
+          <label class="fld" style="margin:0">Show</label>
+          <select id="w-filter" class="panel-input" style="width:auto"><option value="active">Writing now / online</option><option value="all">Everyone who signed in</option></select>
+          <select id="w-lect" class="panel-input adm-only hidden" style="width:auto"><option value="">All lecturers</option></select>
+          <label class="fld" style="margin:0"><input type="checkbox" id="w-alerts"> Alerts only</label>
+        </div>
+        <div class="flex"><button class="btn small ghost" id="w-prev">Previous</button><span id="w-page" class="hint"></span><button class="btn small ghost" id="w-next">Next</button><span class="hint">Updated <span id="w-ts">—</span></span></div>
+      </div>
+      <div class="wall" id="w-grid"></div>
+    </div>
+
+
+    <!-- ===== LECTURERS (exams office) ===== -->
+    <div id="t-lecturers" class="tabpage hidden">
+      <h1>Lecturers</h1>
+      <p class="hint">Create lecturer accounts, then each lecturer signs in at <b>lecturer.html</b> to manage their own programmes, courses, questions and students. Anything you change here overrides the lecturer.</p>
+      <div id="lc-msg"></div>
+      <div class="card toolbar" style="justify-content:space-between">
+        <div class="toolbar"><input id="lc-q" class="panel-input" placeholder="Search lecturers"><span class="hint">Updated <span id="lc-ts">—</span></span></div>
+        <button class="btn small gold" id="lc-add">Add lecturer</button>
+      </div>
+      <div class="card"><div style="overflow-x:auto"><table id="lc-tbl"><thead><tr>
+        <th>Lecturer</th><th>Username</th><th>Department</th><th>Status</th><th>Programmes</th><th>Courses</th><th>Questions</th><th>Students</th><th>Online now</th><th>Writing</th><th>Last sign-in</th><th></th>
+      </tr></thead><tbody></tbody></table></div></div>
+      <div id="lc-detail"></div>
+    </div>
+
+    <!-- ===== EXAM UPLOADS (exams office) ===== -->
+    <div id="t-uploads" class="tabpage hidden">
+      <h1>Exam uploads by lecturers</h1>
+      <p class="hint">One line per lecturer per programme and course unit. <b>Uploaded</b>: this lecturer has set questions. <b>Uploaded by co-lecturer</b>: another lecturer of the same unit has. <b>Not uploaded</b>: the unit still has no questions. <b>No lecturer assigned</b>: nobody is assigned — the exams office can upload its questions (Uploads tab, with a <code>course</code> column).</p>
+      <div class="stat-grid" id="eu-stats"></div>
+      <div class="card" style="margin-top:16px">
+        <div class="toolbar" style="justify-content:space-between">
+          <div class="toolbar">
+            <input id="eu-q" class="panel-input" placeholder="Search lecturer or course">
+            <select id="eu-lect" class="panel-input"><option value="">All lecturers</option></select>
+            <select id="eu-prog" class="panel-input"><option value="">All programmes</option></select>
+            <select id="eu-status" class="panel-input"><option value="">Any status</option><option value="uploaded">Uploaded</option><option value="covered">Uploaded by co-lecturer</option><option value="pending">Not uploaded</option><option value="no_lecturer">No lecturer assigned</option><option value="no_course">No course set up</option></select>
+          </div>
+          <div class="toolbar"><span class="hint">Updated <span id="eu-ts">—</span></span><button class="btn small gold" id="eu-dl">Download (CSV)</button></div>
+        </div>
+        <div style="overflow-x:auto;margin-top:12px"><table id="eu-tbl"><thead><tr>
+          <th>Lecturer</th><th>Programme</th><th>Course unit</th><th>Status</th><th>Questions</th><th>Marks</th><th>Students</th><th>Students with a paper</th><th>Last upload</th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ===== STUDENTS (lecturer: own · admin: all) ===== -->
+    <div id="t-students" class="tabpage hidden">
+      <h1 id="st-title">Students</h1>
+      <p class="hint" id="st-hint"></p>
+      <div id="st-msg"></div>
+      <div class="card">
+        <div class="toolbar" style="justify-content:space-between">
+          <div class="toolbar">
+            <input id="st-q" class="panel-input" placeholder="Search name, reg. no., username">
+            <select id="st-lect" class="panel-input adm-only hidden"><option value="">All lecturers</option><option value="__none">No lecturer assigned</option></select>
+            <select id="st-course" class="panel-input"><option value="">All courses</option></select>
+            <select id="st-show" class="panel-input"><option value="all">Everyone</option><option value="online">Online now</option><option value="writing">Attempting now</option><option value="submitted">Submitted</option><option value="notin">Not signed in</option></select>
+          </div>
+          <div class="toolbar"><button class="btn small gold" id="st-add">Add student</button><button class="btn small ghost" id="st-upload-open">Upload list</button></div>
+        </div>
+        <div class="toolbar" style="margin-top:12px">
+          <span class="hint"><span id="st-count">0</span> shown · <span id="st-selcount">0</span> selected</span>
+          <button class="btn small ghost" id="st-links">Send exam links to selected</button>
+          <button class="btn small danger" id="st-del">Remove selected</button>
+        </div>
+        <div id="st-upload" class="hidden" style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
+          <p class="hint">Columns: <code>exam_taker_id, full_name, username, password, programme, course, year_of_study, exam_venue, email, phone</code><span class="adm-only hidden">, <code>owner</code> (lecturer username)</span>. Only <code>exam_taker_id</code> (registration number) and <code>full_name</code> are required — a blank username uses the registration number and a blank password is generated. Existing students are updated. (.csv or .xlsx)</p>
+          <div class="toolbar"><input type="file" id="st-file" accept=".csv,.xlsx,.xls" class="panel-input"><button class="btn small" id="st-file-go">Upload students</button><a class="btn small ghost" href="samples/lecturer-students.csv" download>Sample file</a></div>
+        </div>
+        <div style="overflow-x:auto;margin-top:12px"><table id="st-tbl"><thead><tr>
+          <th><input type="checkbox" id="st-all" aria-label="Select all"></th><th>Name</th><th>Reg. no.</th><th>Username</th><th>Programme</th><th>Course</th><th class="adm-col">Lecturer</th><th>Paper</th><th>Status</th><th></th>
+        </tr></thead><tbody></tbody></table></div>
+      </div>
+      <div id="st-creds"></div>
+    </div>
+
+    <!-- ===== PROGRAMMES & COURSES (lecturer) ===== -->
+    <div id="t-catalog" class="tabpage hidden">
+      <h1>Programmes &amp; courses</h1>
+      <p class="hint">Add the programmes and courses you examine. Students and questions are linked to a course by its code.</p>
+      <div id="cg-msg"></div>
+      <div class="grid2" style="gap:18px">
+        <div class="card">
+          <h2>Programmes</h2>
+          <div class="toolbar"><input id="cg-prog" class="panel-input" placeholder="e.g. BSc Computer Science" style="flex:1"><button class="btn small" id="cg-prog-add">Add programme</button></div>
+          <div style="overflow-x:auto;margin-top:12px"><table id="cg-prog-tbl"><thead><tr><th>Programme</th><th>Courses</th><th></th></tr></thead><tbody></tbody></table></div>
+        </div>
+        <div class="card">
+          <h2 id="cg-course-h">Add a course</h2>
+          <input type="hidden" id="cg-old">
+          <div class="grid2">
+            <div><label class="fld" for="cg-code">Course code</label><input id="cg-code" class="panel-input" placeholder="e.g. CSC 2201"></div>
+            <div><label class="fld" for="cg-ctitle">Course title</label><input id="cg-ctitle" class="panel-input" placeholder="e.g. Data Structures"></div>
+          </div>
+          <label class="fld" for="cg-cprog">Programme</label><select id="cg-cprog" class="panel-input"><option value="">— none —</option></select>
+          <div class="toolbar" style="margin-top:12px"><button class="btn small" id="cg-course-save">Add course</button><button class="btn small ghost hidden" id="cg-course-cancel">Cancel edit</button></div>
+        </div>
+      </div>
+      <div class="card"><h2>Courses</h2><div style="overflow-x:auto"><table id="cg-course-tbl"><thead><tr><th>Code</th><th>Title</th><th>Programme</th><th>Students</th><th>Questions</th><th></th></tr></thead><tbody></tbody></table></div></div>
+    </div>
+
+    <!-- ===== MY QUESTIONS (lecturer) ===== -->
+    <div id="t-questions" class="tabpage hidden">
+      <h1>My questions</h1>
+      <p class="hint">Only you (and the exams office) can see or change these questions. Each question belongs to one of your courses.</p>
+      <div id="q-msg"></div>
+      <div class="card">
+        <h2 id="q-form-h">Add a question</h2>
+        <input type="hidden" id="q-id">
+        <div class="grid3">
+          <div><label class="fld" for="q-course">Course</label><select id="q-course" class="panel-input"></select></div>
+          <div><label class="fld" for="q-area">Topic / area</label><input id="q-area" class="panel-input" placeholder="e.g. Sorting"></div>
+          <div><label class="fld" for="q-marks">Marks</label><input id="q-marks" class="panel-input" type="number" min="0.5" step="0.5" value="1"></div>
+        </div>
+        <label class="fld" for="q-text">Question</label><textarea id="q-text" class="panel-input" rows="3"></textarea>
+        <div class="grid2">
+          <div><label class="fld" for="q-a">Option A</label><input id="q-a" class="panel-input"></div>
+          <div><label class="fld" for="q-b">Option B</label><input id="q-b" class="panel-input"></div>
+          <div><label class="fld" for="q-c">Option C</label><input id="q-c" class="panel-input"></div>
+          <div><label class="fld" for="q-d">Option D</label><input id="q-d" class="panel-input"></div>
+        </div>
+        <label class="fld" for="q-correct">Correct answer</label>
+        <select id="q-correct" class="panel-input" style="width:auto"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+        <div class="toolbar" style="margin-top:14px"><button class="btn small" id="q-save">Save question</button><button class="btn small ghost hidden" id="q-cancel">Cancel edit</button></div>
+      </div>
+      <div class="card">
+        <h2>Upload many questions</h2>
+        <p class="hint">Columns: <code>question_id, area, question_text, option_a, option_b, option_c, option_d, correct_answer, marks, course</code>. <code>question_id</code> may be left blank. Rows without a <code>course</code> go to the course chosen here. (.csv or .xlsx)</p>
+        <p class="hint"><b>Write every question with the correct answer in <code>option_a</code></b> and put <code>A</code> (or nothing) in <code>correct_answer</code>. On upload the system moves each correct answer to an even spread of A, B, C and D and records where it went; download the answer key afterwards to check. Questions whose options refer to each other (&ldquo;all of the above&rdquo;, &ldquo;both A and B&rdquo;) keep your order. <code>marks</code> may be a half, e.g. <code>0.5</code> or <code>1.5</code>.</p>
+        <div class="toolbar"><select id="q-up-course" class="panel-input"></select><input type="file" id="q-file" accept=".csv,.xlsx,.xls" class="panel-input"><button class="btn small" id="q-file-go">Upload questions</button><a class="btn small ghost" href="samples/lecturer-questions.csv" download>Sample file</a></div>
+      </div>
+      <div class="card">
+        <div class="toolbar" style="justify-content:space-between"><h2 style="margin:0">Question bank</h2>
+          <div class="toolbar"><select id="q-filter" class="panel-input"><option value="">All my courses</option></select><button class="btn small danger" id="q-del">Delete selected</button></div></div>
+        <div style="overflow-x:auto;margin-top:12px"><table id="q-tbl"><thead><tr><th><input type="checkbox" id="q-all" aria-label="Select all"></th><th>ID</th><th>Course</th><th>Topic</th><th>Question</th><th>Answer</th><th>Marks</th><th></th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ===== ASSIGN (lecturer) ===== -->
+    <div id="t-assign" class="tabpage hidden">
+      <h1>Assign questions to students</h1>
+      <p class="hint">A student with no assignment automatically gets <b>all your questions for their course</b>. Use this page to give chosen students a specific set instead.</p>
+      <div id="as-msg"></div>
+      <div class="card toolbar"><label class="fld" style="margin:0" for="as-course">Course</label><select id="as-course" class="panel-input"><option value="">All my courses</option></select></div>
+      <div class="grid2" style="gap:18px">
+        <div class="card"><div class="toolbar" style="justify-content:space-between"><h2 style="margin:0">Students</h2><label class="fld" style="margin:0"><input type="checkbox" id="as-sall"> all</label></div><div class="chk-list" id="as-students" style="margin-top:10px"></div></div>
+        <div class="card"><div class="toolbar" style="justify-content:space-between"><h2 style="margin:0">Questions</h2><label class="fld" style="margin:0"><input type="checkbox" id="as-qall"> all</label></div><div class="chk-list" id="as-questions" style="margin-top:10px"></div></div>
+      </div>
+      <div class="card toolbar"><button class="btn small gold" id="as-go">Give the selected students exactly these questions</button><button class="btn small ghost" id="as-clear">Clear assignment for the selected students</button></div>
+    </div>
+
+    <!-- ===== EXAM LINKS ===== -->
+    <div id="t-links" class="tabpage hidden">
+      <h1>Exam links</h1>
+      <p class="hint">Each student gets a personal link that opens the examination with their username filled in. Passwords are stored encrypted, so a password can only be shown right after the student is added or the password is reset — use <b>New password</b> to issue one with the link.</p>
+      <div id="ln-msg"></div>
+      <div class="card toolbar" style="justify-content:space-between">
+        <div class="toolbar"><select id="ln-course" class="panel-input"><option value="">All courses</option></select><select id="ln-lect" class="panel-input adm-only hidden"><option value="">All lecturers</option></select><input id="ln-q" class="panel-input" placeholder="Search"></div>
+        <div class="toolbar"><button class="btn small ghost" id="ln-copyall">Copy all messages</button><button class="btn small ghost" id="ln-csv">Download links (CSV)</button></div>
+      </div>
+      <div class="card"><label class="fld" style="margin-top:0">General examination link</label><div class="linkbox" id="ln-general"></div></div>
+      <div class="card" id="lm-card" style="border-left:6px solid var(--gold)">
+        <h2>Email exam details to the students listed</h2>
+        <p class="hint">One email per student: their timetable for every course unit, their exam link and username. The address always comes from the student's record. Use the filters above to choose who receives it.</p>
+        <p class="hint" id="lm-status">Checking email…</p>
+        <label class="fld" for="lm-subject">Subject</label><input id="lm-subject" class="panel-input" maxlength="200" value="KIU online examinations: your login details and timetable">
+        <label class="fld"><input id="lm-newpw" type="checkbox"> Give each student a <b>new password</b> and put it in their email (their old password stops working)</label>
+        <div class="toolbar" style="margin-top:10px"><input id="lm-test" class="panel-input" type="email" placeholder="your email address, for a test copy" style="max-width:300px"><button class="btn small ghost" id="lm-test-go">Send a test to me</button></div>
+        <div class="toolbar" style="margin-top:10px"><button class="btn small gold" id="lm-send" disabled>Email all</button><button class="btn small ghost" id="lm-merge">Download for mail merge (CSV)</button></div>
+        <div id="lm-msg"></div><div id="lm-out"></div>
+      </div>
+      <div id="ln-list"></div>
+    </div>
+
+    <div id="t-upload" class="tabpage hidden">
+      <h1>Uploads</h1>
+      <div id="u-msg"></div>
+      <div class="card"><h2>What is loaded</h2><div id="u-summary" class="hint">Loading…</div></div>
+      <div class="card" id="oc-card" style="border-left:6px solid var(--bad)">
+        <h2>Course units not in the system</h2>
+        <p class="hint">Uploads only accept course units that are in the system (<b>Programmes &amp; courses</b>, or the KIU workbook import). Anything below was uploaded under a course code that is not in the system. <span id="oc-who"></span></p>
+        <div id="oc-list" class="hint">Checking…</div>
+        <div class="toolbar" style="margin-top:10px"><button class="btn small ghost" id="oc-check">Check again</button><button class="btn small danger hidden" id="oc-del">Delete the ticked course units from the system</button></div>
+        <div id="oc-msg"></div>
+      </div>
+      <div class="card" style="border-left:6px solid var(--gold)">
+        <h2>Import the KIU registration workbook</h2>
+        <p class="hint">One Excel file with the sheets <code>Course Units</code>, <code>Course Lecturers</code>, <code>Students</code> and <code>Student Course Enrolments</code> (optionally <code>Lecturer Logins</code> and <code>Student Logins</code> with passwords). It creates lecturer accounts (username = KIU email), programmes and course units, student accounts (username = admission number) and one examination per student per course unit. Safe to run again — nothing is duplicated and no exam progress or existing password is changed.</p>
+        <div class="toolbar"><input type="file" id="f-kiu" accept=".xlsx,.xls" class="panel-input"><button class="btn small gold" id="kiu-go">Import workbook</button></div>
+        <div id="kiu-out"></div>
+      </div>
+      <div class="card">
+        <h2>1. Candidates</h2>
+        <p class="hint">Columns: <code>exam_taker_id, username, password, full_name, programme, course, year_of_study, exam_venue</code>. <code>exam_taker_id</code> is the registration number. <code>course</code>, when given, must be a course unit already in the system (rows with any other course are not uploaded). Re-uploading a candidate updates their details without touching their progress. (.csv or .xlsx)</p>
+        <input type="file" id="f-cand" accept=".csv,.xlsx,.xls" class="panel-input">
+        <div class="flex" style="margin-top:10px"><button class="btn small" data-up="candidates" data-file="f-cand">Upload candidates</button><a class="btn small ghost" href="samples/candidates.csv" download>Sample file</a></div>
+      </div>
+      <div class="card">
+        <h2>2. Question bank (Section A)</h2>
+        <p class="hint">Columns: <code>question_id, area, question_text, option_a, option_b, option_c, option_d, correct_answer, marks</code>. <b>Write every question with the correct answer in <code>option_a</code></b> and put <code>A</code> (or nothing) in <code>correct_answer</code>. On upload the system moves each correct answer to an even spread of A, B, C and D and records where it went; download the answer key afterwards to check. Questions whose options refer to each other (&ldquo;all of the above&rdquo;, &ldquo;both A and B&rdquo;) keep your order. <code>marks</code> may be a half, e.g. <code>0.5</code> or <code>1.5</code>. A <code>course</code> column, when given, must name a course unit already in the system (or <code>PRACTICE</code>); questions for any other course are not uploaded. Questions added by lecturers are kept separate: they only go to that lecturer’s students.</p>
+        <input type="file" id="f-q" accept=".csv,.xlsx,.xls" class="panel-input">
+        <div class="flex" style="margin-top:10px"><button class="btn small" data-up="questions" data-file="f-q">Upload questions</button><a class="btn small ghost" href="samples/questions.csv" download>Sample file</a></div>
+      </div>
+      <div class="card" style="border-left:6px solid var(--kiu)">
+        <h2>Practice test for every student</h2>
+        <p class="hint">Lets every student try the system before the real examinations, with the same 10 simple questions (Mathematics and English, multiple choice and True/False).</p>
+        <ol class="hint" style="margin:6px 0 10px 20px">
+          <li>Upload <a href="samples/practice-questions.xlsx" download>practice-questions.xlsx</a> (or <a href="samples/practice-questions.csv" download>.csv</a>) in <b>2. Question bank</b> above. Its course column is <code>PRACTICE</code>.</li>
+          <li>Click <b>Give every student a practice sitting</b>. Each student account gets a PRACTICE sitting next to its real course units and signs in with its usual login.</li>
+          <li>Set the practice test's <b>own time</b> below. It is separate from the real examinations: their Settings and Timetable never change it, and it never changes them. The practice test is Section A only.</li>
+          <li>Afterwards, <b>Remove practice sittings</b>. Real examinations are never touched.</li>
+        </ol>
+        <div class="toolbar"><label class="fld" for="pr-code" style="margin:0">Course code</label><input id="pr-code" class="panel-input" value="PRACTICE" style="max-width:170px">
+          <button class="btn small gold" id="pr-add">Give every student a practice sitting</button><button class="btn small danger" id="pr-del">Remove practice sittings</button></div>
+        <div id="pr-msg"></div>
+        <h3 style="margin:16px 0 6px">Practice test time</h3>
+        <p class="hint tz-note"></p>
+        <div class="grid3" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
+          <div><label class="fld" for="pr-dur">Duration (minutes)</label><input id="pr-dur" class="panel-input" type="number" min="1" max="600" value="15"></div>
+          <div><label class="fld" for="pr-open">Opens at (blank = open now)</label><input id="pr-open" class="panel-input" type="datetime-local"></div>
+          <div><label class="fld" for="pr-last">Last start (blank = no limit)</label><input id="pr-last" class="panel-input" type="datetime-local"></div>
+        </div>
+        <div class="toolbar" style="margin-top:10px"><button class="btn small gold" id="pr-time">Save practice time</button><span class="hint" id="pr-time-now"></span></div>
+        <div id="pr-time-msg"></div>
+      </div>
+      <div class="card">
+        <h2>3. Question assignment (optional)</h2>
+        <p class="hint">Give specific candidates specific questions: <code>exam_taker_id, question_ids</code> (space-separated). Without it, papers follow the blueprint in Settings — or every question in the bank when the blueprint is empty.</p>
+        <input type="file" id="f-assign" accept=".csv,.xlsx,.xls" class="panel-input">
+        <div class="flex" style="margin-top:10px"><button class="btn small" data-up="assign" data-file="f-assign">Upload assignment</button><a class="btn small ghost" href="samples/assignment.csv" download>Sample file</a></div>
+      </div>
+      <div class="card">
+        <h2>4. Theory questions (Section B, optional)</h2>
+        <p class="hint">Columns: <code>theory_id, number, prompt, model_answer, max_marks</code>. The model answer is only shown to markers. A row with <code>max_marks</code> 0 is shown as an instruction.</p>
+        <input type="file" id="f-theory" accept=".csv,.xlsx,.xls" class="panel-input">
+        <div class="flex" style="margin-top:10px"><button class="btn small" data-up="theory" data-file="f-theory">Upload theory questions</button><a class="btn small ghost" href="samples/theory-questions.csv" download>Sample file</a></div>
+      </div>
+      <div class="card">
+        <h2>5. Theory assignment (optional)</h2>
+        <p class="hint">Columns: <code>exam_taker_id, theory_ids</code>. Without it everyone gets the whole theory set.</p>
+        <input type="file" id="f-theoryassign" accept=".csv,.xlsx,.xls" class="panel-input">
+        <div class="flex" style="margin-top:10px"><button class="btn small" data-up="theoryassign" data-file="f-theoryassign">Upload theory assignment</button><a class="btn small ghost" href="samples/theory-assignment.csv" download>Sample file</a></div>
+      </div>
+    </div>
+
+    <div id="t-results" class="tabpage hidden">
+      <h1>Results</h1>
+      <div class="card flex">
+        <button class="btn small gold" id="dl-results">Download results (CSV)</button>
+        <button class="btn small ghost adm-only hidden" id="dl-activity">Download activity log (CSV)</button>
+        <select id="r-lect" class="panel-input adm-only hidden" style="width:auto;margin:0"><option value="">All lecturers</option></select>
+      </div>
+      <div class="card"><div style="overflow-x:auto"><table id="r-tbl"><thead><tr>
+        <th>Name</th><th>Reg. no.</th><th class="adm-col">Lecturer</th><th>Course</th><th>Section A</th><th>Section B</th><th>Total</th><th>Status</th><th>Flags</th><th>Submitted</th><th></th>
+      </tr></thead><tbody></tbody></table></div></div>
+    </div>
+
+    <div id="t-marking" class="tabpage hidden">
+      <h1>Theory marking</h1>
+      <p class="hint">Open each candidate’s uploaded pages, compare with the model answers and enter marks. The system totals them and adds them to Section A.</p>
+      <div id="mk-list"></div>
+    </div>
+
+    <div id="t-timetable" class="tabpage hidden">
+      <h1>Timetable</h1>
+      <div id="tt-msg"></div>
+      <div class="card">
+        <h2>Each course unit's own time</h2>
+        <p class="hint" id="tt-hint">Give each course unit its own duration, opening time and latest start time. A blank box uses the default from <b>Settings</b>. Changing a running unit's duration changes it for the candidates already writing it, too.</p>
+        <p class="hint" id="tt-defaults"></p>
+        <p class="hint tz-note"></p>
+        <p class="hint">The practice test is not on the timetable: it has its own time, set under <b>Uploads → Practice test for every student</b>.</p>
+        <div class="toolbar">
+          <input id="tt-q" class="panel-input" placeholder="Search course code or title">
+          <select id="tt-show" class="panel-input" style="width:auto"><option value="">All units</option><option value="own">With their own time</option><option value="default">Using the defaults</option></select>
+          <button class="btn small ghost" id="tt-dl">Download timetable (CSV)</button>
+        </div>
+        <div style="overflow-x:auto;margin-top:12px"><table id="tt-tbl"><thead><tr><th>Course unit</th><th>Entries</th><th>Duration (min)</th><th>Opens at</th><th>Last start</th><th></th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div class="card">
+        <h2>Upload a timetable</h2>
+        <p class="hint">Columns: <code>course, duration_minutes, opens_at, latest_start</code>. Times are the university's official time (<span class="tz-name">Kampala time</span>), e.g. <code>2026-11-03 09:00</code>. Leave all three blank to put a unit back on the defaults. (.csv or .xlsx)</p>
+        <div class="flex"><input type="file" id="tt-file" accept=".csv,.xlsx,.xls"><button class="btn small" id="tt-up">Upload timetable</button></div>
+      </div>
+    </div>
+
+    <div id="t-settings" class="tabpage hidden">
+      <h1>Settings</h1>
+      <div id="s-msg"></div>
+      <div class="card" id="lti-card" style="border-left:6px solid var(--kiu)">
+        <h2>LMS connection (Moodle LTI 1.3)</h2>
+        <p class="hint">Students open their examination from the LMS (Moodle) without a second password. Give the LMS administrator the values below for <b>Site administration → Plugins → External tool → Manage tools → configure a tool manually</b>, then enter the details they send back and switch it on.</p>
+        <div id="lti-cf">
+          <h3 style="margin:10px 0 6px">1. Give these to the LMS administrator</h3>
+          <div id="lti-tool"></div>
+          <h3 style="margin:16px 0 6px">2. Enter what the LMS administrator sends back</h3>
+          <div class="grid2">
+            <div><label class="fld" for="lti-issuer">Platform ID (issuer)</label><input id="lti-issuer" class="panel-input" placeholder="https://lms.kiu.ac.ug"></div>
+            <div><label class="fld" for="lti-client">Client ID</label><input id="lti-client" class="panel-input"></div>
+            <div><label class="fld" for="lti-deploy">Deployment ID</label><input id="lti-deploy" class="panel-input" placeholder="e.g. 1 (several: separate with commas)"></div>
+            <div><label class="fld" for="lti-jwks">Public keyset URL</label><input id="lti-jwks" class="panel-input" placeholder="https://lms.kiu.ac.ug/mod/lti/certs.php"></div>
+            <div><label class="fld" for="lti-auth">Authentication request URL</label><input id="lti-auth" class="panel-input" placeholder="https://lms.kiu.ac.ug/mod/lti/auth.php"></div>
+            <div><label class="fld" for="lti-token">Access token URL</label><input id="lti-token" class="panel-input" placeholder="https://lms.kiu.ac.ug/mod/lti/token.php"></div>
+          </div>
+          <div class="toolbar" style="margin-top:8px"><button class="btn small ghost" id="lti-fill">Fill in the usual Moodle addresses from the Platform ID</button></div>
+          <label class="fld"><input id="lti-on" type="checkbox"> Students can sign in from the LMS</label>
+          <div class="toolbar" style="margin-top:10px"><button class="btn small gold" id="lti-save">Save LMS connection</button></div>
+          <div id="lti-msg"></div>
+        </div>
+        <p class="hint hidden" id="lti-gas">The LMS connection works in the Cloudflare version only (it checks the LMS's digital signatures). See cloudflare/DEPLOY.md.</p>
+      </div>
+      <div class="card">
+        <h2>Section A — multiple choice</h2>
+        <div class="grid2">
+          <div><label class="fld" for="set-title">Examination title</label><input id="set-title" class="panel-input"></div>
+          <div><label class="fld" for="set-duration">Duration (minutes)</label><input id="set-duration" class="panel-input" type="number" min="1"></div>
+          <div><label class="fld" for="set-papersize">Questions per paper (blank = all)</label><input id="set-papersize" class="panel-input" type="number" min="1" max="500" placeholder="all questions in the unit's bank">
+            <div class="hint">Enforced on every programme and course unit (not the practice test): each candidate gets this many questions, drawn at random from their unit's bank; questions assigned by hand under Uploads → 3 are cut to the first this many. A candidate signed in but not started gets the new number when they press Start. A candidate writing now finishes the paper on screen, and when it is completed it is marked on this many — the questions they answered first. Papers already completed are marked on it straight away. Answers are never deleted: clearing the box puts every paper back.</div></div>
+          <div><label class="fld" for="set-markq">Marks per question (blank = each question's own marks)</label><input id="set-markq" class="panel-input" type="number" min="0.5" max="100" step="0.5" placeholder="each question's own marks">
+            <div class="hint">Applies to every Section A question in every programme and course unit, whatever the <code>marks</code> column of the question files says. Results are worked out with it from now on, including papers already written. Blank uses each question's own marks.</div></div>
+          <div><label class="fld" for="set-start">Opens at (blank = open now)</label><input id="set-start" class="panel-input" type="datetime-local"></div>
+          <div><label class="fld" for="set-last">Last start (blank = no limit)</label><input id="set-last" class="panel-input" type="datetime-local">
+            <div class="hint">The latest moment a student may begin. Anyone who starts before it still gets the full duration, so the examination <b>ends by</b> the last start plus the duration — students are shown all three: <i>Opens at · Last start · Ends by</i>.</div></div>
+        </div>
+        <p class="hint">Duration, opening time and last start here are the <b>defaults</b>. Course units with their own times on the <b>Timetable</b> tab use those instead.</p>
+        <p class="hint tz-note"></p>
+        <label class="fld"><input id="set-loc" type="checkbox"> Require location</label>
+        <label class="fld"><input id="set-shuffle" type="checkbox"> Shuffle question order per candidate</label>
+        <label class="fld"><input id="set-shuffle-opt" type="checkbox"> Shuffle option order per candidate</label>
+        <label class="fld"><input id="set-reveal" type="checkbox"> Show candidates their Section A score at the end</label>
+        <label class="fld" for="set-ins">Instructions (HTML)</label><textarea id="set-ins" class="panel-input" style="min-height:130px"></textarea>
+        <label class="fld" for="set-terms">Terms (HTML)</label><textarea id="set-terms" class="panel-input" style="min-height:110px"></textarea>
+      </div>
+      <div class="card">
+        <h2>Proctoring</h2>
+        <label class="fld"><input id="set-photo" type="checkbox"> Candidates take an identity photo after sharing their location</label>
+        <label class="fld"><input id="set-camera" type="checkbox"> Camera must stay on during the examination (shown in a frame on screen)</label>
+        <label class="fld"><input id="set-rec" type="checkbox"> Record the camera for the whole examination</label>
+        <label class="fld"><input id="set-audio" type="checkbox"> Include microphone audio in the recording</label>
+        <div class="grid2">
+          <div><label class="fld" for="set-quality">Recording quality</label>
+            <select id="set-quality" class="panel-input"><option value="minimal">Minimal — about 0.6 MB per minute (very large sittings)</option><option value="low">Low — about 1.4 MB per minute</option><option value="standard">Standard — about 2.6 MB per minute</option></select></div>
+          <div><label class="fld" for="set-seg">Upload a recording part every (seconds)</label><input id="set-seg" class="panel-input" type="number" min="30" max="300"></div>
+          <div><label class="fld" for="set-snap">Live snapshot every (seconds)</label><input id="set-snap" class="panel-input" type="number" min="10" max="300"></div>
+        </div>
+        <p class="hint" id="storage-est"></p>
+      </div>
+      <div class="card">
+        <h2>Load — how hard candidates' browsers work the server</h2>
+        <p class="hint" id="load-hint">One backend (one Google account) runs at most 30 requests at the same time. Choose a profile for the number of candidates writing <b>at the same moment on this backend</b>, then confirm it with the load test (README → "Storage and capacity").</p>
+        <div class="grid2">
+          <div><label class="fld" for="set-profile">Profile</label>
+            <select id="set-profile" class="panel-input">
+              <option value="">Custom (keep the values below)</option>
+              <option value="std">Standard — up to about 250 writing at once</option>
+              <option value="large">Large — about 250 to 500 at once</option>
+              <option value="xl">Very large — 500 or more at once (snapshots only, no video)</option>
+            </select></div>
+          <div><label class="fld" for="set-sync">Save every (seconds)</label><input id="set-sync" class="panel-input" type="number" min="15" max="120"></div>
+          <div><label class="fld" for="set-burst">Spread end-of-time submissions over (seconds)</label><input id="set-burst" class="panel-input" type="number" min="0" max="60"></div>
+        </div>
+        <p class="hint" id="load-est"></p>
+      </div>
+      <div class="card">
+        <h2>Paper blueprint (questions per area)</h2>
+        <p class="hint">Leave empty to put every question in the bank on every paper. Otherwise each candidate gets this many questions drawn from each area.</p>
+        <div id="bp-rows"></div>
+        <button class="btn small ghost" id="bp-add" style="margin-top:8px">Add area</button>
+        <div class="hint" id="bp-total" style="margin-top:8px"></div>
+      </div>
+      <div class="card">
+        <h2>Section B — theory</h2>
+        <label class="fld"><input id="set-theory-on" type="checkbox"> Add a Section B (theory) after Section A</label>
+        <label class="fld"><input id="set-theory-upload" type="checkbox"> Candidates upload photos of their written pages</label>
+        <label class="fld"><input id="set-theory-sheet" type="checkbox"> Candidates can print an answer sheet</label>
+        <label class="fld" for="set-theory-dur">Section B duration (minutes)</label><input id="set-theory-dur" class="panel-input" type="number" min="1" style="max-width:200px">
+        <label class="fld" for="set-theory-ins">Section B instructions (HTML)</label><textarea id="set-theory-ins" class="panel-input" style="min-height:110px"></textarea>
+      </div>
+      <button class="btn small" id="save-settings">Save settings</button>
+    </div>
+
+    <div id="t-admins" class="tabpage hidden">
+      <h1>Admins</h1>
+      <div id="a-msg"></div>
+      <div class="card">
+        <h2>Create an admin</h2>
+        <p class="hint">Admins can upload, monitor, proctor, mark and download results. They cannot create admins, manage observer links or reset candidates.</p>
+        <div class="flex" style="align-items:flex-end">
+          <div style="flex:1;min-width:160px"><label class="fld">Username</label><input id="a-user" class="panel-input"></div>
+          <div style="flex:1;min-width:160px"><label class="fld">Full name</label><input id="a-name" class="panel-input"></div>
+          <div style="flex:1;min-width:160px"><label class="fld">Password (8+ characters)</label><input id="a-pass" class="panel-input" type="password"></div>
+          <button class="btn small" id="a-create">Create admin</button>
+        </div>
+      </div>
+      <div class="card"><div style="overflow-x:auto"><table id="a-tbl"><thead><tr><th>Username</th><th>Name</th><th>Status</th><th>Last sign-in</th><th></th></tr></thead><tbody></tbody></table></div></div>
+    </div>
+
+    <div id="t-observers" class="tabpage hidden">
+      <h1>Observer links</h1>
+      <div id="o-msg"></div>
+      <div class="card">
+        <h2>Create a read-only link</h2>
+        <p class="hint">Anyone with the link can watch progress without signing in. Observers never see camera pictures, recordings or locations, and see scores only if you tick the box. Links expire; revoke one at any time.</p>
+        <div class="flex" style="align-items:flex-end">
+          <div style="flex:1"><label class="fld">Label</label><input id="o-label" class="panel-input" placeholder="e.g. Dean, School of Mathematics and Computing"></div>
+          <div style="flex:0 0 150px"><label class="fld" for="o-days">Valid for (days)</label><input id="o-days" class="panel-input" type="number" min="1" max="90" value="7"></div>
+          <button class="btn small gold" id="o-create">Create link</button>
+        </div>
+        <label class="fld"><input id="o-scores" type="checkbox"> Include scores (Section A, Section B and totals)</label>
+      </div>
+      <div id="o-list"></div>
+    </div>
+
+    <div id="t-account" class="tabpage hidden">
+      <h1>My account</h1>
+      <div class="card" style="max-width:520px">
+        <h2>Change password</h2>
+        <div id="pw-msg"></div>
+        <label class="fld">Current password</label><input id="pw-cur" class="panel-input" type="password" autocomplete="current-password">
+        <label class="fld">New password (10+ characters, letters and numbers)</label><input id="pw-new" class="panel-input" type="password" autocomplete="new-password">
+        <label class="fld">Repeat new password</label><input id="pw-new2" class="panel-input" type="password" autocomplete="new-password">
+        <button class="btn small" id="pw-save" style="margin-top:14px">Change password</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- student edit modal -->
+<div id="st-modal" class="modal-bg hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sm-h">
+    <h2 id="sm-h">Add student</h2>
+    <div id="sm-msg"></div>
+    <input type="hidden" id="sm-mode">
+    <div class="grid2">
+      <div><label class="fld" for="sm-id">Registration number</label><input id="sm-id" class="panel-input"></div>
+      <div><label class="fld" for="sm-name">Full name</label><input id="sm-name" class="panel-input"></div>
+      <div><label class="fld" for="sm-user">Username <span class="hint">(blank = reg. no.)</span></label><input id="sm-user" class="panel-input" autocomplete="off"></div>
+      <div><label class="fld" for="sm-pass" id="sm-pass-l">Password <span class="hint">(blank = generate)</span></label><input id="sm-pass" class="panel-input" autocomplete="new-password"></div>
+      <div><label class="fld" for="sm-prog">Programme</label><input id="sm-prog" class="panel-input" list="dl-progs"></div>
+      <div><label class="fld" for="sm-course">Course</label><input id="sm-course" class="panel-input" list="dl-courses"></div>
+      <div><label class="fld" for="sm-year">Year of study</label><input id="sm-year" class="panel-input"></div>
+      <div><label class="fld" for="sm-venue">Exam venue</label><input id="sm-venue" class="panel-input" placeholder="e.g. Online (remote)"></div>
+      <div><label class="fld" for="sm-email">Email</label><input id="sm-email" class="panel-input" type="email"></div>
+      <div><label class="fld" for="sm-phone">Phone / WhatsApp</label><input id="sm-phone" class="panel-input" placeholder="e.g. 2567XXXXXXXX"></div>
+      <div class="adm-only hidden"><label class="fld" for="sm-owner">Lecturer</label><select id="sm-owner" class="panel-input"><option value="">Exams office (no lecturer)</option></select></div>
+    </div>
+    <datalist id="dl-progs"></datalist><datalist id="dl-courses"></datalist>
+    <div class="toolbar" style="margin-top:16px"><button class="btn small" id="sm-save">Save</button><button class="btn small ghost" id="sm-cancel">Cancel</button></div>
+  </div>
+</div>
+
+<!-- lecturer edit modal (exams office) -->
+<div id="lc-modal" class="modal-bg hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="lm-h">
+    <h2 id="lm-h">Add lecturer</h2>
+    <div id="lm-msg"></div>
+    <input type="hidden" id="lm-mode">
+    <div class="grid2">
+      <div><label class="fld" for="lm-user">Username</label><input id="lm-user" class="panel-input" autocomplete="off"></div>
+      <div><label class="fld" for="lm-name">Full name</label><input id="lm-name" class="panel-input" placeholder="e.g. Dr. Jane Namusoke"></div>
+      <div><label class="fld" for="lm-email">Email</label><input id="lm-email" class="panel-input" type="email"></div>
+      <div><label class="fld" for="lm-dept">Department / school</label><input id="lm-dept" class="panel-input"></div>
+      <div><label class="fld" for="lm-pass" id="lm-pass-l">Password (8+ characters)</label><input id="lm-pass" class="panel-input" autocomplete="new-password"></div>
+      <div><label class="fld" for="lm-active">Status</label><select id="lm-active" class="panel-input"><option value="1">Active</option><option value="0">Disabled</option></select></div>
+    </div>
+    <div class="toolbar" style="margin-top:16px"><button class="btn small" id="lm-save">Save</button><button class="btn small ghost" id="lm-cancel">Cancel</button></div>
+  </div>
+</div>
+
+<!-- candidate proctoring drawer -->
+<div id="drawer" class="drawer-bg hidden">
+  <div class="drawer" role="dialog" aria-modal="true" aria-labelledby="dr-name">
+    <div class="flex" style="justify-content:space-between"><h2 id="dr-name" style="margin:0">Candidate</h2><button class="btn small ghost" id="dr-close">Close</button></div>
+    <p class="hint" id="dr-meta"></p>
+    <div id="dr-body">Loading…</div>
+  </div>
+</div>
+
+<footer class="site-foot">ALL RIGHTS RESERVED (2026): DESIGNED AND DEVELOPED BY <b>DR. MICHAEL ADELANI ADEWUSI</b> FOR KAMPALA INTERNATIONAL UNIVERSITY</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="config.js"></script>
+<script src="assets/common.js"></script>
+<script>
+(function(){
+  var A=window.KIU;
+  if(!A){ document.body.innerHTML='<p style="font-family:Times New Roman,serif;padding:40px;color:#fff">A required file (assets/common.js) did not load. Refresh the page.</p>'; return; }
+  var esc=A.esc, T={token:null, role:null}, pollTimer=null;
+  var REFRESH=(A.CFG.MONITOR_REFRESH_SECONDS||15)*1000;
+  var CLOUD=A.CFG.PLATFORM==='cloudflare';   // the Cloudflare version (cloudflare/): no 30-request limit, files in R2
+  var $=function(id){ return document.getElementById(id); };
+
+  // Several backends: choose which one to sign in to (each has its own accounts, students and results).
+  if(A.backends().length>1){
+    $('bk-box').classList.remove('hidden');
+    $('bk-sel').innerHTML=(A.needsBackend()?'<option value="">— choose —</option>':'')+A.backends().map(function(x){ return '<option value="'+esc(x.id)+'"'+(A.CFG.BACKEND&&A.CFG.BACKEND.id===x.id?' selected':'')+'>'+esc(x.name||x.id)+'</option>'; }).join('');
+    $('bk-sel').onchange=function(){ var u=new URL(location.href); u.searchParams.set('b', this.value); location.href=u.toString(); };
+    if(A.needsBackend()){ $('lb').disabled=true; $('login-sub').textContent='Choose the examination centre first.'; return; }
+  }
+  if(!A.configured()){ document.querySelector('#login .authcard').innerHTML='<img class="crest" src="assets/logo.png" alt="KIU"><h1>Not set up yet</h1><p class="hint">Paste your Apps Script /exec URL into config.js first (the Cloudflare version needs no URL: see cloudflare/DEPLOY.md).</p>'; return; }
+
+  if(/[?&]portal=lecturer\b/.test(location.search)){ $('login-title').textContent='Lecturer portal'; $('login-sub').textContent='Sign in with the account given to you by the examinations office'; document.title='KIU CBT — Lecturer Portal'; }
+
+  /* ---- login ---- */
+  $('lb').onclick=function(){
+    var u=$('lu').value.trim(), p=$('lp').value, e=$('login-err'), b=this;
+    e.classList.add('hidden'); b.disabled=true; b.textContent='Signing in…';
+    A.api('adminLogin',{username:u,password:p}).then(function(r){
+      T.token=r.token; T.role=r.role; T.lec=(r.role==='lecturer'); T.name=r.full_name||u; T.user=u; A.setZone(r.time_zone); showZone();
+      $('role-badge').textContent=r.role==='superadmin'?'Superadmin':(T.lec?'Lecturer':'Admin');
+      $('who').textContent=(r.full_name||u)+(A.CFG.BACKEND&&A.backends().length>1?' · '+(A.CFG.BACKEND.name||A.CFG.BACKEND.id):'');
+      if(r.role==='superadmin') document.querySelectorAll('.super').forEach(function(x){x.classList.remove('hidden');});
+      document.querySelectorAll(T.lec?'.lec':'.adm,.adm-only').forEach(function(x){x.classList.remove('hidden');});
+      document.body.classList.toggle('is-lec', T.lec);
+      document.title = T.lec ? 'KIU CBT — Lecturer Portal' : 'KIU CBT — Administration';
+      if(T.lec){ $('st-title').textContent='My students'; $('st-hint').textContent='Every student sitting one of your course units (one line per student per course unit), plus any students you add yourself. University-registered students are read-only here — the examinations office corrects their details and passwords; students you add yourself you can edit, remove and re-issue passwords for.'; }
+      else { $('st-hint').textContent='Every student in the system, including those added by lecturers. Your changes here override a lecturer’s.'; }
+      $('login').classList.add('hidden'); $('app').classList.remove('hidden');
+      if(r.must_change){
+        // Nothing else works until a new password is chosen (enforced on the server too).
+        T.mustChange=true;
+        document.querySelectorAll('.topnav .tab').forEach(function(x){ if(x.dataset.tab!=='account') x.classList.add('hidden'); });
+        $('pw-warn').innerHTML=r.default_password?'You are using the default password. Choose a new password to continue.':'Choose your own password to continue — the one you were given was temporary.';
+        $('pw-warn').classList.remove('hidden');
+        openTab('account'); return;
+      }
+      refreshLookups();
+      $('pw-warn').classList.add('hidden');
+      loadDashboard();
+    }).catch(function(err){ e.textContent=err.message; e.classList.remove('hidden'); })
+      .finally(function(){ b.disabled=false; b.textContent='Sign in'; });
+  };
+  $('lp').addEventListener('keydown',function(e){ if(e.key==='Enter') $('lb').click(); });
+  $('logout').onclick=function(e){ e.preventDefault(); location.reload(); };
+
+  /* ---- tabs ---- */
+  function openTab(tab){
+    document.querySelectorAll('.tab').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===tab); });
+    document.querySelectorAll('.tabpage').forEach(function(p){ p.classList.add('hidden'); });
+    $('t-'+tab).classList.remove('hidden');
+    if(pollTimer){ clearInterval(pollTimer); pollTimer=null; }
+    var loaders={dashboard:loadDashboard, monitor:loadMonitor, wall:loadWall, upload:function(){ loadSummary(); loadOrphans(); loadPracticeTiming(); }, results:loadResults,
+      marking:loadMarking, settings:loadSettings, admins:loadAdmins, observers:loadObservers,
+      lecturers:loadLecturers, uploads:loadUploads, students:loadStudents, catalog:loadCatalog, questions:loadQuestions, assign:loadAssign, links:loadLinks, timetable:loadTimetable};
+    if(loaders[tab]) loaders[tab]();
+    if(tab==='monitor') pollTimer=setInterval(loadMonitor, REFRESH);
+    if(tab==='wall') pollTimer=setInterval(loadWall, REFRESH);
+    if(tab==='dashboard') pollTimer=setInterval(loadDashboard, REFRESH);
+    if(tab==='lecturers') pollTimer=setInterval(loadLecturers, REFRESH*2);
+    if(tab==='uploads') pollTimer=setInterval(loadUploads, REFRESH*2);
+    if(tab==='students') pollTimer=setInterval(function(){ if($('st-modal').classList.contains('hidden')) loadStudents(true); }, REFRESH*2);
+  }
+  document.querySelectorAll('.tab').forEach(function(btn){ btn.onclick=function(){ openTab(btn.dataset.tab); }; });
+
+  function statCard(n,l,alert){ return '<div class="stat'+(alert?' alert':'')+'"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>'; }
+  function statsHtml(s){
+    return (s.students!=null&&s.students!==s.total?statCard(s.students,'Students')+statCard(s.total,'Exam entries (student × course unit)'):statCard(s.total,'Registered'))+statCard(s.logged_in,'Signed in')+statCard(s.online,'Online now')+statCard(s.in_progress,'Writing Section A')+
+      statCard(s.submitted,'Section A submitted')+statCard(s.theory||0,'Writing Section B')+statCard(s.completed||0,'Completed')+
+      statCard(s.left||0,'Left mid-way', s.left>0)+statCard(s.cam_alerts||0,'Camera alerts', s.cam_alerts>0)+statCard(s.integrity_alerts||0,'Integrity alerts', s.integrity_alerts>0);
+  }
+  function pill(t,c){ return '<span class="pill '+c+'">'+esc(t)+'</span>'; }
+  // Alerts the server raised from what it actually received (see integrityFlags_ in Code.gs).
+  function flagPills(flags, max){
+    flags=flags||[]; if(!flags.length) return '';
+    var shown=flags.slice(0, max||flags.length).map(function(f){ return '<span class="pill '+(f.level==='high'?'bad':'mid')+'" title="'+esc(f.text)+'">'+esc(f.text)+'</span>'; }).join(' ');
+    return shown+(max&&flags.length>max?' <span class="hint">+'+(flags.length-max)+' more</span>':'');
+  }
+  function highFlag(c){ return (c.flags||[]).some(function(f){ return f.level==='high'; }); }
+  function overallStatus(c, useOnline){
+    var online = useOnline ? !!c.online : true;
+    if(c.theory_step==='theory_submitted') return pill('Completed (A+B)','sub');
+    if(c.theory_step==='theory') return online?pill('Writing Section B','mid'):pill('Away (Section B)','left');
+    if(c.step==='submitted') return pill(useOnline?'Section A submitted':'Submitted','sub');
+    if(c.step==='exam') return online?pill('Writing Section A','mid'):pill('Away (Section A)','left');
+    var ready={instructions:'Reading instructions',photo:'Taking photo',confirm:'Confirming details',exam_info:'Ready to start'};
+    if(ready[c.step]) return online?pill(ready[c.step],'on'):pill('Away','left');
+    return pill('Not signed in','off');
+  }
+  function camPill(c){
+    var active = c.step==='exam' || c.theory_step==='theory';
+    if(!c.cam_status) return '<span class="hint">—</span>';
+    if(c.cam_status==='on') return pill('On','on')+(c.cam_events?' '+pill(c.cam_events+' issue'+(c.cam_events>1?'s':''),'mid'):'');
+    if(c.cam_status==='not_required') return '<span class="hint">not required</span>';
+    return pill('Off', active?'bad':'off')+(c.cam_events?' '+pill(String(c.cam_events),'mid'):'');
+  }
+  function locLink(c){ return (c.geo_lat&&c.geo_lng)?'<a target="_blank" rel="noopener" href="https://maps.google.com/?q='+encodeURIComponent(c.geo_lat+','+c.geo_lng)+'">map</a>':esc(c.geo_status||'—'); }
+
+  /* ---- dashboard ---- */
+  function loadDashboard(){
+    A.api('getSettings',{token:T.token}).then(function(r){
+      A.setZone(r.time_zone); showZone();
+      var s=r.settings||{};
+      $('d-title').textContent=s.exam_title||'Examination';
+      $('d-meta').innerHTML='Section A: <b>'+esc(s.duration_minutes||60)+' min</b> · Questions: <b>'+(s.paper_size?esc(s.paper_size)+' per paper':'all in the bank')+'</b> · Marks: <b>'+(s.mark_per_question?esc(s.mark_per_question)+' per question':'each question\'s own')+'</b> · Opens: <b>'+(s.scheduled_start?esc(A.fmtExam(s.scheduled_start,'at',{local:false})):'now')+'</b>'+(s.last_start_at?' · Last start: <b>'+esc(A.fmtExam(s.last_start_at,'by',{local:false}))+'</b> · Ends by: <b>'+esc(A.fmtExam(new Date(new Date(s.last_start_at).getTime()+(+s.duration_minutes||60)*60000).toISOString(),'by',{local:false}))+'</b>':'')+' · Section B: <b>'+(s.theory_enabled==='1'?esc(s.theory_duration_minutes)+' min':'off')+'</b><br>'+
+        'Photo: <b>'+(s.require_photo!=='0'?'yes':'no')+'</b> · Camera: <b>'+(s.require_camera!=='0'?'required':'optional')+'</b> · Recording: <b>'+(s.record_video!=='0'?(s.record_quality||'low')+(s.record_audio!=='0'?' with audio':' (no audio)'):'off')+'</b> · Location: <b>'+(s.require_location!=='0'?'required':'optional')+'</b>';
+    }).catch(function(){});
+    A.api('monitor',{token:T.token}).then(function(r){
+      $('d-stats').innerHTML=statsHtml(r.stats);
+      var on=r.rows.filter(function(c){ return c.online && c.theory_step!=='theory_submitted' && (c.step!=='submitted' || c.theory_step==='theory'); });
+      $('d-online').querySelector('tbody').innerHTML=on.map(function(c){
+        return '<tr><td><span class="online-dot"></span><b>'+esc(c.full_name)+'</b></td><td>'+esc(c.exam_taker_id)+'</td><td class="adm-col">'+esc(c.owner_name||'No lecturer assigned')+'</td><td>'+esc(c.course||'—')+'</td>'+
+          '<td>'+overallStatus(c,true)+'</td><td>'+c.answered+' / '+c.total_q+'</td><td>'+camPill(c)+'</td><td>'+esc(A.ago(c.last_seen))+'</td>'+
+          '<td><button class="btn small ghost" data-view="'+esc(c.exam_taker_id)+'">View</button></td></tr>';
+      }).join('')||'<tr><td colspan="9" class="hint">Nobody is online right now.</td></tr>';
+      bindView($('d-online')); $('d-ts').textContent=new Date().toLocaleTimeString();
+    }).catch(function(){});
+    A.api('myOverview',{token:T.token}).then(function(r){
+      $('d-counts').innerHTML=(T.lec?'':statCard(LOOK.lecturers.length,'Lecturers'))+statCard(r.programmes,'Programmes')+statCard(r.courses,'Courses')+statCard(r.questions,'Questions')+'<span id="d-up"></span>';
+      if(!T.lec) A.api('examUploads',{token:T.token}).then(function(u){
+        var x=$('d-up'); if(x) x.outerHTML=statCard(u.summary.units_uploaded+' / '+u.summary.units,'Course units with exams uploaded')+statCard(u.summary.units_pending,'Course units still waiting', u.summary.units_pending>0)+statCard(u.summary.units_no_lecturer,'Course units with no lecturer', u.summary.units_no_lecturer>0);
+      }).catch(function(){});
+    }).catch(function(){});
+  }
+
+  /* ---- live monitor ---- */
+  var monRows=[];
+  function loadMonitor(){
+    A.api('monitor',{token:T.token}).then(function(r){
+      $('m-stats').innerHTML=statsHtml(r.stats); monRows=r.rows; drawMonitor();
+      $('m-ts').textContent=new Date().toLocaleTimeString();
+    }).catch(function(){});
+  }
+  function drawMonitor(){
+    var q=$('m-q').value.trim().toLowerCase(), show=$('m-show').value, lect=$('m-lect').value;
+    var rows=monRows.filter(function(c){
+      if(!lectMatch(c, lect)) return false;
+      if(!showMatch(c, show)) return false;
+      return !q || String(c.full_name).toLowerCase().indexOf(q)>=0 || String(c.exam_taker_id).toLowerCase().indexOf(q)>=0; });
+    $('m-tbl').querySelector('tbody').innerHTML = rows.map(function(c){
+      var rec = c.rec_segments ? (c.rec_segments+' part'+(c.rec_segments>1?'s':'')+'<br><span class="hint">'+A.ago(c.last_rec_at)+'</span>') : '<span class="hint">—</span>';
+      return '<tr><td>'+(c.online?'<span class="online-dot"></span>':'')+'<b>'+esc(c.full_name)+'</b>'+(c.has_photo?'':' <span class="hint">(no photo)</span>')+'</td><td>'+esc(c.exam_taker_id)+'</td><td class="adm-col">'+esc(c.owner_name||'No lecturer assigned')+'</td><td>'+esc(c.course||'—')+'</td><td>'+overallStatus(c,true)+((c.flags||[]).length?'<div style="margin-top:4px">'+flagPills(c.flags,2)+'</div>':'')+'</td>'+
+        '<td>'+c.answered+' / '+c.total_q+'</td><td>'+(c.online?pill('yes','on'):pill('no','off'))+'</td><td>'+camPill(c)+'</td><td>'+rec+'</td>'+
+        '<td>'+(c.focus_loss>0?pill(String(c.focus_loss),'mid'):'0')+'</td><td>'+locLink(c)+'</td>'+
+        '<td><button class="btn small ghost" data-view="'+esc(c.exam_taker_id)+'">View</button></td></tr>';
+    }).join('') || '<tr><td colspan="12" class="hint">No candidates match.</td></tr>';
+    bindView($('m-tbl'));
+  }
+  $('m-q').oninput=drawMonitor; $('m-show').onchange=drawMonitor; $('m-lect').onchange=drawMonitor;
+  function lectMatch(c, v){
+    if(!v) return true;
+    var l=c.lects||[];
+    if(v==='__none') return !c.owner && !l.length;
+    v=String(v).toLowerCase();
+    return String(c.owner||'').toLowerCase()===v || l.indexOf(v)>=0;
+  }
+  function showMatch(c, show){
+    var writing = c.online && (c.step==='exam' || c.theory_step==='theory');
+    if(show==='online') return !!c.online;
+    if(show==='writing') return writing;
+    if(show==='submitted') return c.step==='submitted';
+    if(show==='notin') return !c.step || c.step==='password';
+    if(show==='flagged') return (c.flags||[]).length>0;
+    return true;
+  }
+  function bindView(root){ root.querySelectorAll('[data-view]').forEach(function(b){ b.onclick=function(){ openDrawer(b.dataset.view); }; }); }
+
+  /* ---- live proctoring wall ---- */
+  var wallOffset=0, wallLimit=24;
+  function loadWall(){
+    A.api('liveWall',{token:T.token, filter:$('w-filter').value, owner:$('w-lect').value, offset:wallOffset, limit:wallLimit}).then(function(r){
+      var alertsOnly=$('w-alerts').checked;
+      var tiles=r.tiles.filter(function(t){ return !alertsOnly || isAlert(t); });
+      $('w-grid').innerHTML = tiles.map(function(t){
+        var alert=isAlert(t);
+        var shot = t.snap ? '<img class="snap" src="'+esc(t.snap)+'" alt="Latest camera picture"><span class="age">'+esc(A.ago(t.snap_at))+'</span>'
+                          : '<div class="nosnap">No camera picture yet</div>';
+        var ref = t.photo ? '<img class="ref" src="'+esc(t.photo)+'" alt="Identity photo">' : '';
+        var flags = (t.cam_status && t.cam_status!=='on' ? pill('Camera off','bad') : '') + (t.dark ? pill('Dark / covered','bad') : '') +
+                    (t.focus_loss ? pill('Left window '+t.focus_loss,'mid') : '') + (t.online ? '' : pill('Offline','off')) + flagPills(t.flags, 2);
+        return '<div class="tile'+(alert?' alert':'')+'" data-view="'+esc(t.exam_taker_id)+'" tabindex="0">'+
+          '<div class="shotw">'+shot+ref+'</div><div class="meta"><b>'+esc(t.full_name)+'</b><span class="hint">'+esc(t.exam_taker_id)+(t.course?' · '+esc(t.course):'')+'</span>'+(!T.lec&&t.owner_name?'<span class="hint">'+esc(t.owner_name)+'</span>':'')+
+          '<div class="flex">'+(flags||pill('OK','on'))+'</div></div></div>';
+      }).join('') || '<div class="card hint">No candidates to show'+(alertsOnly?' with alerts':'')+'.</div>';
+      bindView($('w-grid'));
+      var from=r.total?r.offset+1:0, to=Math.min(r.total, r.offset+wallLimit);
+      $('w-page').textContent=from+'–'+to+' of '+r.total;
+      $('w-prev').disabled = r.offset<=0; $('w-next').disabled = to>=r.total;
+      $('w-ts').textContent=new Date().toLocaleTimeString();
+    }).catch(function(e){ $('w-grid').innerHTML='<div class="card"><div class="error">'+esc(e.message)+'</div></div>'; });
+  }
+  function isAlert(t){ var active=t.step==='exam'||t.theory_step==='theory'; return (active && t.cam_status && t.cam_status!=='on') || t.dark || t.focus_loss>0 || highFlag(t); }
+  $('w-prev').onclick=function(){ wallOffset=Math.max(0,wallOffset-wallLimit); loadWall(); };
+  $('w-next').onclick=function(){ wallOffset+=wallLimit; loadWall(); };
+  $('w-filter').onchange=function(){ wallOffset=0; loadWall(); };
+  $('w-lect').onchange=function(){ wallOffset=0; loadWall(); };
+  $('w-alerts').onchange=loadWall;
+
+  /* ---- candidate drawer: photo, live picture, recordings, timeline ---- */
+  var mediaUrls=[];
+  function openDrawer(id){
+    $('drawer').classList.remove('hidden'); $('dr-name').textContent='Loading…'; $('dr-meta').textContent=''; $('dr-body').innerHTML='<p class="hint">Loading…</p>';
+    A.api('proctorView',{token:T.token, exam_taker_id:id}).then(function(r){
+      var c=r.candidate;
+      $('dr-name').textContent=c.full_name+' ('+c.exam_taker_id+')';
+      $('dr-meta').textContent=[c.programme, c.course, c.year_of_study?(/^\d+$/.test(String(c.year_of_study))?'Year '+c.year_of_study:c.year_of_study):'', c.exam_venue].filter(Boolean).join(' · ');
+      var videos=r.recordings.filter(function(x){ return x.kind==='video'; });
+      var photo=r.recordings.filter(function(x){ return x.kind==='photo'; }).pop();
+      var bad={camera_off:1,camera_stopped:1,camera_not_live:1,camera_dark:1,left_exam_window:1,recording_segment_rejected:1,microphone_unavailable:1,reset_by_admin:1,reopened_by_admin:1,reattempt_blocked:1,heartbeat_gap:1,camera_frozen:1,location_moved:1,virtual_camera:1,extra_screen:1,late_answers_rejected:1,devtools_opened:1};
+      var html=
+        '<div class="imgs"><figure><img id="dr-photo" alt="Identity photo" src="'+esc(r.photo_thumb||'')+'"><figcaption>Identity photo'+(photo?' · '+esc(A.fmtTime(photo.at)):' · not taken')+
+          (photo?' · <a href="#" id="dr-photo-full">open full size</a>':'')+'</figcaption></figure>'+
+        '<figure><img alt="Latest camera picture" src="'+esc(r.snap||'')+'"><figcaption>Latest camera picture'+(r.snap_at?' · '+esc(A.ago(r.snap_at)):' · none yet')+'</figcaption></figure></div>'+
+        '<div class="card" style="box-shadow:none;border:1px solid var(--line);margin-top:14px">'+
+          '<div class="flex" style="justify-content:space-between"><h2 style="margin:0">Exam recording</h2><span class="hint">'+videos.length+' part'+(videos.length===1?'':'s')+' · '+A.mb(c.rec_bytes)+'</span></div>'+
+          '<video id="dr-player" class="player hidden" controls playsinline></video><div id="dr-play-msg" class="hint"></div>'+
+          (videos.length ? '<div class="flex" style="margin:10px 0"><button class="btn small" id="dr-playall">Play all from the start</button><button class="btn small ghost" id="dr-dlall">Download all parts</button></div>' : '')+
+          '<div class="seglist">'+(videos.map(function(v,i){
+            return '<div class="seg"><span class="t"><b>Part '+(i+1)+'</b> · '+esc(A.fmtTime(v.started||v.at))+' · '+esc(v.phase==='theory'?'Section B':v.phase==='mcq'?'Section A':v.phase==='login'?'Section A (start)':v.phase||'')+' · '+A.mb(v.bytes)+'</span>'+
+              '<button class="btn small" data-play="'+i+'">Play</button><button class="btn small ghost" data-dl="'+i+'">Download</button></div>';
+          }).join('') || '<div class="seg hint">No recording received yet.</div>')+'</div></div>'+
+        ((r.flags||[]).length ? '<div class="card" style="box-shadow:none;border:1px solid #e3b4ac;background:#fff8f6;margin-top:14px"><h2 style="margin:0 0 6px">Integrity alerts</h2>'+
+          '<p class="hint" style="margin:0 0 8px">Raised by the server from what it actually received — review the recording before deciding anything.</p>'+flagPills(r.flags)+'</div>' : '')+
+        '<div class="grid2" style="margin-top:6px"><div><h2>Summary</h2>'+
+          '<div class="detail"><span class="k">Status</span><span class="v" style="font-size:18px">'+overallStatus({step:c.step,theory_step:c.theory_step},false)+'</span></div>'+
+          '<div class="detail"><span class="k">Started</span><span class="v" style="font-size:18px">'+esc(A.fmtTime(c.started_at))+'</span></div>'+
+          '<div class="detail"><span class="k">Submitted</span><span class="v" style="font-size:18px">'+esc(A.fmtTime(c.submitted_at))+'</span></div>'+
+          '<div class="detail"><span class="k">Left the window</span><span class="v" style="font-size:18px">'+c.focus_loss+'</span></div>'+
+          '<div class="detail"><span class="k">Camera issues</span><span class="v" style="font-size:18px">'+c.cam_events+'</span></div>'+
+          '<div class="detail"><span class="k">Location</span><span class="v" style="font-size:18px">'+locLink(c)+'</span></div>'+
+          (r.evidence ? '<div class="detail"><span class="k">Pictures received</span><span class="v" style="font-size:18px">'+(r.evidence.pictures||0)+'</span></div>'+
+            (r.evidence.camera_device?'<div class="detail"><span class="k">Camera device</span><span class="v" style="font-size:16px">'+esc(r.evidence.camera_device)+'</span></div>':'') : '')+
+          (T.role==='superadmin' ? '<div class="flex" style="margin-top:14px"><button class="btn small ghost" id="dr-extend">Re-open Section A (fresh timer, keep answers)</button><button class="btn small danger" id="dr-reset">Reset candidate completely</button><button class="btn small danger" id="dr-media">Delete recordings and photos</button></div>' : '')+
+        '</div><div><h2>Timeline</h2><div class="timeline">'+(r.events.slice().reverse().map(function(e){
+          return '<div class="'+(bad[e.event]?'ev-bad':'')+'">'+esc(A.fmtTime(e.at))+' — '+esc(String(e.event).replace(/_/g,' '))+(e.detail?' <span class="hint">('+esc(String(e.detail).slice(0,80))+')</span>':'')+'</div>';
+        }).join('')||'<div class="hint">No events.</div>')+'</div></div></div>';
+      $('dr-body').innerHTML=html;
+
+      var player=$('dr-player'), pmsg=$('dr-play-msg'), queue=null;
+      function fetchPart(i){
+        var v=videos[i];
+        return A.api('proctorMedia',{token:T.token, file_id:v.file_id}).then(function(m){
+          var url=URL.createObjectURL(A.b64ToBlob(m.data, m.mime)); mediaUrls.push(url); return {url:url, name:m.name, mime:m.mime};
+        });
+      }
+      function play(i){
+        pmsg.textContent='Loading part '+(i+1)+' of '+videos.length+'…';
+        fetchPart(i).then(function(f){
+          player.classList.remove('hidden'); player.src=f.url; player.play().catch(function(){});
+          pmsg.textContent='Playing part '+(i+1)+' of '+videos.length+(queue!==null?' (continuous)':'');
+          player.onended=function(){ if(queue!==null && i+1<videos.length) play(i+1); else { queue=null; pmsg.textContent='End of part '+(i+1)+'.'; } };
+          if(!player.canPlayType(f.mime)) pmsg.textContent='This browser cannot play '+f.mime+' — use Download and open it in Chrome or VLC.';
+        }).catch(function(e){ pmsg.textContent='Could not load this part: '+e.message; });
+      }
+      $('dr-body').querySelectorAll('[data-play]').forEach(function(b){ b.onclick=function(){ queue=null; play(+b.dataset.play); }; });
+      $('dr-body').querySelectorAll('[data-dl]').forEach(function(b){ b.onclick=function(){
+        b.disabled=true; fetchPart(+b.dataset.dl).then(function(f){ var a=document.createElement('a'); a.href=f.url; a.download=f.name; document.body.appendChild(a); a.click(); a.remove(); })
+          .catch(function(e){ alert(e.message); }).finally(function(){ b.disabled=false; });
+      }; });
+      if($('dr-playall')) $('dr-playall').onclick=function(){ queue=0; play(0); };
+      if($('dr-dlall')) $('dr-dlall').onclick=function(){
+        var b=this; b.disabled=true; var i=0;
+        (function next(){ if(i>=videos.length){ b.disabled=false; b.textContent='Download all parts'; return; }
+          b.textContent='Downloading '+(i+1)+' of '+videos.length+'…';
+          fetchPart(i).then(function(f){ var a=document.createElement('a'); a.href=f.url; a.download=f.name; document.body.appendChild(a); a.click(); a.remove(); i++; setTimeout(next,600); })
+            .catch(function(e){ alert(e.message); b.disabled=false; b.textContent='Download all parts'; });
+        })();
+      };
+      if($('dr-photo-full')) $('dr-photo-full').onclick=function(e){
+        e.preventDefault();
+        A.api('proctorMedia',{token:T.token, file_id:photo.file_id}).then(function(m){
+          var url=URL.createObjectURL(A.b64ToBlob(m.data, m.mime)); mediaUrls.push(url); $('dr-photo').src=url;
+        }).catch(function(er){ alert(er.message); });
+      };
+      if($('dr-extend')) $('dr-extend').onclick=function(){
+        if(!confirm('Re-open Section A for '+c.full_name+' with a fresh full timer? Their saved answers are kept.')) return;
+        A.api('resetCandidate',{token:T.token, exam_taker_id:c.exam_taker_id, mode:'extend'}).then(function(){ alert('Re-opened. The candidate can sign in again and continue.'); openDrawer(c.exam_taker_id); }).catch(function(e){ alert(e.message); });
+      };
+      if($('dr-reset')) $('dr-reset').onclick=function(){
+        if(!confirm('Reset '+c.full_name+' completely? Their answers and marks are cleared so they can sit the paper again.')) return;
+        var del=confirm('Also DELETE their recordings, photos and Section B pages for this paper?\n\nOK = delete them permanently.\nCancel = keep them as evidence.');
+        A.api('resetCandidate',{token:T.token, exam_taker_id:c.exam_taker_id, delete_media:del}).then(function(r){ alert('Reset done.'+(del?' '+(r.deleted||0)+' recording/photo file(s) deleted.':' Recordings kept.')); openDrawer(c.exam_taker_id); }).catch(function(e){ alert(e.message); });
+      };
+      if($('dr-media')) $('dr-media').onclick=function(){
+        if(!confirm('Permanently delete every recording, the identity photo and the camera pictures of '+c.full_name+' ('+c.course+')? This cannot be undone. Section B pages are kept.')) return;
+        A.api('deleteCandidateMedia',{token:T.token, exam_taker_id:c.exam_taker_id}).then(function(r){ alert((r.deleted||0)+' file(s) deleted ('+Math.round((r.bytes||0)/1048576*10)/10+' MB).'); openDrawer(c.exam_taker_id); }).catch(function(e){ alert(e.message); });
+      };
+    }).catch(function(e){ $('dr-body').innerHTML='<div class="error">'+esc(e.message)+'</div>'; });
+  }
+  function closeDrawer(){
+    $('drawer').classList.add('hidden'); var p=$('dr-player'); if(p){ p.pause(); p.removeAttribute('src'); }
+    mediaUrls.forEach(function(u){ URL.revokeObjectURL(u); }); mediaUrls=[];
+  }
+  $('dr-close').onclick=closeDrawer;
+  $('drawer').onclick=function(e){ if(e.target===$('drawer')) closeDrawer(); };
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && !$('drawer').classList.contains('hidden')) closeDrawer(); });
+
+  /* ---- uploads ---- */
+  function loadSummary(){
+    A.api('bankSummary',{token:T.token}).then(function(r){
+      var areas=Object.keys(r.areas).map(function(a){ return esc(a)+' ('+r.areas[a]+')'; }).join(', ');
+      $('u-summary').innerHTML='<b>'+r.candidates+'</b> candidates · <b>'+r.questions+'</b> Section A questions'+(areas?' in '+areas:'')+
+        ' · <b>'+r.assigned+'</b> candidates with a specific assignment · <b>'+r.theory+'</b> theory questions';
+    }).catch(function(e){ $('u-summary').textContent=e.message; });
+  }
+  /* ---- course units not in the system ---- */
+  var ORPH=[];
+  function loadOrphans(){
+    var su=T.role==='superadmin';
+    $('oc-who').textContent=su?'Tick the ones to remove: their questions, sittings (with answers, results, recordings and photos) and timetable rows are deleted. Student accounts stay.':'Only the superadmin can delete them.';
+    A.api('orphanCourses',{token:T.token}).then(function(r){
+      ORPH=r.rows||[];
+      if(!ORPH.length){ $('oc-list').innerHTML='<span style="color:var(--ok);font-weight:700">None — every uploaded course unit is in the system.</span>'; $('oc-del').classList.add('hidden'); return; }
+      $('oc-list').innerHTML='<div style="overflow-x:auto"><table><thead><tr>'+(su?'<th><input type="checkbox" id="oc-all" checked aria-label="Tick all"></th>':'')+'<th>Course code</th><th>Questions</th><th>Sittings</th><th>Started / finished</th><th>Timetable</th></tr></thead><tbody>'+
+        ORPH.map(function(o,i){ return '<tr>'+(su?'<td><input type="checkbox" class="oc-pick" data-i="'+i+'" checked aria-label="'+esc(o.course)+'"></td>':'')+'<td><b>'+esc(o.course)+'</b></td><td>'+o.questions+'</td><td>'+o.sittings+'</td><td>'+
+          ((o.started||o.finished)?'<b style="color:var(--bad)">'+o.started+' / '+o.finished+'</b>':'0 / 0')+'</td><td>'+(o.timetable?'yes':'—')+'</td></tr>'; }).join('')+'</tbody></table></div>';
+      $('oc-del').classList.toggle('hidden',!su);
+      if(su) $('oc-all').onchange=function(){ var on=this.checked; document.querySelectorAll('.oc-pick').forEach(function(x){ x.checked=on; }); };
+    }).catch(function(e){ $('oc-list').textContent=e.message; });
+  }
+  $('oc-check').onclick=function(){ msg('oc-msg','',false); loadOrphans(); };
+  $('oc-del').onclick=function(){
+    var pick=[]; document.querySelectorAll('.oc-pick').forEach(function(x){ if(x.checked) pick.push(ORPH[+x.dataset.i]); });
+    if(!pick.length){ msg('oc-msg','Tick at least one course unit.',true); return; }
+    var q=0,st=0,done=0; pick.forEach(function(o){ q+=o.questions; st+=o.sittings; done+=o.started+o.finished; });
+    if(!confirm('Delete '+pick.map(function(o){ return o.course; }).join(', ')+' from the system?\n\nThis permanently removes '+q+' question(s) and '+st+' sitting(s)'+(done?' — '+done+' of them already started or finished, with their answers, results, recordings and photos':'')+', and their timetable rows. It cannot be undone.')) return;
+    var b=this; busy(b,true,'Deleting…');
+    A.api('deleteOrphanCourses',{token:T.token, courses:pick.map(function(o){ return o.course; })}).then(function(r){
+      msg('oc-msg','Deleted '+r.courses.join(', ')+': '+r.questions_removed+' question(s), '+r.sittings_removed+' sitting(s), '+r.media_deleted+' recording/photo file(s), '+r.timetable_removed+' timetable row(s).'+(r.refused&&r.refused.length?' Not deleted (they are in the system): '+r.refused.join(', ')+'.':''),false);
+      loadOrphans(); loadSummary();
+    }).catch(function(e){ msg('oc-msg',e.message,true); }).finally(function(){ busy(b,false); });
+  };
+  var LABEL={candidates:'Upload candidates',assign:'Upload assignment',questions:'Upload questions',theory:'Upload theory questions',theoryassign:'Upload theory assignment'};
+  document.querySelectorAll('[data-up]').forEach(function(btn){
+    btn.onclick=function(){
+      var kind=btn.dataset.up, file=$(btn.dataset.file).files[0];
+      if(!file){ msg('u-msg','Choose a file first.',true); return; }
+      var action={candidates:'uploadCandidates',assign:'uploadAssign',questions:'uploadQuestions',theory:'uploadTheory',theoryassign:'uploadTheoryAssign'}[kind];
+      var isXlsx=/\.xlsx?$/i.test(file.name);
+      if(isXlsx && typeof XLSX==='undefined'){ msg('u-msg','Excel support did not load. Upload the CSV version instead.',true); return; }
+      var reader=new FileReader();
+      reader.onload=function(){
+        var rows;
+        try{
+          if(isXlsx){ var wb=XLSX.read(new Uint8Array(reader.result),{type:'array'}); rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:false});
+            rows=rows.map(function(o){ var n={}; Object.keys(o).forEach(function(k){ n[String(k).trim().toLowerCase()]=String(o[k]).trim(); }); return n; }); }
+          else rows=A.parseCSV(reader.result);
+        } catch(err){ msg('u-msg','Could not read the file: '+err.message,true); return; }
+        if(!rows||!rows.length){ msg('u-msg','No rows found. The first row must hold the column headers.',true); return; }
+        btn.disabled=true; btn.textContent='Uploading '+rows.length+' rows…';
+        A.api(action,{token:T.token, rows:rows}).then(function(r){
+          var outside=(r.not_in_system||[]).length;
+          msg('u-msg','Saved '+r.processed+' row(s)'+(r.skipped?' — '+r.skipped+' skipped'+(outside?'':' (missing required columns, invalid answer, or a username already used by someone else)')+'.':'.')+(r.notes&&r.notes.length?' '+r.notes.join('; ')+'.':''), !!r.skipped && (!r.processed || outside>0));
+          if(kind==='questions') showPlacement('u-msg', r);
+          loadSummary();
+        }).catch(function(e){ msg('u-msg',e.message,true); })
+          .finally(function(){ btn.disabled=false; btn.textContent=LABEL[kind]; });
+      };
+      if(isXlsx) reader.readAsArrayBuffer(file); else reader.readAsText(file);
+    };
+  });
+
+  /* ---- KIU registration workbook import ---- */
+  $('kiu-go').onclick=function(){
+    var b=this, f=$('f-kiu').files[0], out=$('kiu-out');
+    if(!f){ out.innerHTML='<div class="error">Choose the Excel workbook first.</div>'; return; }
+    if(typeof XLSX==='undefined'){ out.innerHTML='<div class="error">Excel support did not load (check the internet connection) — refresh the page and try again.</div>'; return; }
+    var rd=new FileReader();
+    rd.onload=function(){
+      var wb; try{ wb=XLSX.read(new Uint8Array(rd.result),{type:'array'}); } catch(e){ out.innerHTML='<div class="error">Could not read the workbook: '+esc(e.message)+'</div>'; return; }
+      function sheet(name){
+        var key=Object.keys(wb.Sheets).filter(function(n){ return n.trim().toLowerCase()===name.toLowerCase(); })[0];
+        if(!key) return null;
+        return XLSX.utils.sheet_to_json(wb.Sheets[key],{defval:'',raw:false}).map(function(o){ var n={}; Object.keys(o).forEach(function(k){ n[String(k).trim().toLowerCase()]=String(o[k]).replace(/\s+/g,' ').trim(); }); return n; });
+      }
+      var U=sheet('Course Units'), L=sheet('Course Lecturers'), S=sheet('Students'), E=sheet('Student Course Enrolments');
+      // With several backends, each imports only the programmes listed for it in config.js.
+      var progs=(A.CFG.BACKEND&&A.CFG.BACKEND.programmes||[]).map(function(p){ return String(p).replace(/\s+/g,' ').trim().toLowerCase(); });
+      var mine=function(r){ return !progs.length || progs.indexOf(String(r['programme name']||'').toLowerCase())>=0; };
+      var allCount=(U||[]).length+(S||[]).length;
+      if(progs.length){ U=U&&U.filter(mine); L=L&&L.filter(mine); S=S&&S.filter(mine); E=E&&E.filter(mine); }
+      var miss=[]; if(!U) miss.push('Course Units'); if(!L) miss.push('Course Lecturers'); if(!S) miss.push('Students'); if(!E) miss.push('Student Course Enrolments');
+      if(miss.length){ out.innerHTML='<div class="error">Missing sheet(s): '+esc(miss.join(', '))+'.</div>'; return; }
+      var lpw={}, spw={};
+      (sheet('Lecturer Logins')||[]).forEach(function(r){ if(r['lecturer email']&&r['password']) lpw[r['lecturer email'].toLowerCase()]=r['password']; });
+      (sheet('Student Logins')||[]).forEach(function(r){ if(r['admission number']&&r['password']) spw[r['admission number']]=r['password']; });
+      var payload={token:T.token,
+        units:U.map(function(r){ return {programme:r['programme name'], code:r['course code'], description:r['course description']}; }),
+        lecturers:L.map(function(r){ return {programme:r['programme name'], code:r['course code'], name:r['lecturer name'], email:r['lecturer email'], password:lpw[String(r['lecturer email']||'').toLowerCase()]||''}; }),
+        students:S.map(function(r){ return {admission:r['admission number'], name:r['student name'], email:r['student email'], programme:r['programme name'], password:spw[r['admission number']]||''}; }),
+        enrolments:E.map(function(r){ return {programme:r['programme name'], code:r['course code'], admission:r['admission number'], name:r['student name'], email:r['student email']}; })};
+      var noLect=L.filter(function(r){ return !r['lecturer email']; }).length;
+      if(!confirm((progs.length?'This backend ('+(A.CFG.BACKEND.name||A.CFG.BACKEND.id)+') takes only its '+progs.length+' programme(s).\n\n':'')+'Import '+U.length+' course units, '+(L.length-noLect)+' lecturer assignments, '+S.length+' students and '+E.length+' course enrolments?')) return;
+      busy(b,true,'Importing… (this can take a minute)');
+      out.innerHTML='<p class="hint">Importing — keep this page open…</p>';
+      A.api('importKiu',payload).then(function(r){
+        var p=r.report, c=r.credentials;
+        out.innerHTML='<div class="ok-msg">Import finished.</div><div class="hint" style="font-size:17px">Lecturers: '+p.lecturers_created+' created, '+p.lecturers_updated+' updated · Programmes added: '+p.programmes_added+' · Course units added: '+p.courses_added+
+          ' · Students: '+p.students_created+' created, '+p.students_updated+' updated · Examinations (student × course unit): '+p.sittings_created+' created, '+p.sittings_updated+' updated</div>'+
+          (p.skipped.length?'<div class="error" style="margin-top:8px">Skipped '+p.skipped.length+': '+esc(p.skipped.slice(0,8).join('; '))+(p.skipped.length>8?' …':'')+'</div>':'')+
+          ((c.lecturers.length||c.students.length)?'<div class="toolbar" style="margin-top:10px">'+(c.lecturers.length?'<button class="btn small" id="kiu-dl-l">Download '+c.lecturers.length+' lecturer logins</button>':'')+(c.students.length?'<button class="btn small" id="kiu-dl-s">Download '+c.students.length+' student logins</button>':'')+'</div><p class="hint">Download these now — passwords are stored encrypted and cannot be shown again.</p>':'');
+        if($('kiu-dl-l')) $('kiu-dl-l').onclick=function(){ A.download('kiu-cbt-lecturer-logins-'+stamp()+'.csv', A.toCSV(['Lecturer Name','Email','Username','Password','Portal'], c.lecturers.map(function(x){ return [x.name,x.email,x.username,x.password,examBase()+'lecturer.html']; }))); };
+        if($('kiu-dl-s')) $('kiu-dl-s').onclick=function(){ A.download('kiu-cbt-student-logins-'+stamp()+'.csv', A.toCSV(['Admission Number','Student Name','Email','Programme','Username','Password','Exam Link'], c.students.map(function(x){ return [x.admission,x.name,x.email,x.programme,x.username,x.password,examLink(x.username)]; }))); };
+        loadSummary(); refreshLookups();
+      }).catch(function(e){ out.innerHTML='<div class="error">'+esc(e.message)+'</div>'; }).finally(function(){ busy(b,false); });
+    };
+    rd.readAsArrayBuffer(f);
+  };
+
+  /* ---- results ---- */
+  function flags(x){
+    var f=[]; if(x.focus_loss) f.push(pill('Left window '+x.focus_loss,'mid')); if(x.cam_events) f.push(pill('Camera '+x.cam_events,'mid'));
+    if(!x.has_photo && x.logged_in_at) f.push(pill('No photo','bad')); return f.join(' ')||'<span class="hint">—</span>';
+  }
+  function loadResults(){
+    A.api('results',{token:T.token}).then(function(r){
+      var lect=$('r-lect').value;
+      $('r-tbl').querySelector('tbody').innerHTML=r.rows.filter(function(x){ return lectMatch(x, lect); }).map(function(x){
+        var th=(x.theory_total===''||x.theory_total==null)?('<span class="hint">'+(x.theory_scans?('unmarked · '+x.theory_scans+' pages'):'—')+'</span>'):('<b>'+x.theory_total+'</b>');
+        return '<tr><td><b>'+esc(x.full_name)+'</b></td><td>'+esc(x.exam_taker_id)+'</td><td class="adm-col">'+esc(x.owner_name||'No lecturer assigned')+'</td><td>'+esc(x.course||'—')+'</td>'+
+          '<td><b>'+x.score+'</b> / '+x.max_score+'</td><td>'+th+'</td><td><b>'+x.grand_total+'</b></td>'+
+          '<td>'+(x.logged_in_at?overallStatus(x,false):pill('Absent','off'))+'</td><td>'+flags(x)+'</td><td>'+esc(A.fmtTime(x.submitted_at))+'</td>'+
+          '<td><button class="btn small ghost" data-view="'+esc(x.exam_taker_id)+'">View</button></td></tr>';
+      }).join('')||'<tr><td colspan="11" class="hint">No candidates yet.</td></tr>';
+      bindView($('r-tbl'));
+    }).catch(function(e){ $('r-tbl').querySelector('tbody').innerHTML='<tr><td colspan="10"><div class="error">'+esc(e.message)+'</div></td></tr>'; });
+  }
+  $('dl-results').onclick=function(){
+    var head=['Registration No','Full Name','Lecturer','Programme','Course','Year','Venue','Status','Answered','Questions','Section A','Section A Max','Section B','Total','Theory Pages','Left Window','Camera Issues','Recording Parts','Photo','GPS','Signed In','Started','Section A Submitted','Section B Submitted','Integrity Alerts'];
+    A.api('results',{token:T.token}).then(function(r){
+      var lect=$('r-lect').value;
+      var rows=r.rows.filter(function(x){ return lectMatch(x, lect); }).map(function(x){ return [x.exam_taker_id,x.full_name,x.owner_name||'No lecturer assigned',x.programme,x.course,x.year_of_study,x.exam_venue,x.logged_in_at?(x.theory_step||x.step):'absent',x.answered,x.total_q,x.score,x.max_score,x.theory_total,x.grand_total,x.theory_scans,x.focus_loss,x.cam_events,x.rec_segments,x.has_photo?'yes':'no',x.geo,x.logged_in_at,x.started_at,x.submitted_at,x.theory_submitted_at,x.integrity||'']; });
+      A.download('kiu-cbt-results-'+stamp()+'.csv', A.toCSV(head,rows));
+    }).catch(function(e){ alert(e.message); });
+  };
+  $('r-lect').onchange=loadResults;
+  $('dl-activity').onclick=function(){
+    A.api('activity',{token:T.token}).then(function(r){
+      A.download('kiu-cbt-activity-'+stamp()+'.csv', A.toCSV(['Time','Event','Registration No','Detail'], r.rows.map(function(x){ return [x.at,x.event,x.exam_taker_id,x.detail]; })));
+    }).catch(function(e){ alert(e.message); });
+  };
+
+  /* ---- theory marking ---- */
+  function loadMarking(){
+    A.api('marking',{token:T.token}).then(function(r){
+      var box=$('mk-list');
+      if(!r.rows.length){ box.innerHTML='<div class="card hint">No candidate has started Section B yet.</div>'; return; }
+      var banner = r.has_bank ? '' : '<div class="card" style="border-left:5px solid var(--gold)"><b>No theory questions uploaded.</b> You can still open each candidate’s pages and enter an overall Section B mark.</div>';
+      box.innerHTML=banner+r.rows.map(function(c){
+        var qs=(c.questions||[]).filter(function(q){ return Number(q.max_marks)>0; });
+        var scans=(c.scans||[]).map(function(s){ return '<button class="btn small ghost" data-scan="'+esc(s.fileId)+'">Page '+esc(s.page||'')+'</button>'; }).join(' ')||'<span class="hint">no pages uploaded</span>';
+        var cur=(c.theory_total!==''&&c.theory_total!=null)?c.theory_total:'', body;
+        if(qs.length){
+          body='<div style="overflow-x:auto"><table><thead><tr><th>Question</th><th>Model answer</th><th>Mark</th></tr></thead><tbody>'+qs.map(function(q){
+            var v=(c.scores&&c.scores[q.theory_id]!=null)?c.scores[q.theory_id]:'';
+            return '<tr><td><b>Q'+esc(q.number)+'.</b> '+esc(q.prompt)+'</td><td class="hint" style="max-width:320px">'+esc(q.model_answer||'')+'</td>'+
+              '<td style="white-space:nowrap"><input type="number" min="0" step="0.5" max="'+q.max_marks+'" value="'+esc(v)+'" data-tid="'+esc(q.theory_id)+'" class="mk-score panel-input" style="width:80px"> / '+q.max_marks+'</td></tr>';
+          }).join('')+'</tbody></table></div>';
+        } else body='<div class="flex" style="margin-top:8px"><label class="fld" style="margin:0">Overall Section B mark</label><input type="number" min="0" step="0.5" class="mk-overall panel-input" value="'+esc(cur)+'" style="width:110px"></div>';
+        return '<div class="card" data-cand="'+esc(c.exam_taker_id)+'"><div class="flex" style="justify-content:space-between"><h2 style="margin:0">'+esc(c.full_name)+' <span class="hint">('+esc(c.exam_taker_id)+')</span></h2>'+
+          (c.theory_step==='theory_submitted'?pill('Submitted','sub'):pill('Writing','mid'))+'</div>'+
+          '<div style="margin:10px 0" class="flex"><b>Pages:</b> '+scans+'</div>'+body+
+          '<div class="flex" style="margin-top:10px"><button class="btn small mk-save">Save mark</button><span class="mk-total hint">'+(cur!==''?'Total: '+esc(cur):'')+'</span></div></div>';
+      }).join('');
+      // Pages are private Drive files: fetch through the signed-in session and show them in a new tab.
+      box.querySelectorAll('[data-scan]').forEach(function(b){ b.onclick=function(){
+        var win=window.open('', '_blank'); if(win) win.document.write('<p style="font:18px serif;padding:20px">Loading page…</p>');
+        var id=b.closest('[data-cand]').dataset.cand;
+        A.api('scanMedia',{token:T.token, exam_taker_id:id, fileId:b.dataset.scan}).then(function(m){
+          var url=URL.createObjectURL(A.b64ToBlob(m.data, m.mime)); if(win) win.location.href=url; else location.href=url;
+        }).catch(function(e){ if(win) win.close(); alert(e.message); });
+      }; });
+      box.querySelectorAll('.mk-save').forEach(function(btn){
+        btn.onclick=function(){
+          var card=btn.closest('[data-cand]'), payload={token:T.token, exam_taker_id:card.dataset.cand}, ov=card.querySelector('.mk-overall');
+          if(ov) payload.overall=(ov.value===''?0:parseFloat(ov.value)||0);
+          else { var sc={}; card.querySelectorAll('.mk-score').forEach(function(i){ if(i.value!=='') sc[i.dataset.tid]=parseFloat(i.value)||0; }); payload.scores=sc; }
+          btn.disabled=true; btn.textContent='Saving…';
+          A.api('saveTheoryScore',payload).then(function(r){ card.querySelector('.mk-total').textContent='Total: '+r.total; })
+            .catch(function(e){ alert(e.message); }).finally(function(){ btn.disabled=false; btn.textContent='Save mark'; });
+        };
+      });
+    }).catch(function(e){ $('mk-list').innerHTML='<div class="card"><div class="error">'+esc(e.message)+'</div></div>'; });
+  }
+
+  /* ---- settings ---- */
+  /* ---------- LMS connection (Moodle LTI 1.3) ---------- */
+  function ltiTool(){
+    var base=location.origin, rows=[
+      ['Tool URL', base+'/lti/launch'], ['Public keyset URL', base+'/lti/jwks'], ['Initiate login URL', base+'/lti/login'], ['Redirection URI(s)', base+'/lti/launch'],
+      ['LTI version', 'LTI 1.3'], ['Public key type', 'Keyset URL'], ['Default launch container', 'New window'], ['Custom parameters', 'admission=$User.username'],
+      ['Privacy: share launcher\'s name / email', 'Always / Always']];
+    $('lti-tool').innerHTML='<table><tbody>'+rows.map(function(x,i){ return '<tr><td style="white-space:nowrap"><b>'+esc(x[0])+'</b></td><td><code>'+esc(x[1])+'</code></td><td><button class="btn small ghost" data-lti-copy="'+i+'">Copy</button></td></tr>'; }).join('')+'</tbody></table>'+
+      '<p class="hint">If the admission number is kept in the Moodle <b>ID number</b> field instead of the username, use <code>admission=$Person.sourcedId</code>.</p>';
+    $('lti-tool').querySelectorAll('[data-lti-copy]').forEach(function(b){ b.onclick=function(){ copyText(rows[+b.dataset.ltiCopy][1], b); }; });
+    $('lti-tool').dataset.all=rows.map(function(x){ return x[0]+': '+x[1]; }).join('\n');
+  }
+  function ltiFill(s){
+    var cf=A.CFG.PLATFORM==='cloudflare';
+    $('lti-cf').classList.toggle('hidden',!cf); $('lti-gas').classList.toggle('hidden',cf);
+    if(!cf) return;
+    ltiTool();
+    $('lti-issuer').value=s.lti_issuer||''; $('lti-client').value=s.lti_client_id||''; $('lti-deploy').value=s.lti_deployment_ids||'';
+    $('lti-jwks').value=s.lti_jwks_url||''; $('lti-auth').value=s.lti_auth_url||''; $('lti-token').value=s.lti_token_url||''; $('lti-on').checked=s.lti_enabled==='1';
+  }
+  $('lti-fill').onclick=function(){
+    var i=$('lti-issuer').value.trim().replace(/\/+$/,''); if(!/^https?:\/\//.test(i)){ msg('lti-msg','Enter the Platform ID first (for example https://lms.kiu.ac.ug).',true); return; }
+    $('lti-jwks').value=i+'/mod/lti/certs.php'; $('lti-auth').value=i+'/mod/lti/auth.php'; $('lti-token').value=i+'/mod/lti/token.php';
+  };
+  $('lti-save').onclick=function(){
+    var v={ lti_issuer:$('lti-issuer').value.trim().replace(/\/+$/,''), lti_client_id:$('lti-client').value.trim(), lti_deployment_ids:$('lti-deploy').value.trim(),
+      lti_jwks_url:$('lti-jwks').value.trim(), lti_auth_url:$('lti-auth').value.trim(), lti_token_url:$('lti-token').value.trim(), lti_enabled:$('lti-on').checked?'1':'0' };
+    var url=function(x){ return /^https:\/\/[^\s]+$/.test(x) || /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//.test(x+'/'); };
+    if(v.lti_enabled==='1'){
+      if(!url(v.lti_issuer)||!v.lti_client_id||!url(v.lti_jwks_url)||!url(v.lti_auth_url)){ msg('lti-msg','To switch it on, fill in the Platform ID, Client ID, Public keyset URL and Authentication request URL (https:// addresses).',true); return; }
+    }
+    var b=this; busy(b,true,'Saving…');
+    A.api('saveSettings',{token:T.token, settings:v}).then(function(){ msg('lti-msg', v.lti_enabled==='1'?'Saved. Students can now open their examination from the LMS.':'Saved. LMS sign-in is switched off.', false); })
+      .catch(function(e){ msg('lti-msg',e.message,true); }).finally(function(){ busy(b,false); });
+  };
+  function loadSettings(){
+    A.api('getSettings',{token:T.token}).then(function(r){
+      A.setZone(r.time_zone); showZone();
+      var s=r.settings||{}, on=function(k){ return s[k]!=='0'; };
+      ltiFill(s);
+      $('set-title').value=s.exam_title||''; $('set-duration').value=s.duration_minutes||60; $('set-papersize').value=s.paper_size||''; $('set-markq').value=s.mark_per_question||'';
+      $('set-start').value=s.scheduled_start?A.toZoneInput(s.scheduled_start):'';
+      $('set-last').value=s.last_start_at?A.toZoneInput(s.last_start_at):''; whenHints();
+      $('set-loc').checked=on('require_location'); $('set-shuffle').checked=on('shuffle_questions');
+      $('set-shuffle-opt').checked=s.shuffle_options==='1'; $('set-reveal').checked=on('reveal_mcq_score');
+      $('set-ins').value=s.instructions_html||''; $('set-terms').value=s.terms_html||'';
+      $('set-photo').checked=on('require_photo'); $('set-camera').checked=on('require_camera');
+      $('set-rec').checked=on('record_video'); $('set-audio').checked=on('record_audio');
+      $('set-quality').value=s.record_quality||'low'; $('set-seg').value=s.record_segment_seconds||120; $('set-snap').value=s.snapshot_seconds||30;
+      $('set-sync').value=s.sync_seconds||30; $('set-burst').value=s.burst_spread_seconds!=null&&s.burst_spread_seconds!==''?s.burst_spread_seconds:20; $('set-profile').value='';
+      $('set-theory-on').checked=s.theory_enabled==='1'; $('set-theory-upload').checked=on('theory_upload_enabled');
+      $('set-theory-sheet').checked=on('theory_sheet_enabled'); $('set-theory-dur').value=s.theory_duration_minutes||60;
+      $('set-theory-ins').value=s.theory_instructions_html||'';
+      var bp=[]; try{ bp=JSON.parse(s.area_blueprint||'[]'); }catch(e){}
+      $('bp-rows').innerHTML=''; (bp||[]).forEach(function(b){ addBpRow(b.area,b.count); }); bpTotal(); estimate(); loadEstimate();
+    }).catch(function(e){ msg('s-msg',e.message,true); });
+  }
+  function estimate(){
+    var perMin = {standard:2.6, low:1.4, minimal:0.6}[$('set-quality').value]||1.4, mins=(+$('set-duration').value||60)+($('set-theory-on').checked?(+$('set-theory-dur').value||0):0);
+    $('storage-est').textContent = $('set-rec').checked ? ('Storage estimate: about '+Math.round(perMin*mins)+' MB per candidate, or '+(perMin*mins*100/1024).toFixed(1)+' GB per 100 candidates, '+(CLOUD?'stored in Cloudflare R2 (DEPLOY.md, step 9: delete old recordings automatically).':'saved to the Google Drive of the account that owns the Apps Script.')) : 'Recording is off: only snapshots are kept (in memory for 6 hours).';
+  }
+  ['set-quality','set-duration','set-theory-dur','set-rec','set-theory-on'].forEach(function(id){ $(id).addEventListener('input',estimate); $(id).addEventListener('change',estimate); });
+  // Load profiles: values that keep a backend inside its 30 simultaneous requests (confirm with the load test).
+  var PROFILES={
+    std:  {sync:30, snap:30, seg:120, quality:'low',     rec:true,  burst:20},
+    large:{sync:45, snap:60, seg:240, quality:'minimal', rec:true,  burst:45},
+    xl:   {sync:60, snap:60, seg:300, quality:'minimal', rec:false, burst:60}
+  };
+  if(CLOUD){
+    $('load-hint').innerHTML='Cloudflare version: there is no limit of 30 requests at a time. <b>Standard</b> was load-tested with 2,000 candidates writing at once; <b>Large</b> and <b>Very large</b> save less often and use smaller recordings, which lowers the running costs.';
+    var po=$('set-profile').options; po[1].text='Standard — tested with 2,000 writing at once'; po[2].text='Large — fewer saves, smaller recordings (lower cost)'; po[3].text='Very large — pictures only, no video (lowest cost)';
+  }
+  $('set-profile').onchange=function(){
+    var p=PROFILES[this.value]; if(!p) return;
+    $('set-sync').value=p.sync; $('set-snap').value=p.snap; $('set-seg').value=p.seg; $('set-quality').value=p.quality; $('set-rec').checked=p.rec; $('set-burst').value=p.burst;
+    estimate(); loadEstimate();
+  };
+  // Rough requests per second for N candidates (shown as a guide; the load test gives the real figure).
+  function loadEstimate(){
+    var sync=+$('set-sync').value||30, seg=+$('set-seg').value||120, rec=$('set-rec').checked;
+    var per100=100/sync+(rec?100/seg:0);
+    $('load-est').textContent='Each 100 candidates writing at once send about '+per100.toFixed(1)+' requests per second'+(rec?' (saves plus recording parts)':' (saves only)')+'.';
+  }
+  ['set-sync','set-seg','set-rec'].forEach(function(id){ $(id).addEventListener('input',loadEstimate); $(id).addEventListener('change',loadEstimate); });
+  function addBpRow(area,count){
+    var row=document.createElement('div'); row.className='flex bp-row'; row.style.marginTop='6px';
+    row.innerHTML='<input class="panel-input bp-area" style="flex:2" placeholder="Area name (as in the question bank)" value="'+esc(area||'')+'">'+
+      '<input class="panel-input bp-count" type="number" min="0" style="flex:0 0 110px" placeholder="count" value="'+(count!=null?esc(count):'')+'">'+
+      '<button class="btn small danger bp-del" aria-label="Remove area">Remove</button>';
+    $('bp-rows').appendChild(row);
+    row.querySelector('.bp-del').onclick=function(){ row.remove(); bpTotal(); };
+    row.querySelector('.bp-count').oninput=bpTotal; bpTotal();
+  }
+  function bpTotal(){
+    var t=0, n=0; document.querySelectorAll('.bp-row').forEach(function(r){ if(r.querySelector('.bp-area').value.trim()){ n++; t+=parseInt(r.querySelector('.bp-count').value||'0',10)||0; } });
+    $('bp-total').textContent = n ? ('Questions per candidate: '+t) : 'No blueprint: every question in the bank goes on every paper.';
+  }
+  $('bp-add').onclick=function(){ addBpRow('',''); };
+  $('save-settings').onclick=function(){
+    var sv=$('set-start').value, bp=[];
+    document.querySelectorAll('.bp-row').forEach(function(r){ var a=r.querySelector('.bp-area').value.trim(); if(a) bp.push({area:a, count:parseInt(r.querySelector('.bp-count').value||'0',10)||0}); });
+    var b1=function(id){ return $(id).checked?'1':'0'; };
+    var settings={
+      exam_title:$('set-title').value.trim(), duration_minutes:String(Math.max(1,parseInt($('set-duration').value||'60',10))), paper_size:$('set-papersize').value.trim(), mark_per_question:$('set-markq').value.trim(),
+      scheduled_start:sv?A.fromZoneInput(sv):'', last_start_at:$('set-last').value?A.fromZoneInput($('set-last').value):'', require_location:b1('set-loc'), shuffle_questions:b1('set-shuffle'),
+      shuffle_options:b1('set-shuffle-opt'), reveal_mcq_score:b1('set-reveal'), instructions_html:$('set-ins').value, terms_html:$('set-terms').value,
+      require_photo:b1('set-photo'), require_camera:b1('set-camera'), record_video:b1('set-rec'), record_audio:b1('set-audio'),
+      record_quality:$('set-quality').value, record_segment_seconds:String(Math.min(300,Math.max(30,parseInt($('set-seg').value||'120',10)))),
+      snapshot_seconds:String(Math.min(300,Math.max(10,parseInt($('set-snap').value||'30',10)))),
+      sync_seconds:String(Math.min(120,Math.max(15,parseInt($('set-sync').value||'30',10)))),
+      burst_spread_seconds:String(Math.min(60,Math.max(0,parseInt($('set-burst').value||'20',10)))),
+      area_blueprint:JSON.stringify(bp), theory_enabled:b1('set-theory-on'), theory_upload_enabled:b1('set-theory-upload'),
+      theory_sheet_enabled:b1('set-theory-sheet'), theory_duration_minutes:String(Math.max(1,parseInt($('set-theory-dur').value||'60',10))),
+      theory_instructions_html:$('set-theory-ins').value
+    };
+    var b=this; b.disabled=true; b.textContent='Saving…';
+    A.api('saveSettings',{token:T.token, settings:settings}).then(function(r){
+      var sh=(r&&r.short)||[], n=settings.paper_size, mk=settings.mark_per_question, im=(r&&r.impact)||{};
+      msg('s-msg','Settings saved. Candidates who sign in from now on get the new settings.'+(n?' Each paper now has '+n+' questions.':'')+(mk?' Every Section A question is now worth '+mk+' mark'+(+mk===1?'':'s')+'.':'')+
+        (n&&im.completed?' '+im.completed+' completed paper(s) with more questions are now marked on '+n+' (the questions answered first).':'')+
+        (n&&im.writing?' '+im.writing+' candidate(s) writing now finish their paper and are then marked on '+n+'.':'')+
+        (n&&im.assigned?' '+im.assigned+' hand-assigned paper(s) not started yet are cut to '+n+'.':'')+
+        (sh.length?' Note: '+sh.length+' course unit(s) have fewer than '+n+' questions, so their candidates get all they have: '+sh.slice(0,12).map(function(x){ return x.course+' ('+x.available+')'; }).join(', ')+(sh.length>12?' …':'')+'.':''), false);
+      window.scrollTo(0,0); })
+      .catch(function(e){ msg('s-msg',e.message,true); }).finally(function(){ b.disabled=false; b.textContent='Save settings'; });
+  };
+
+  /* ---- one official time zone: every date box and time on this page is in it ---- */
+  function showZone(){
+    var lbl=A.zoneLabel(A.zone()), here=A.otherZone();
+    document.querySelectorAll('.tz-name').forEach(function(e){ e.textContent=lbl; });
+    document.querySelectorAll('.tz-note').forEach(function(e){ e.innerHTML='All dates and times here are the university\'s official time: <b>'+esc(lbl)+'</b>. Students anywhere in the world see them in this time, with their own local time beside it.'+(here?' <b>This computer is in another time zone</b> — type the times in '+esc(lbl.split(',')[0])+'.':''); });
+  }
+  /* ---- every date-and-time box says its time in words underneath (no "12:00 AM" doubt) ---- */
+  function whenKind(el){ return (el.id==='set-last'||el.id==='pr-last'||el.classList.contains('tt-last'))?'by':'at'; }
+  function whenHint(el){
+    var h=el.nextElementSibling; if(!h||!h.classList.contains('when-hint')){ h=document.createElement('div'); h.className='hint when-hint'; el.insertAdjacentElement('afterend',h); }
+    h.textContent=el.value?'= '+A.fmtExam(A.fromZoneInput(el.value),whenKind(el)):'';
+  }
+  function whenHints(){ document.querySelectorAll('input[type="datetime-local"]').forEach(whenHint); }
+  document.addEventListener('input',function(e){ if(e.target&&e.target.type==='datetime-local') whenHint(e.target); });
+  document.addEventListener('change',function(e){ if(e.target&&e.target.type==='datetime-local') whenHint(e.target); });
+
+  /* ---- timetable ---- */
+  var TT=null;
+  function loadTimetable(){
+    A.api('listSchedule',{token:T.token}).then(function(r){
+      TT=r; var df=r.defaults||{};
+      $('tt-defaults').innerHTML='Defaults: <b>'+esc(df.duration_minutes)+' min</b> · opens <b>'+(df.opens_at?esc(A.fmtExam(df.opens_at,'at',{local:false})):'now')+'</b> · latest start <b>'+(df.last_start_at?esc(A.fmtExam(df.last_start_at,'by',{local:false})):'no limit')+'</b>';
+      if(T.lec) $('tt-hint').innerHTML='Set the time for course units that are entirely yours (students you added yourself). University course units are timetabled by the examinations office and are shown read-only.';
+      drawTimetable();
+    }).catch(function(e){ msg('tt-msg',e.message,true); });
+  }
+  function ttOwn(u){ return !!(u.duration_minutes||u.opens_at||u.last_start_at); }
+  function drawTimetable(){
+    if(!TT) return;
+    var q=$('tt-q').value.trim().toLowerCase(), show=$('tt-show').value;
+    var rows=TT.rows.filter(function(u){
+      if(show==='own'&&!ttOwn(u)) return false; if(show==='default'&&ttOwn(u)) return false;
+      return !q || (u.course+' '+(u.title||'')).toLowerCase().indexOf(q)>=0;
+    });
+    $('tt-tbl').querySelector('tbody').innerHTML=rows.map(function(u){
+      var dis=u.editable?'':' disabled';
+      return '<tr data-tt="'+esc(u.course)+'"><td><b>'+esc(u.course)+'</b> '+esc(u.title||'')+(ttOwn(u)?'':'<br><span class="hint">using defaults</span>')+(u.updated_by?'<br><span class="hint">set by '+esc(u.updated_by)+'</span>':'')+'</td>'+
+        '<td>'+u.entries+(u.started?'<br><span class="hint">'+u.started+' started</span>':'')+'</td>'+
+        '<td><input class="panel-input tt-dur" type="number" min="1" max="600" style="width:90px" value="'+esc(u.duration_minutes)+'"'+dis+'></td>'+
+        '<td><input class="panel-input tt-open" type="datetime-local" value="'+esc(u.opens_at?A.toZoneInput(u.opens_at):'')+'"'+dis+'></td>'+
+        '<td><input class="panel-input tt-last" type="datetime-local" value="'+esc(u.last_start_at?A.toZoneInput(u.last_start_at):'')+'"'+dis+'></td>'+
+        '<td style="white-space:nowrap">'+(u.editable?'<button class="btn small tt-save">Save</button> <button class="btn small ghost tt-clear">Use defaults</button>':'<span class="hint">exams office</span>')+'</td></tr>';
+    }).join('')||'<tr><td colspan="6" class="hint">No course units yet.</td></tr>';
+    whenHints();
+    $('tt-tbl').querySelectorAll('tr[data-tt]').forEach(function(tr){
+      var sv=tr.querySelector('.tt-save'), cl=tr.querySelector('.tt-clear'); if(!sv) return;
+      sv.onclick=function(){
+        var o=tr.querySelector('.tt-open').value, l=tr.querySelector('.tt-last').value;
+        saveTimetable([{course:tr.dataset.tt, duration_minutes:tr.querySelector('.tt-dur').value, opens_at:o?A.fromZoneInput(o):'', last_start_at:l?A.fromZoneInput(l):''}], sv);
+      };
+      cl.onclick=function(){ if(confirm('Put '+tr.dataset.tt+' back on the default times from Settings?')) saveTimetable([{course:tr.dataset.tt, clear:true}], cl); };
+    });
+  }
+  function saveTimetable(rows, btn){
+    if(btn) busy(btn,true,'Saving…');
+    return A.api('saveSchedule',{token:T.token, rows:rows}).then(function(r){
+      var bad=r.results.filter(function(x){ return x.status==='skipped'; });
+      msg('tt-msg', r.saved+' unit(s) saved'+(bad.length?' — '+bad.length+' skipped: '+bad.slice(0,5).map(function(x){ return x.course+' ('+x.reason+')'; }).join('; '):'.'), bad.length>0 && !r.saved);
+      loadTimetable();
+    }).catch(function(e){ msg('tt-msg',e.message,true); }).finally(function(){ if(btn) busy(btn,false); });
+  }
+  ['tt-q'].forEach(function(id){ $(id).oninput=drawTimetable; }); $('tt-show').onchange=drawTimetable;
+  // "2026-11-03 09:00" (this computer's time zone) or a full ISO time → ISO
+  // timetable files: "2026-11-03 09:00" is official time; a full ISO time with its own zone is taken as it is
+  function ttTime(v){ v=String(v||'').trim(); if(!v) return ''; if(/^\d{4}-\d{2}-\d{2}[ T]\d{1,2}:\d{2}(:\d{2})?$/.test(v)) return A.fromZoneInput(v); var d=new Date(v); return isNaN(d)?'invalid:'+v:d.toISOString(); }
+  $('tt-up').onclick=function(){
+    var f=$('tt-file').files[0], b=this; if(!f){ msg('tt-msg','Choose a file first.',true); return; }
+    readSheetFile(f).then(function(rows){
+      var bad=[], out=rows.map(function(r){
+        var o=ttTime(r.opens_at||r.opens||r.open||r.start), l=ttTime(r.latest_start||r.last_start_at||r.last_start||r.closes_at);
+        if(/^invalid:/.test(o)||/^invalid:/.test(l)) bad.push(r.course||r.course_code||'?');
+        return {course:r.course||r.course_code||r.code||'', duration_minutes:r.duration_minutes||r.duration||r.minutes||'', opens_at:o, last_start_at:l};
+      });
+      if(bad.length){ msg('tt-msg','Could not read the time for: '+bad.slice(0,8).join(', ')+'. Use the form 2026-11-03 09:00.',true); return; }
+      return saveTimetable(out, b);
+    }).catch(function(e){ msg('tt-msg',e.message,true); });
+  };
+  $('tt-dl').onclick=function(){
+    if(!TT) return;
+    var f=function(x){ return x?A.toZoneInput(x).replace('T',' '):''; };
+    A.download('kiu-cbt-timetable-'+new Date().toISOString().slice(0,10)+'.csv', A.toCSV(['course','title','duration_minutes','opens_at','latest_start','entries','started'],
+      TT.rows.map(function(u){ return [u.course,u.title,u.duration_minutes,f(u.opens_at),f(u.last_start_at),u.entries,u.started]; })));
+  };
+
+  /* ---- admins ---- */
+  function loadAdmins(){
+    A.api('listAdmins',{token:T.token}).then(function(r){
+      $('a-tbl').querySelector('tbody').innerHTML=r.rows.map(function(a){
+        return '<tr><td><b>'+esc(a.username)+'</b></td><td>'+esc(a.full_name||'—')+'</td><td>'+(a.active?pill('Active','on'):pill('Disabled','off'))+'</td><td>'+esc(A.fmtTime(a.last_login))+'</td>'+
+          '<td><button class="btn small ghost" data-toggle-admin="'+esc(a.username)+'">'+(a.active?'Disable':'Enable')+'</button></td></tr>';
+      }).join('')||'<tr><td colspan="5" class="hint">No admins yet.</td></tr>';
+      document.querySelectorAll('[data-toggle-admin]').forEach(function(b){ b.onclick=function(){ A.api('toggleAdmin',{token:T.token,username:b.dataset.toggleAdmin}).then(loadAdmins).catch(function(e){ alert(e.message); }); }; });
+    }).catch(function(e){ msg('a-msg',e.message,true); });
+  }
+  $('a-create').onclick=function(){
+    A.api('createAdmin',{token:T.token,username:$('a-user').value.trim(),full_name:$('a-name').value.trim(),password:$('a-pass').value})
+      .then(function(){ msg('a-msg','Admin created.',false); $('a-user').value=''; $('a-name').value=''; $('a-pass').value=''; loadAdmins(); })
+      .catch(function(e){ msg('a-msg',e.message,true); });
+  };
+
+  /* ---- observers ---- */
+  function loadObservers(){
+    A.api('listObservers',{token:T.token}).then(function(r){
+      var base=location.href.replace(/[?#].*$/,'').replace(/[^/]*$/,'');
+      $('o-list').innerHTML=r.rows.map(function(o){
+        var link=base+'observe.html'+(A.backendParam()?'?'+A.backendParam():'')+'#t='+o.token, live=o.active&&!o.expired;
+        return '<div class="card"><div class="flex" style="justify-content:space-between"><h2 style="margin:0">'+esc(o.label)+'</h2><span>'+(o.show_scores?pill('Shows scores','mid')+' ':'')+(live?pill('Active','on'):pill(o.active?'Expired':'Revoked','off'))+'</span></div>'+
+          '<p class="hint" style="margin:6px 0 0">'+(o.expired?'Expired ':'Expires ')+esc(A.fmtTime(o.expires_at))+'</p>'+
+          (live?('<label class="fld">Link</label><div class="linkbox">'+esc(link)+'</div><div class="flex" style="margin-top:10px"><button class="btn small" data-copy="'+esc(link)+'">Copy link</button><a class="btn small ghost" target="_blank" rel="noopener" href="'+esc(link)+'">Open</a></div>'):'')+
+          '<button class="btn small '+(live?'danger':'ghost')+'" style="margin-top:12px" data-toggle-obs="'+esc(o.token)+'">'+(live?'Revoke':'Re-activate for '+(parseInt($('o-days').value,10)||7)+' days')+'</button></div>';
+      }).join('')||'<div class="card hint">No observer links yet.</div>';
+      document.querySelectorAll('[data-toggle-obs]').forEach(function(b){ b.onclick=function(){ A.api('toggleObserver',{token:T.token,observer:b.dataset.toggleObs,days:parseInt($('o-days').value,10)||7}).then(loadObservers).catch(function(e){ alert(e.message); }); }; });
+      document.querySelectorAll('[data-copy]').forEach(function(b){ b.onclick=function(){
+        (navigator.clipboard?navigator.clipboard.writeText(b.dataset.copy):Promise.reject()).then(function(){ b.textContent='Copied'; setTimeout(function(){ b.textContent='Copy link'; },1500); })
+          .catch(function(){ prompt('Copy this link:', b.dataset.copy); });
+      }; });
+    }).catch(function(e){ msg('o-msg',e.message,true); });
+  }
+  $('o-create').onclick=function(){
+    A.api('createObserver',{token:T.token,label:$('o-label').value.trim(),days:parseInt($('o-days').value,10)||7,show_scores:$('o-scores').checked}).then(function(){ $('o-label').value=''; $('o-scores').checked=false; loadObservers(); }).catch(function(e){ msg('o-msg',e.message,true); });
+  };
+
+
+  /* =====================================================================
+   * LECTURER PORTAL + STUDENT / LECTURER MANAGEMENT
+   * ===================================================================== */
+  var LOOK={lecturers:[], programmes:[], courses:[]}, PW={}, STU=[], QB=[];
+  function examBase(){ return location.href.replace(/[?#].*$/,'').replace(/[^/]*$/,''); }
+  function examLink(username){ var q=[]; if(A.backendParam()) q.push(A.backendParam()); if(username) q.push('u='+encodeURIComponent(username)); return examBase()+'index.html'+(q.length?'?'+q.join('&'):''); }
+  function fillSelect(id, items, keepFirst){
+    var el=$(id); if(!el) return; var cur=el.value, first=[];
+    for(var i=0;i<(keepFirst||0);i++) first.push(el.options[i].outerHTML);
+    el.innerHTML=first.join('')+items.map(function(o){ return '<option value="'+esc(o.v)+'">'+esc(o.t)+'</option>'; }).join('');
+    if([].some.call(el.options,function(o){ return o.value===cur; })) el.value=cur;
+  }
+  function courseLabel(c){ return c.course_code+(c.course_title?' — '+c.course_title:'')+(!T.lec&&c.owner_name?' ('+c.owner_name+')':''); }
+  function refreshLookups(){
+    var jobs=[A.api('listCatalog',{token:T.token}).then(function(r){ LOOK.programmes=r.programmes; LOOK.courses=r.courses; })];
+    if(!T.lec) jobs.push(A.api('listStudents',{token:T.token}).then(function(r){ LOOK.lecturers=r.lecturers||[]; STU=r.rows; }));
+    return Promise.all(jobs).then(function(){
+      var lects=LOOK.lecturers.map(function(l){ return {v:l.username,t:l.full_name}; });
+      ['m-lect','r-lect','ln-lect','w-lect'].forEach(function(id){ fillSelect(id, [{v:'__none',t:'No lecturer assigned'}].concat(lects), 1); });
+      $('w-lect').querySelector('[value="__none"]') && $('w-lect').removeChild($('w-lect').querySelector('[value="__none"]'));
+      fillSelect('st-lect', lects, 2); fillSelect('sm-owner', lects, 1);
+      var seenC={}, cs=[];
+      LOOK.courses.forEach(function(c){
+        var k=c.course_code.toLowerCase();
+        if(seenC[k]){ seenC[k].n++; seenC[k].t=c.course_code+(c.course_title?' — '+c.course_title:'')+' ('+seenC[k].n+' programmes)'; return; }
+        seenC[k]={v:c.course_code,t:courseLabel(c),n:1}; cs.push(seenC[k]);
+      });
+      ['st-course','ln-course','q-filter','as-course'].forEach(function(id){ fillSelect(id, cs, 1); });
+      fillSelect('q-course', cs, 0); fillSelect('q-up-course', cs, 0);
+      fillSelect('cg-cprog', LOOK.programmes.map(function(p){ return {v:p.programme,t:p.programme}; }), 1);
+      $('dl-progs').innerHTML=LOOK.programmes.map(function(p){ return '<option value="'+esc(p.programme)+'">'; }).join('');
+      $('dl-courses').innerHTML=LOOK.courses.map(function(c){ return '<option value="'+esc(c.course_code)+'">'+esc(c.course_title)+'</option>'; }).join('');
+    }).catch(function(){});
+  }
+  function readSheetFile(file){
+    return new Promise(function(res,rej){
+      var isXlsx=/\.xlsx?$/i.test(file.name);
+      if(isXlsx && typeof XLSX==='undefined') return rej(new Error('Excel support did not load. Upload the CSV version instead.'));
+      var reader=new FileReader();
+      reader.onerror=function(){ rej(new Error('Could not read the file.')); };
+      reader.onload=function(){
+        try{
+          var rows;
+          if(isXlsx){ var wb=XLSX.read(new Uint8Array(reader.result),{type:'array'}); rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:false});
+            rows=rows.map(function(o){ var n={}; Object.keys(o).forEach(function(k){ n[String(k).trim().toLowerCase()]=String(o[k]).trim(); }); return n; }); }
+          else rows=A.parseCSV(reader.result);
+          if(!rows||!rows.length) return rej(new Error('No rows found. The first row must hold the column headers.'));
+          res(rows);
+        } catch(e){ rej(new Error('Could not read the file: '+e.message)); }
+      };
+      if(isXlsx) reader.readAsArrayBuffer(file); else reader.readAsText(file);
+    });
+  }
+  function busy(btn, on, label){ btn.disabled=on; if(on){ btn.dataset.l=btn.textContent; btn.textContent=label||'Working…'; } else if(btn.dataset.l) btn.textContent=btn.dataset.l; }
+  function copyText(text, btn){
+    (navigator.clipboard?navigator.clipboard.writeText(text):Promise.reject()).then(function(){ if(btn){ var t=btn.textContent; btn.textContent='Copied'; setTimeout(function(){ btn.textContent=t; },1500); } })
+      .catch(function(){ prompt('Copy this:', text); });
+  }
+  function stuStatus(c){ return overallStatus({step:c.step, theory_step:c.theory_step, online:c.online}, true); }
+
+  /* ---------- exam uploads (exams office) ---------- */
+  var EU=null;
+  function upPill(r){
+    if(r.status==='uploaded') return pill(r.owner?'Uploaded':'Uploaded by exams office','on')+(r.registered?'':' '+pill('course not registered','mid'));
+    if(r.status==='covered') return pill('Uploaded by co-lecturer','sub');
+    if(r.status==='pending') return pill('Not uploaded','bad');
+    if(r.status==='no_lecturer') return pill('No lecturer assigned','left');
+    return pill('No course set up','off');
+  }
+  function loadUploads(){
+    A.api('examUploads',{token:T.token}).then(function(r){
+      EU=r; var s=r.summary;
+      $('eu-stats').innerHTML=statCard(s.units,'Course units (programme × code)')+statCard(s.units_uploaded,'Units with questions')+statCard(s.units_pending,'Units waiting for questions',s.units_pending>0)+
+        statCard(s.units_no_lecturer,'Units with no lecturer',s.units_no_lecturer>0)+statCard(s.lecturers,'Lecturers')+
+        statCard(s.lecturers_complete,'Lecturers fully covered')+statCard(s.lecturers_none,'Lecturers who uploaded nothing',s.lecturers_none>0);
+      var lects={}, progs={};
+      r.rows.forEach(function(x){ lects[x.owner]=x.owner_name; if(x.programme) progs[x.programme]=1; });
+      fillSelect('eu-lect', Object.keys(lects).sort(function(a,b){ return lects[a].localeCompare(lects[b]); }).map(function(k){ return {v:k,t:lects[k]}; }), 1);
+      fillSelect('eu-prog', Object.keys(progs).sort().map(function(p){ return {v:p,t:p}; }), 1);
+      drawUploads(); $('eu-ts').textContent=new Date().toLocaleTimeString();
+    }).catch(function(e){ $('eu-tbl').querySelector('tbody').innerHTML='<tr><td colspan="9"><div class="error">'+esc(e.message)+'</div></td></tr>'; });
+  }
+  function euFiltered(){
+    if(!EU) return [];
+    var q=$('eu-q').value.trim().toLowerCase(), l=$('eu-lect').value, p=$('eu-prog').value, st=$('eu-status').value;
+    return EU.rows.filter(function(x){
+      if(l && x.owner!==l) return false; if(p && x.programme!==p) return false; if(st && x.status!==st) return false;
+      return !q || (x.owner_name+' '+x.course_code+' '+x.course_title+' '+x.programme).toLowerCase().indexOf(q)>=0;
+    });
+  }
+  function drawUploads(){
+    $('eu-tbl').querySelector('tbody').innerHTML=euFiltered().map(function(x){
+      return '<tr><td><b>'+esc(x.owner_name)+'</b>'+(x.department?'<br><span class="hint">'+esc(x.department)+'</span>':'')+'</td><td>'+esc(x.programme||'—')+'</td>'+
+        '<td>'+(x.course_code?'<b>'+esc(x.course_code)+'</b> '+esc(x.course_title||''):'<span class="hint">—</span>')+'</td><td>'+upPill(x)+'</td>'+
+        '<td>'+x.questions+'</td><td>'+x.marks+'</td><td>'+x.students+'</td><td>'+(x.students?x.students_ready+' / '+x.students:'—')+'</td><td>'+esc(A.fmtTime(x.last_upload)||'—')+'</td></tr>';
+    }).join('')||'<tr><td colspan="9" class="hint">Nothing to show yet. Add lecturers and let them register their courses.</td></tr>';
+  }
+  $('eu-q').oninput=drawUploads; ['eu-lect','eu-prog','eu-status'].forEach(function(id){ $(id).onchange=drawUploads; });
+  $('eu-dl').onclick=function(){
+    A.download('kiu-cbt-exam-uploads-'+stamp()+'.csv', A.toCSV(['Lecturer','Username','Department','Email','Programme','Course Code','Course Title','Status','Questions','Marks','Students','Students With Paper','Last Upload'],
+      euFiltered().map(function(x){ return [x.owner_name,x.owner,x.department,x.email,x.programme,x.course_code,x.course_title,{uploaded:'Uploaded',covered:'Uploaded by co-lecturer',pending:'Not uploaded',no_lecturer:'No lecturer assigned',no_course:'No course set up'}[x.status],x.questions,x.marks,x.students,x.students_ready,x.last_upload]; })));
+  };
+
+  /* ---------- lecturers (exams office) ---------- */
+  var LECS=[];
+  function loadLecturers(){
+    A.api('listLecturers',{token:T.token}).then(function(r){ LECS=r.rows; LOOK.lecturers=r.rows.map(function(l){ return {username:l.username, full_name:l.full_name}; }); drawLecturers(); $('lc-ts').textContent=new Date().toLocaleTimeString(); })
+      .catch(function(e){ msg('lc-msg',e.message,true); });
+  }
+  function drawLecturers(){
+    var q=$('lc-q').value.trim().toLowerCase();
+    $('lc-tbl').querySelector('tbody').innerHTML=LECS.filter(function(l){ return !q || (l.full_name+' '+l.username+' '+(l.department||'')).toLowerCase().indexOf(q)>=0; }).map(function(l){
+      return '<tr><td><b>'+esc(l.full_name)+'</b>'+(l.email?'<br><span class="hint">'+esc(l.email)+'</span>':'')+'</td><td>'+esc(l.username)+'</td><td>'+esc(l.department||'—')+'</td>'+
+        '<td>'+(l.active?pill('Active','on'):pill('Disabled','off'))+'</td><td>'+l.programmes+'</td><td>'+l.courses+'</td><td>'+l.questions+'</td><td>'+l.students+'</td>'+
+        '<td>'+(l.online?pill(String(l.online),'on'):'0')+'</td><td>'+(l.writing?pill(String(l.writing),'mid'):'0')+'</td><td>'+esc(A.fmtTime(l.last_login)||'never')+'</td>'+
+        '<td style="white-space:nowrap"><button class="btn small ghost" data-lc-view="'+esc(l.username)+'">View</button> <button class="btn small ghost" data-lc-edit="'+esc(l.username)+'">Edit</button> <button class="btn small danger" data-lc-del="'+esc(l.username)+'">Remove</button></td></tr>';
+    }).join('')||'<tr><td colspan="12" class="hint">No lecturers yet. Click “Add lecturer”.</td></tr>';
+    $('lc-tbl').querySelectorAll('[data-lc-edit]').forEach(function(b){ b.onclick=function(){ openLecturer(b.dataset.lcEdit); }; });
+    $('lc-tbl').querySelectorAll('[data-lc-view]').forEach(function(b){ b.onclick=function(){ viewLecturer(b.dataset.lcView); }; });
+    $('lc-tbl').querySelectorAll('[data-lc-del]').forEach(function(b){ b.onclick=function(){ removeLecturer(b.dataset.lcDel); }; });
+  }
+  $('lc-q').oninput=drawLecturers;
+  $('lc-add').onclick=function(){ openLecturer(null); };
+  function openLecturer(username){
+    var l=username ? LECS.filter(function(x){ return x.username===username; })[0] : null;
+    $('lm-mode').value=l?'edit':'create'; $('lm-h').textContent=l?'Edit lecturer':'Add lecturer'; $('lm-msg').innerHTML='';
+    $('lm-user').value=l?l.username:''; $('lm-user').disabled=!!l;
+    $('lm-name').value=l?l.full_name:''; $('lm-email').value=l?(l.email||''):''; $('lm-dept').value=l?(l.department||''):'';
+    $('lm-pass').value=''; $('lm-pass-l').textContent=l?'New password (blank = keep current)':'Password (8+ characters)';
+    $('lm-active').value=(!l||l.active)?'1':'0';
+    $('lc-modal').classList.remove('hidden'); (l?$('lm-name'):$('lm-user')).focus();
+  }
+  $('lm-cancel').onclick=function(){ $('lc-modal').classList.add('hidden'); };
+  $('lm-save').onclick=function(){
+    var b=this; busy(b,true,'Saving…');
+    A.api('saveLecturer',{token:T.token, mode:$('lm-mode').value, username:$('lm-user').value.trim(), full_name:$('lm-name').value.trim(),
+      email:$('lm-email').value.trim(), department:$('lm-dept').value.trim(), password:$('lm-pass').value, active:$('lm-active').value==='1'})
+      .then(function(){ $('lc-modal').classList.add('hidden'); msg('lc-msg','Lecturer saved.',false); loadLecturers(); refreshLookups(); })
+      .catch(function(e){ msg('lm-msg',e.message,true); }).finally(function(){ busy(b,false); });
+  };
+  function removeLecturer(username){
+    var l=LECS.filter(function(x){ return x.username===username; })[0]; if(!l) return;
+    if(!confirm('Remove lecturer '+l.full_name+' ('+l.username+')?\n\nTheir account is deleted and they can no longer sign in.')) return;
+    var purge = (l.students||l.questions) ? confirm('Also delete their '+l.students+' student(s), '+l.questions+' question(s), programmes and courses?\n\nOK = delete everything.\nCancel = keep the students and questions (the exams office manages them).') : false;
+    A.api('deleteLecturer',{token:T.token, username:username, purge:purge}).then(function(r){
+      msg('lc-msg','Lecturer removed'+(purge?' with '+r.students+' student(s) and '+r.questions+' question(s).':'. Their students and questions were kept.'),false);
+      $('lc-detail').innerHTML=''; loadLecturers(); refreshLookups();
+    }).catch(function(e){ msg('lc-msg',e.message,true); });
+  }
+  function viewLecturer(username){
+    var l=LECS.filter(function(x){ return x.username===username; })[0]; if(!l) return;
+    var box=$('lc-detail'); box.innerHTML='<div class="card hint">Loading…</div>';
+    Promise.all([A.api('listCatalog',{token:T.token, owner:username}), A.api('listStudents',{token:T.token})]).then(function(res){
+      var cat=res[0], studs=res[1].rows.filter(function(s){ return String(s.owner).toLowerCase()===username.toLowerCase(); });
+      box.innerHTML='<div class="card"><div class="toolbar" style="justify-content:space-between"><h2 style="margin:0">'+esc(l.full_name)+' <span class="hint">('+esc(l.username)+')</span></h2>'+
+        '<div class="toolbar"><button class="btn small ghost" id="lcd-students">Manage their students</button><button class="btn small ghost" id="lcd-close">Close</button></div></div>'+
+        '<p class="hint">'+esc([l.department,l.email].filter(Boolean).join(' · '))+'</p>'+
+        '<div class="grid2" style="gap:18px"><div><h3>Programmes</h3>'+(cat.programmes.map(function(p){ return '<div class="flex" style="justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0"><span>'+esc(p.programme)+'</span><button class="btn small danger" data-lcd-prog="'+esc(p.programme)+'">Remove</button></div>'; }).join('')||'<p class="hint">None</p>')+'</div>'+
+        '<div><h3>Courses</h3>'+(cat.courses.map(function(c){ return '<div class="flex" style="justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0"><span><b>'+esc(c.course_code)+'</b> '+esc(c.course_title)+' <span class="hint">· '+c.students+' students · '+c.questions+' questions</span></span><button class="btn small danger" data-lcd-course="'+esc(c.course_code)+'">Remove</button></div>'; }).join('')||'<p class="hint">None</p>')+'</div></div>'+
+        '<h3>Students ('+studs.length+')</h3><div style="overflow-x:auto"><table><thead><tr><th>Name</th><th>Reg. no.</th><th>Course</th><th>Status</th></tr></thead><tbody>'+
+        (studs.map(function(x){ return '<tr><td>'+(x.online?'<span class="online-dot"></span>':'')+esc(x.full_name)+'</td><td>'+esc(x.exam_taker_id)+'</td><td>'+esc(x.course||'—')+'</td><td>'+stuStatus(x)+'</td></tr>'; }).join('')||'<tr><td colspan="4" class="hint">No students</td></tr>')+
+        '</tbody></table></div></div>';
+      $('lcd-close').onclick=function(){ box.innerHTML=''; };
+      $('lcd-students').onclick=function(){ $('st-lect').value=username; openTab('students'); };
+      box.querySelectorAll('[data-lcd-prog]').forEach(function(b){ b.onclick=function(){ if(!confirm('Remove programme "'+b.dataset.lcdProg+'" and its courses?')) return;
+        A.api('deleteProgramme',{token:T.token, owner:username, programme:b.dataset.lcdProg}).then(function(){ viewLecturer(username); loadLecturers(); }).catch(function(e){ alert(e.message); }); }; });
+      box.querySelectorAll('[data-lcd-course]').forEach(function(b){ b.onclick=function(){ if(!confirm('Remove course "'+b.dataset.lcdCourse+'"?')) return;
+        A.api('deleteCourse',{token:T.token, owner:username, course_code:b.dataset.lcdCourse}).then(function(){ viewLecturer(username); loadLecturers(); }).catch(function(e){ alert(e.message); }); }; });
+      box.scrollIntoView({behavior:'smooth'});
+    }).catch(function(e){ box.innerHTML='<div class="card"><div class="error">'+esc(e.message)+'</div></div>'; });
+  }
+
+  /* ---------- students ---------- */
+  var stSel={};
+  function loadStudents(quiet){
+    A.api('listStudents',{token:T.token}).then(function(r){ STU=r.rows; if(r.lecturers && r.lecturers.length) LOOK.lecturers=r.lecturers; drawStudents(); })
+      .catch(function(e){ if(!quiet) msg('st-msg',e.message,true); });
+  }
+  function stFiltered(){
+    var q=$('st-q').value.trim().toLowerCase(), lect=$('st-lect').value, course=$('st-course').value, show=$('st-show').value;
+    return STU.filter(function(c){
+      if(!lectMatch(c, lect)) return false;
+      if(course && String(c.course).toLowerCase()!==course.toLowerCase()) return false;
+      if(!showMatch(c, show)) return false;
+      return !q || (c.full_name+' '+c.exam_taker_id+' '+c.username).toLowerCase().indexOf(q)>=0;
+    });
+  }
+  function drawStudents(){
+    var rows=stFiltered(), ids={}; STU.forEach(function(c){ ids[c.exam_taker_id]=1; });
+    Object.keys(stSel).forEach(function(k){ if(!ids[k]) delete stSel[k]; });
+    $('st-count').textContent=rows.length; $('st-selcount').textContent=Object.keys(stSel).length;
+    $('st-tbl').querySelector('tbody').innerHTML=rows.map(function(c){
+      var paper=c.assigned?(c.assigned+' assigned'):(c.paper+' (default)');
+      return '<tr><td><input type="checkbox" data-st-sel="'+esc(c.exam_taker_id)+'"'+(stSel[c.exam_taker_id]?' checked':'')+'></td>'+
+        '<td>'+(c.online?'<span class="online-dot"></span>':'')+'<b>'+esc(c.full_name)+'</b>'+(c.email?'<br><span class="hint">'+esc(c.email)+'</span>':'')+'</td><td class="nowrap">'+esc(c.exam_taker_id)+'</td><td>'+esc(c.username)+'</td>'+
+        '<td>'+esc(c.programme||'—')+'</td><td>'+esc(c.course||'—')+(c.course_title?'<br><span class="hint">'+esc(c.course_title)+'</span>':'')+'</td><td class="adm-col">'+esc(c.owner_name||'No lecturer assigned')+'</td><td>'+esc(paper)+'</td><td>'+stuStatus(c)+'</td>'+
+        '<td style="white-space:nowrap">'+(c.editable!==false?'<button class="btn small ghost" data-st-edit="'+esc(c.exam_taker_id)+'">Edit</button> <button class="btn small ghost" data-st-pw="'+esc(c.exam_taker_id)+'">Password</button> ':'')+
+        '<button class="btn small ghost" data-view="'+esc(c.exam_taker_id)+'">View</button>'+(c.editable!==false?' <button class="btn small danger" data-st-del="'+esc(c.exam_taker_id)+'">Remove</button>':'')+'</td></tr>';
+    }).join('')||'<tr><td colspan="10" class="hint">'+(STU.length?'No students match.':'No students yet. Click “Add student” or “Upload list”.')+'</td></tr>';
+    var tb=$('st-tbl');
+    tb.querySelectorAll('[data-st-sel]').forEach(function(x){ x.onchange=function(){ if(x.checked) stSel[x.dataset.stSel]=1; else delete stSel[x.dataset.stSel]; $('st-selcount').textContent=Object.keys(stSel).length; }; });
+    tb.querySelectorAll('[data-st-edit]').forEach(function(b){ b.onclick=function(){ openStudent(b.dataset.stEdit); }; });
+    tb.querySelectorAll('[data-st-pw]').forEach(function(b){ b.onclick=function(){ newPassword(b.dataset.stPw, 'st-creds'); }; });
+    tb.querySelectorAll('[data-st-del]').forEach(function(b){ b.onclick=function(){ removeStudents([b.dataset.stDel]); }; });
+    bindView(tb);
+    $('st-all').checked=rows.length>0 && rows.every(function(c){ return stSel[c.exam_taker_id]; });
+  }
+  ['st-q'].forEach(function(id){ $(id).oninput=drawStudents; });
+  ['st-lect','st-course','st-show'].forEach(function(id){ $(id).onchange=drawStudents; });
+  $('st-all').onchange=function(){ var on=this.checked; stFiltered().forEach(function(c){ if(on) stSel[c.exam_taker_id]=1; else delete stSel[c.exam_taker_id]; }); drawStudents(); };
+  $('st-add').onclick=function(){ openStudent(null); };
+  $('st-upload-open').onclick=function(){ $('st-upload').classList.toggle('hidden'); };
+  $('st-del').onclick=function(){ var ids=Object.keys(stSel); if(!ids.length){ msg('st-msg','Tick the students to remove first.',true); return; } removeStudents(ids); };
+  $('st-links').onclick=function(){ var ids=Object.keys(stSel); if(!ids.length){ msg('st-msg','Tick the students first.',true); return; } showCreds(STU.filter(function(c){ return stSel[c.exam_taker_id]; }), 'st-creds'); };
+  function removeStudents(ids){
+    var names=STU.filter(function(c){ return ids.indexOf(c.exam_taker_id)>=0; }).map(function(c){ return c.full_name; });
+    if(!confirm('Remove '+ids.length+' student(s)?\n\n'+names.slice(0,8).join('\n')+(names.length>8?'\n…':'')+'\n\nThey will no longer be able to sign in. Recordings already saved are kept.')) return;
+    A.api('deleteStudents',{token:T.token, ids:ids}).then(function(r){
+      ids.forEach(function(id){ delete stSel[id]; });
+      msg('st-msg','Removed '+r.removed+' student(s).'+(r.refused&&r.refused.length?' '+r.refused.length+' could not be removed (not yours).':''), false); loadStudents();
+    }).catch(function(e){ msg('st-msg',e.message,true); });
+  }
+  function openStudent(id){
+    var c=id ? STU.filter(function(x){ return x.exam_taker_id===id; })[0] : null;
+    $('sm-mode').value=c?'edit':'create'; $('sm-h').textContent=c?'Edit student':'Add student'; $('sm-msg').innerHTML='';
+    $('sm-id').value=c?c.exam_taker_id:''; $('sm-id').disabled=!!c;
+    $('sm-name').value=c?c.full_name:''; $('sm-user').value=c?c.username:''; $('sm-pass').value=''; $('sm-user').disabled=!!(c&&c.student_id);
+    $('sm-pass-l').innerHTML=c?'New password <span class="hint">(blank = keep current)</span>':'Password <span class="hint">(blank = generate)</span>';
+    $('sm-prog').value=c?c.programme:''; $('sm-course').value=c?c.course:($('st-course').value||'');
+    $('sm-year').value=c?c.year_of_study:''; $('sm-venue').value=c?c.exam_venue:''; $('sm-email').value=c?c.email:''; $('sm-phone').value=c?c.phone:'';
+    $('sm-owner').value=c?(c.owner||''):(($('st-lect').value&&$('st-lect').value!=='__none')?$('st-lect').value:'');
+    $('st-modal').classList.remove('hidden'); (c?$('sm-name'):$('sm-id')).focus();
+  }
+  $('sm-cancel').onclick=function(){ $('st-modal').classList.add('hidden'); };
+  $('sm-course').onchange=function(){
+    var c=LOOK.courses.filter(function(x){ return x.course_code.toLowerCase()===$('sm-course').value.trim().toLowerCase(); })[0];
+    if(c && c.programme && !$('sm-prog').value) $('sm-prog').value=c.programme;
+  };
+  $('sm-save').onclick=function(){
+    var b=this, row={exam_taker_id:$('sm-id').value.trim(), full_name:$('sm-name').value.trim(), username:$('sm-user').value.trim(), password:$('sm-pass').value.trim(),
+      programme:$('sm-prog').value.trim(), course:$('sm-course').value.trim(), year_of_study:$('sm-year').value.trim(), exam_venue:$('sm-venue').value.trim(),
+      email:$('sm-email').value.trim(), phone:$('sm-phone').value.trim()};
+    if(!T.lec) row.owner=$('sm-owner').value;
+    if(!row.exam_taker_id||!row.full_name){ msg('sm-msg','Registration number and full name are required.',true); return; }
+    busy(b,true,'Saving…');
+    A.api('saveStudents',{token:T.token, rows:[row]}).then(function(r){
+      var x=r.results[0];
+      if(x.status==='skipped'){ msg('sm-msg',x.reason,true); return; }
+      $('st-modal').classList.add('hidden');
+      msg('st-msg', (x.status==='created'?'Student added.':'Student updated.'), false);
+      if(x.password){ PW[String(x.username||x.exam_taker_id).toLowerCase()]=x.password; }
+      loadStudentsThen(function(){ if(x.password) showCreds(STU.filter(function(c){ return c.exam_taker_id===x.exam_taker_id; }), 'st-creds'); });
+    }).catch(function(e){ msg('sm-msg',e.message,true); }).finally(function(){ busy(b,false); });
+  };
+  function loadStudentsThen(fn){ A.api('listStudents',{token:T.token}).then(function(r){ STU=r.rows; drawStudents(); if(fn) fn(); }).catch(function(e){ msg('st-msg',e.message,true); }); }
+  $('st-file-go').onclick=function(){
+    var b=this, f=$('st-file').files[0];
+    if(!f){ msg('st-msg','Choose a file first.',true); return; }
+    readSheetFile(f).then(function(rows){
+      busy(b,true,'Uploading '+rows.length+' rows…');
+      return A.api('saveStudents',{token:T.token, rows:rows}).then(function(r){
+        r.results.forEach(function(x){ if(x.password) PW[String(x.username||x.exam_taker_id).toLowerCase()]=x.password; });
+        var bad=r.results.filter(function(x){ return x.status==='skipped'; });
+        msg('st-msg','Added '+r.created+', updated '+r.updated+(r.skipped?', skipped '+r.skipped+': '+bad.slice(0,4).map(function(x){ return (x.exam_taker_id||'(blank)')+' — '+x.reason; }).join('; '):'')+'.', !!r.skipped && !r.created && !r.updated);
+        loadStudentsThen(function(){
+          var ids={}; r.results.forEach(function(x){ if(x.status==='created') ids[x.exam_taker_id]=1; });
+          var made=STU.filter(function(c){ return ids[c.exam_taker_id]; }); if(made.length) showCreds(made, 'st-creds');
+        });
+        refreshLookups();
+      });
+    }).catch(function(e){ msg('st-msg',e.message,true); }).finally(function(){ busy(b,false); });
+  };
+  function newPassword(id, box){
+    var c=STU.filter(function(x){ return x.exam_taker_id===id; })[0];
+    if(!confirm('Issue a new password for '+(c?c.full_name:id)+'? The old password will stop working.')) return;
+    A.api('resetStudentPassword',{token:T.token, exam_taker_id:id}).then(function(r){
+      PW[String(r.username).toLowerCase()]=r.password; showCreds([c||{exam_taker_id:id, full_name:r.full_name, username:r.username, email:r.email, phone:r.phone, course:r.course}], box);
+      if($('t-links') && !$('t-links').classList.contains('hidden')) drawLinks();
+    }).catch(function(e){ alert(e.message); });
+  }
+
+  /* ---------- exam messages (WhatsApp / email / copy) ---------- */
+  // "Tue 3 Nov 2026, 09:00 (GMT+3)" in this computer's time zone
+  function when(t){ var d=new Date(t); if(isNaN(d)) return ''; return d.toLocaleString([], {weekday:'short', day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', timeZoneName:'short'}); }
+  function schedOf(c){ return c.sched || (c.course ? [{course:c.course, title:c.course_title, minutes:c.exam_minutes, opens:c.exam_opens_at, last:c.exam_last_start}] : []); }
+  function schedLine(x){
+    var w=A.examWindow(x.opens, x.last, x.minutes, {year:true, allOpens:true});
+    var parts=[x.opens?w.shift():'Open now'];
+    if(x.minutes) parts.push(x.minutes+' minutes');
+    parts=parts.concat(w);
+    return '• '+x.course+(x.title?' — '+x.title:'')+': '+parts.join(' · ')+(x.opens||x.last?' ('+A.zoneLabel(A.zone(), new Date(x.opens||x.last))+')':'');
+  }
+  function messageFor(c, pwText){
+    var pw=pwText||PW[String(c.username).toLowerCase()];
+    var lect=T.lec ? T.name : (c.owner_name || 'Examinations Office');
+    var sc=schedOf(c), many=sc.length>1;
+    return 'Dear '+c.full_name+',\n\nYou are registered for the Kampala International University online examination'+(many?'s below':(c.course?' in '+c.course:''))+'.\n\n'+
+      (sc.length?'Your timetable:\n'+sc.map(schedLine).join('\n')+'\nEach paper is timed from the moment you start it. All times are '+A.zoneLabel(A.zone()).replace(', ',' (')+'); if you are in another country, the exam page also shows them in your own time.\n\n':'')+
+      'Exam link: '+examLink(c.username)+'\nUsername: '+c.username+'\nPassword: '+(pw||'(the password already given to you)')+'\n\n'+
+      (many||c.student_id?'After signing in, choose the course unit you are sitting. ':'')+'Use a computer or phone with a working camera, switch on your location, and sign in on time. Your camera will record you for the whole examination.\n\n— '+lect;
+  }
+  function waLink(c){ var ph=String(c.phone||'').replace(/[^0-9]/g,''); return 'https://wa.me/'+(ph||'')+'?text='+encodeURIComponent(messageFor(c)); }
+  function mailLink(c){ return 'mailto:'+encodeURIComponent(c.email||'')+'?subject='+encodeURIComponent('KIU online examination'+(c.course?' — '+c.course:''))+'&body='+encodeURIComponent(messageFor(c)); }
+  function credCard(c){
+    return '<div class="cred"><b>'+esc(c.full_name)+'</b> <span class="hint">('+esc(c.exam_taker_id)+')</span><pre>'+esc(messageFor(c))+'</pre>'+
+      '<div class="toolbar"><a class="btn small wa" target="_blank" rel="noopener" href="'+esc(waLink(c))+'">WhatsApp</a>'+
+      '<a class="btn small ghost" href="'+esc(mailLink(c))+'">Email</a>'+
+      '<button class="btn small ghost" data-copy-msg="'+esc(c.exam_taker_id)+'">Copy message</button>'+
+      (PW[String(c.username).toLowerCase()]||c.editable===false?'':'<button class="btn small ghost" data-newpw="'+esc(c.exam_taker_id)+'">New password</button>')+'</div></div>';
+  }
+  function bindCreds(root, list, box){
+    root.querySelectorAll('[data-copy-msg]').forEach(function(b){ b.onclick=function(){ var c=list.filter(function(x){ return x.exam_taker_id===b.dataset.copyMsg; })[0]; copyText(messageFor(c), b); }; });
+    root.querySelectorAll('[data-newpw]').forEach(function(b){ b.onclick=function(){ newPassword(b.dataset.newpw, box); }; });
+  }
+  function showCreds(list, box){
+    if(!list.length) return;
+    var el=$(box);
+    el.innerHTML='<div class="card"><div class="toolbar" style="justify-content:space-between"><h2 style="margin:0">Send exam details ('+list.length+')</h2><div class="toolbar"><button class="btn small ghost" id="cr-copyall">Copy all</button><button class="btn small ghost" id="cr-close">Close</button></div></div>'+
+      '<p class="hint">Passwords shown here are only visible now — send them before leaving this page.</p>'+list.map(credCard).join('')+'</div>';
+    bindCreds(el, list, box);
+    $('cr-close').onclick=function(){ el.innerHTML=''; };
+    $('cr-copyall').onclick=function(){ copyText(list.map(messageFor).join('\n\n---------------------------\n\n'), this); };
+    el.scrollIntoView({behavior:'smooth'});
+  }
+
+  /* ---------- exam links tab ---------- */
+  function loadLinks(){
+    $('ln-general').textContent=examLink('');
+    mailInfo();
+    loadStudentsThen(drawLinks);
+  }
+  // One entry per student login (a student can sit several course units with one login).
+  function lnFiltered(){
+    var q=$('ln-q').value.trim().toLowerCase(), course=$('ln-course').value, lect=$('ln-lect').value;
+    var rows=STU.filter(function(c){
+      if(course && String(c.course).toLowerCase()!==course.toLowerCase()) return false;
+      if(!lectMatch(c, lect)) return false;
+      return !q || (c.full_name+' '+c.exam_taker_id+' '+c.username).toLowerCase().indexOf(q)>=0;
+    });
+    var by={}, out=[];
+    rows.forEach(function(c){
+      var k=String(c.username).toLowerCase();
+      if(!by[k]){ by[k]={}; for(var f in c) by[k][f]=c[f]; by[k].courses=[]; if(c.student_id) by[k].exam_taker_id=c.exam_taker_id; out.push(by[k]); }
+      if(c.course && by[k].courses.indexOf(c.course)<0){ by[k].courses.push(c.course);
+        (by[k].sched=by[k].sched||[]).push({course:c.course, title:c.course_title, minutes:c.exam_minutes, opens:c.exam_opens_at, last:c.exam_last_start}); }
+      if(c.editable===false) by[k].editable=false;
+    });
+    out.forEach(function(x){ x.course=x.courses.join(', '); if(x.sched) x.sched.sort(function(a,b){ return String(a.opens||'').localeCompare(String(b.opens||'')) || String(a.course).localeCompare(String(b.course)); }); });
+    return out;
+  }
+  function drawLinks(){
+    var list=lnFiltered();
+    $('ln-list').innerHTML='<div class="card"><h2>'+list.length+' student(s)</h2>'+(list.map(credCard).join('')||'<p class="hint">No students yet. Add them under '+(T.lec?'My students':'Students')+'.</p>')+'</div>';
+    bindCreds($('ln-list'), list, 'ln-list-x');
+    if($('lm-send')) lmCount();
+  }
+  $('ln-q').oninput=drawLinks; $('ln-course').onchange=drawLinks; $('ln-lect').onchange=drawLinks;
+  $('ln-copyall').onclick=function(){ var l=lnFiltered(); if(!l.length) return; copyText(l.map(messageFor).join('\n\n---------------------------\n\n'), this); };
+  $('ln-csv').onclick=function(){
+    var l=lnFiltered();
+    A.download('kiu-cbt-exam-links-'+stamp()+'.csv', A.toCSV(['Registration No','Full Name','Course','Username','Password (if issued now)','Exam Link','Email','Phone'],
+      l.map(function(c){ return [c.student_id||c.exam_taker_id,c.full_name,c.course,c.username,PW[String(c.username).toLowerCase()]||'',examLink(c.username),c.email,c.phone]; })));
+  };
+  var lnx=document.createElement('div'); lnx.id='ln-list-x'; $('t-links').appendChild(lnx);
+
+  /* ---------- email exam details to many students ---------- */
+  var MAIL={ready:false, batch:50}, EMAIL_OK=/^[^\s@,;<>"]+@[^\s@,;<>"]+\.[^\s@,;<>"]+$/;
+  function mailInfo(){
+    A.api('mailInfo',{token:T.token}).then(function(r){
+      MAIL=r;
+      $('lm-status').innerHTML = r.ready ? 'Email is ready: '+esc(r.via)+(r.from?', from <b>'+esc(r.from)+'</b>':'')+(r.left!=null?', '+r.left+' emails left today':'')+'.'
+        : '<b>Email is not set up yet.</b> '+esc(r.reason)+' Meanwhile, <b>Download for mail merge</b> gives every message in a CSV file for Gmail or Outlook mail merge.';
+      lmCount();
+    }).catch(function(e){ $('lm-status').textContent=e.message; });
+  }
+  function lmList(){ return lnFiltered().filter(function(c){ return EMAIL_OK.test(String(c.email||'').trim()); }); }
+  function lmCount(){ var n=lmList().length, all=lnFiltered().length; $('lm-send').textContent='Email all '+n+' student(s) shown'+(all>n?' ('+(all-n)+' have no email address)':''); $('lm-send').disabled=!MAIL.ready||!n; $('lm-test-go').disabled=!MAIL.ready||!n; }
+  function lmItem(c, newpw){ return {exam_taker_id:c.exam_taker_id, text:messageFor(c, newpw?'{{PASSWORD}}':(PW[String(c.username).toLowerCase()]||'{{PASSWORD}}'))}; }
+  function lmRun(mode, testTo){
+    var list=lmList(), newpw=$('lm-newpw').checked && !testTo, subject=$('lm-subject').value.trim();
+    if(!list.length){ msg('lm-msg','No student with an email address in this list.',true); return; }
+    if(testTo){ if(!EMAIL_OK.test(testTo)){ msg('lm-msg','Enter your email address for the test copy.',true); return; } list=list.slice(0,1); }
+    else if(!confirm((mode==='download'?'Prepare ':'Send ')+list.length+' message(s)'+(newpw?' with a NEW password for each student (their old passwords stop working)':'')+'?')) return;
+    var size=Math.max(1, Math.min(MAIL.batch||50, 50)), batches=[]; for(var i=0;i<list.length;i+=size) batches.push(list.slice(i,i+size));
+    var all=[], btns=['lm-send','lm-merge','lm-test-go']; btns.forEach(function(id){ $(id).disabled=true; }); $('lm-out').innerHTML='';
+    var k=0;
+    (function next(){
+      if(k>=batches.length) return finish();
+      msg('lm-msg',(mode==='download'?'Preparing ':'Sending ')+Math.min(list.length,(k+1)*size)+' of '+list.length+'…',false);
+      A.api('emailStudents',{token:T.token, mode:mode, test_to:testTo||'', subject:subject, new_passwords:newpw, items:batches[k].map(function(c){ return lmItem(c,newpw); })},{tries:1})
+        .then(function(r){ all=all.concat(r.results||[]); k++; next(); })
+        .catch(function(e){ msg('lm-msg','Stopped after '+all.length+' of '+list.length+': '+e.message,true); finish(true); });
+    })();
+    function finish(stopped){
+      btns.forEach(function(id){ $(id).disabled=false; }); lmCount();
+      var c=function(st){ return all.filter(function(x){ return x.status===st; }).length; };
+      if(mode==='download'){
+        var ok=all.filter(function(x){ return x.status==='ready'; });
+        if(ok.length) A.download('kiu-cbt-exam-emails-'+stamp()+'.csv', A.toCSV(['Email','Full Name','Registration No','Subject','Message'], ok.map(function(x){ return [x.email,x.full_name,x.exam_taker_id,x.subject,x.message]; })));
+        if(!stopped) msg('lm-msg','Downloaded '+ok.length+' message(s)'+(c('skipped')?'; '+c('skipped')+' skipped':'')+(newpw?'. The file holds the NEW passwords: keep it private and delete it after the mail merge.':'.'),false);
+      } else if(!stopped) msg('lm-msg',(testTo?'Test: ':'')+'sent '+c('sent')+(c('failed')?' · failed '+c('failed'):'')+(c('skipped')?' · skipped '+c('skipped'):'')+'.', c('failed')>0);
+      var bad=all.filter(function(x){ return x.status==='failed'||x.status==='skipped'; });
+      if(bad.length) $('lm-out').innerHTML='<div class="card"><h2>Not sent ('+bad.length+')</h2>'+bad.map(function(x){
+        return '<div class="cred"><b>'+esc(x.full_name||x.exam_taker_id)+'</b> <span class="hint">('+esc(x.exam_taker_id)+(x.email?' · '+esc(x.email):'')+')</span><div class="hint">'+esc(x.reason||'')+'</div>'+
+          (x.message?'<pre>'+esc(x.message)+'</pre><div class="hint">This student\'s password was changed: pass this message on another way (WhatsApp, print).</div>':'')+'</div>';
+      }).join('')+'</div>';
+    }
+  }
+  $('lm-send').onclick=function(){ lmRun('send',''); };
+  $('lm-test-go').onclick=function(){ lmRun('send',$('lm-test').value.trim()); };
+  $('lm-merge').onclick=function(){ lmRun('download',''); };
+
+  /* ---------- practice test for every student ---------- */
+  $('pr-add').onclick=function(){
+    var b=this; busy(b,true,'Adding…');
+    A.api('addPracticeSittings',{token:T.token, course:$('pr-code').value}).then(function(r){
+      msg('pr-msg', r.created+' student(s) now have a '+r.course+' sitting'+(r.already?' ('+r.already+' already had one)':'')+'. The practice paper has '+r.questions+' question(s)'+
+        (r.questions?'.':': upload practice-questions.xlsx in "2. Question bank" first.')+(r.standalone?' '+r.standalone+' login(s) made for a single course (not university student accounts) were left out.':''), !r.questions);
+    }).catch(function(e){ msg('pr-msg',e.message,true); }).finally(function(){ busy(b,false); });
+  };
+  function practiceTimeText(t){ return 'Now: '+t.duration_minutes+' min · opens '+(t.opens_at?A.fmtExam(t.opens_at,'at',{local:false}):'now')+' · last start '+(t.last_start_at?A.fmtExam(t.last_start_at,'by',{local:false})+' · ends by '+A.fmtExam(new Date(new Date(t.last_start_at).getTime()+t.duration_minutes*60000).toISOString(),'by',{local:false}):'no limit'); }
+  function loadPracticeTiming(){
+    A.api('getPracticeTiming',{token:T.token}).then(function(r){
+      var t=r.timing; $('pr-dur').value=t.duration_minutes; $('pr-open').value=t.opens_at?A.toZoneInput(t.opens_at):''; $('pr-last').value=t.last_start_at?A.toZoneInput(t.last_start_at):''; whenHints();
+      $('pr-time-now').textContent=practiceTimeText(t);
+    }).catch(function(e){ msg('pr-time-msg',e.message,true); });
+  }
+  $('pr-time').onclick=function(){
+    var b=this, o=$('pr-open').value, l=$('pr-last').value; busy(b,true,'Saving…');
+    A.api('savePracticeTiming',{token:T.token, duration_minutes:$('pr-dur').value, opens_at:o?A.fromZoneInput(o):'', last_start_at:l?A.fromZoneInput(l):''}).then(function(r){
+      $('pr-time-now').textContent=practiceTimeText(r.timing);
+      msg('pr-time-msg','Practice time saved: '+r.timing.duration_minutes+' minutes, '+(r.timing.opens_at?'opens '+A.fmtExam(r.timing.opens_at,'at',{local:false}):'open now')+'. The real examinations are not affected.',false);
+    }).catch(function(e){ msg('pr-time-msg',e.message,true); }).finally(function(){ busy(b,false); });
+  };
+  $('pr-del').onclick=function(){
+    var code=$('pr-code').value.trim()||'PRACTICE';
+    if(!confirm('Remove every '+code+' practice sitting, with its answers, results, recordings and photos? Real examinations are not touched.')) return;
+    var b=this; busy(b,true,'Removing…');
+    A.api('removePracticeSittings',{token:T.token, course:code}).then(function(r){ msg('pr-msg','Removed '+r.removed+' '+r.course+' practice sitting(s) and deleted '+(r.media_deleted||0)+' recording/photo file(s).',false); })
+      .catch(function(e){ msg('pr-msg',e.message,true); }).finally(function(){ busy(b,false); });
+  };
+
+  /* ---------- programmes & courses (lecturer) ---------- */
+  function loadCatalog(){
+    A.api('listCatalog',{token:T.token}).then(function(r){
+      LOOK.programmes=r.programmes; LOOK.courses=r.courses;
+      var perProg={}; r.courses.forEach(function(c){ perProg[c.programme]=(perProg[c.programme]||0)+1; });
+      $('cg-prog-tbl').querySelector('tbody').innerHTML=r.programmes.map(function(p){
+        return '<tr><td><b>'+esc(p.programme)+'</b></td><td>'+(perProg[p.programme]||0)+'</td><td style="white-space:nowrap"><button class="btn small ghost" data-pg-ren="'+esc(p.programme)+'">Rename</button> <button class="btn small danger" data-pg-del="'+esc(p.programme)+'">Remove</button></td></tr>';
+      }).join('')||'<tr><td colspan="3" class="hint">No programmes yet.</td></tr>';
+      $('cg-course-tbl').querySelector('tbody').innerHTML=r.courses.map(function(c){
+        return '<tr><td><b>'+esc(c.course_code)+'</b></td><td>'+esc(c.course_title||'—')+'</td><td>'+esc(c.programme||'—')+'</td><td>'+c.students+'</td><td>'+c.questions+'</td>'+
+          '<td style="white-space:nowrap"><button class="btn small ghost" data-cs-edit="'+esc(c.course_code)+'">Edit</button> <button class="btn small danger" data-cs-del="'+esc(c.course_code)+'">Remove</button></td></tr>';
+      }).join('')||'<tr><td colspan="6" class="hint">No courses yet.</td></tr>';
+      document.querySelectorAll('[data-pg-del]').forEach(function(b){ b.onclick=function(){
+        if(!confirm('Remove programme "'+b.dataset.pgDel+'" and the courses filed under it? Students and questions are not deleted.')) return;
+        A.api('deleteProgramme',{token:T.token, programme:b.dataset.pgDel}).then(function(){ msg('cg-msg','Programme removed.',false); loadCatalog(); refreshLookups(); }).catch(function(e){ msg('cg-msg',e.message,true); }); }; });
+      document.querySelectorAll('[data-pg-ren]').forEach(function(b){ b.onclick=function(){
+        var n=prompt('New name for "'+b.dataset.pgRen+'":', b.dataset.pgRen); if(!n||n.trim()===b.dataset.pgRen) return;
+        A.api('saveProgramme',{token:T.token, old:b.dataset.pgRen, programme:n.trim()}).then(function(){ msg('cg-msg','Programme renamed.',false); loadCatalog(); refreshLookups(); }).catch(function(e){ msg('cg-msg',e.message,true); }); }; });
+      document.querySelectorAll('[data-cs-del]').forEach(function(b){ b.onclick=function(){
+        if(!confirm('Remove course "'+b.dataset.csDel+'"? Its students and questions are kept.')) return;
+        A.api('deleteCourse',{token:T.token, course_code:b.dataset.csDel}).then(function(){ msg('cg-msg','Course removed.',false); loadCatalog(); refreshLookups(); }).catch(function(e){ msg('cg-msg',e.message,true); }); }; });
+      document.querySelectorAll('[data-cs-edit]').forEach(function(b){ b.onclick=function(){
+        var c=r.courses.filter(function(x){ return x.course_code===b.dataset.csEdit; })[0];
+        $('cg-old').value=c.course_code; $('cg-code').value=c.course_code; $('cg-ctitle').value=c.course_title; $('cg-cprog').value=c.programme;
+        $('cg-course-h').textContent='Edit course'; $('cg-course-save').textContent='Save course'; $('cg-course-cancel').classList.remove('hidden'); $('cg-code').focus(); }; });
+      fillSelect('cg-cprog', r.programmes.map(function(p){ return {v:p.programme,t:p.programme}; }), 1);
+    }).catch(function(e){ msg('cg-msg',e.message,true); });
+  }
+  $('cg-prog-add').onclick=function(){
+    var n=$('cg-prog').value.trim(); if(!n){ msg('cg-msg','Type the programme name.',true); return; }
+    A.api('saveProgramme',{token:T.token, programme:n}).then(function(){ $('cg-prog').value=''; msg('cg-msg','Programme added.',false); loadCatalog(); refreshLookups(); }).catch(function(e){ msg('cg-msg',e.message,true); });
+  };
+  function resetCourseForm(){ $('cg-old').value=''; $('cg-code').value=''; $('cg-ctitle').value=''; $('cg-course-h').textContent='Add a course'; $('cg-course-save').textContent='Add course'; $('cg-course-cancel').classList.add('hidden'); }
+  $('cg-course-cancel').onclick=resetCourseForm;
+  $('cg-course-save').onclick=function(){
+    A.api('saveCourse',{token:T.token, old:$('cg-old').value, course_code:$('cg-code').value.trim(), course_title:$('cg-ctitle').value.trim(), programme:$('cg-cprog').value})
+      .then(function(){ msg('cg-msg',$('cg-old').value?'Course updated.':'Course added.',false); resetCourseForm(); loadCatalog(); refreshLookups(); })
+      .catch(function(e){ msg('cg-msg',e.message,true); });
+  };
+
+  /* ---------- my questions (lecturer) ---------- */
+  var qSel={};
+  function loadQuestions(){
+    refreshLookups().then(function(){
+      if(!LOOK.courses.length) msg('q-msg','Add a course under “Programmes & courses” first, then add questions to it.',true);
+      return A.api('listQuestions',{token:T.token});
+    }).then(function(r){ if(r){ QB=r.rows; drawQuestions(); } }).catch(function(e){ msg('q-msg',e.message,true); });
+  }
+  function drawQuestions(){
+    var f=$('q-filter').value, rows=QB.filter(function(q){ return !f || String(q.course).toLowerCase()===f.toLowerCase(); });
+    $('q-tbl').querySelector('tbody').innerHTML=rows.map(function(q){
+      return '<tr><td><input type="checkbox" data-q-sel="'+esc(q.question_id)+'"'+(qSel[q.question_id]?' checked':'')+'></td><td>'+esc(q.question_id)+'</td><td>'+esc(q.course||'—')+'</td><td>'+esc(q.area)+'</td>'+
+        '<td><div class="cut" title="'+esc(q.question_text)+'">'+esc(q.question_text)+'</div></td><td><b>'+esc(q.correct_answer)+'</b></td><td>'+esc(q.marks)+'</td>'+
+        '<td style="white-space:nowrap"><button class="btn small ghost" data-q-edit="'+esc(q.question_id)+'">Edit</button> <button class="btn small danger" data-q-del1="'+esc(q.question_id)+'">Delete</button></td></tr>';
+    }).join('')||'<tr><td colspan="8" class="hint">No questions yet.</td></tr>';
+    var tb=$('q-tbl');
+    tb.querySelectorAll('[data-q-sel]').forEach(function(x){ x.onchange=function(){ if(x.checked) qSel[x.dataset.qSel]=1; else delete qSel[x.dataset.qSel]; }; });
+    tb.querySelectorAll('[data-q-edit]').forEach(function(b){ b.onclick=function(){ editQuestion(b.dataset.qEdit); }; });
+    tb.querySelectorAll('[data-q-del1]').forEach(function(b){ b.onclick=function(){ deleteQs([b.dataset.qDel1]); }; });
+  }
+  $('q-filter').onchange=drawQuestions;
+  $('q-all').onchange=function(){ var on=this.checked, f=$('q-filter').value; QB.forEach(function(q){ if(f && String(q.course).toLowerCase()!==f.toLowerCase()) return; if(on) qSel[q.question_id]=1; else delete qSel[q.question_id]; }); drawQuestions(); };
+  $('q-del').onclick=function(){ var ids=Object.keys(qSel); if(!ids.length){ msg('q-msg','Tick the questions to delete first.',true); return; } deleteQs(ids); };
+  function deleteQs(ids){
+    if(!confirm('Delete '+ids.length+' question(s)? They are also removed from any student assignment.')) return;
+    A.api('deleteQuestions',{token:T.token, ids:ids}).then(function(r){ ids.forEach(function(i){ delete qSel[i]; }); msg('q-msg','Deleted '+r.removed+' question(s).',false); loadQuestions(); }).catch(function(e){ msg('q-msg',e.message,true); });
+  }
+  function clearQForm(){ ['q-id','q-area','q-text','q-a','q-b','q-c','q-d'].forEach(function(i){ $(i).value=''; }); $('q-marks').value=1; $('q-correct').value='A'; $('q-form-h').textContent='Add a question'; $('q-cancel').classList.add('hidden'); }
+  function editQuestion(id){
+    var q=QB.filter(function(x){ return x.question_id===id; })[0]; if(!q) return;
+    $('q-id').value=q.question_id; $('q-course').value=q.course; $('q-area').value=q.area; $('q-marks').value=q.marks||1; $('q-text').value=q.question_text;
+    $('q-a').value=q.option_a; $('q-b').value=q.option_b; $('q-c').value=q.option_c; $('q-d').value=q.option_d; $('q-correct').value=q.correct_answer||'A';
+    $('q-form-h').textContent='Edit question '+q.question_id; $('q-cancel').classList.remove('hidden'); $('q-text').focus(); window.scrollTo({top:0,behavior:'smooth'});
+  }
+  $('q-cancel').onclick=clearQForm;
+  $('q-save').onclick=function(){
+    var b=this;
+    if(!$('q-course').value){ msg('q-msg','Add a course first under “Programmes & courses”.',true); return; }
+    busy(b,true,'Saving…');
+    A.api('saveQuestion',{token:T.token, question:{question_id:$('q-id').value, course:$('q-course').value, area:$('q-area').value.trim()||'General', marks:$('q-marks').value,
+      question_text:$('q-text').value.trim(), option_a:$('q-a').value.trim(), option_b:$('q-b').value.trim(), option_c:$('q-c').value.trim(), option_d:$('q-d').value.trim(), correct_answer:$('q-correct').value}})
+      .then(function(){ msg('q-msg',$('q-id').value?'Question updated.':'Question added.',false); clearQForm(); loadQuestions(); })
+      .catch(function(e){ msg('q-msg',e.message,true); }).finally(function(){ busy(b,false); });
+  };
+  $('q-file-go').onclick=function(){
+    var b=this, f=$('q-file').files[0];
+    if(!f){ msg('q-msg','Choose a file first.',true); return; }
+    if(!$('q-up-course').value){ msg('q-msg','Add a course first under “Programmes & courses”.',true); return; }
+    readSheetFile(f).then(function(rows){
+      busy(b,true,'Uploading '+rows.length+' rows…');
+      return A.api('uploadQuestions',{token:T.token, rows:rows, course:$('q-up-course').value}).then(function(r){
+        msg('q-msg','Saved '+r.processed+' question(s)'+(r.skipped?'; skipped '+r.skipped+((r.notes&&r.notes.length)?' ('+r.notes.join('; ')+')':' (missing question text or an invalid correct answer)'):'')+'.', !!r.skipped && !r.processed);
+        showPlacement('q-msg', r);
+        loadQuestions();
+      });
+    }).catch(function(e){ msg('q-msg',e.message,true); }).finally(function(){ busy(b,false); });
+  };
+
+  /* ---------- assign questions (lecturer) ---------- */
+  function loadAssign(){
+    refreshLookups().then(function(){ return Promise.all([A.api('listStudents',{token:T.token}), A.api('listQuestions',{token:T.token})]); })
+      .then(function(r){ STU=r[0].rows; QB=r[1].rows; drawAssign(); }).catch(function(e){ msg('as-msg',e.message,true); });
+  }
+  function drawAssign(){
+    var course=$('as-course').value.toLowerCase();
+    var studs=STU.filter(function(c){ return !course || String(c.course).toLowerCase()===course; });
+    var qs=QB.filter(function(q){ return !course || String(q.course).toLowerCase()===course; });
+    $('as-students').innerHTML=studs.map(function(c){
+      return '<label><input type="checkbox" value="'+esc(c.exam_taker_id)+'"><span><b>'+esc(c.full_name)+'</b> <span class="hint">'+esc(c.exam_taker_id)+' · '+esc(c.course||'no course')+' · paper: '+(c.assigned?c.assigned+' assigned':c.paper+' default')+'</span></span></label>';
+    }).join('')||'<p class="hint" style="padding:8px 12px">No students'+(course?' in this course':'')+'.</p>';
+    $('as-questions').innerHTML=qs.map(function(q){
+      return '<label><input type="checkbox" value="'+esc(q.question_id)+'"><span><b>'+esc(q.question_id)+'</b> '+esc(q.question_text)+' <span class="hint">('+esc(q.course||'—')+', '+esc(q.marks)+' mark'+(Number(q.marks)>1?'s':'')+')</span></span></label>';
+    }).join('')||'<p class="hint" style="padding:8px 12px">No questions'+(course?' in this course':'')+'.</p>';
+    $('as-sall').checked=false; $('as-qall').checked=false;
+  }
+  $('as-course').onchange=drawAssign;
+  $('as-sall').onchange=function(){ var on=this.checked; $('as-students').querySelectorAll('input').forEach(function(i){ i.checked=on; }); };
+  $('as-qall').onchange=function(){ var on=this.checked; $('as-questions').querySelectorAll('input').forEach(function(i){ i.checked=on; }); };
+  function checked(id){ return [].map.call($(id).querySelectorAll('input:checked'), function(i){ return i.value; }); }
+  $('as-go').onclick=function(){
+    var ids=checked('as-students'), qids=checked('as-questions');
+    if(!ids.length||!qids.length){ msg('as-msg','Tick at least one student and one question.',true); return; }
+    A.api('assignQuestions',{token:T.token, ids:ids, question_ids:qids}).then(function(r){ msg('as-msg','Assigned '+r.questions+' question(s) to '+r.students+' student(s).',false); loadAssign(); }).catch(function(e){ msg('as-msg',e.message,true); });
+  };
+  $('as-clear').onclick=function(){
+    var ids=checked('as-students'); if(!ids.length){ msg('as-msg','Tick the students first.',true); return; }
+    A.api('assignQuestions',{token:T.token, ids:ids, mode:'clear'}).then(function(r){ msg('as-msg','Cleared. '+r.students+' student(s) now get all your questions for their course.',false); loadAssign(); }).catch(function(e){ msg('as-msg',e.message,true); });
+  };
+
+  /* ---- account ---- */
+  $('pw-save').onclick=function(){
+    if($('pw-new').value!==$('pw-new2').value){ msg('pw-msg','The two new passwords do not match.',true); return; }
+    var b=this; b.disabled=true;
+    A.api('changePassword',{token:T.token,current:$('pw-cur').value,next:$('pw-new').value}).then(function(){
+      msg('pw-msg','Password changed. Every session of this account has been signed out — sign in again with the new password.',false); $('pw-cur').value=$('pw-new').value=$('pw-new2').value=''; $('pw-warn').classList.add('hidden');
+      setTimeout(function(){ location.reload(); }, 2500);
+    }).catch(function(e){ msg('pw-msg',e.message,true); }).finally(function(){ b.disabled=false; });
+  };
+
+  // After a question upload: where the correct answers were placed, and the answer key to check against the file.
+  function showPlacement(id, r){
+    if(!r || !r.placed || !r.key || !r.key.length) return;
+    // its own light panel: the message area sits on the green page background, where grey hint text cannot be read
+    var p=r.placed, box=document.createElement('div');
+    box.style.cssText='margin-top:8px;background:#fff;color:#1f2a24;border:1px solid #cfe3d6;border-radius:10px;padding:10px 14px;font-size:17px;line-height:1.5';
+    box.innerHTML='Correct answers placed: <b>A '+p.A+'</b> · <b>B '+p.B+'</b> · <b>C '+p.C+'</b> · <b>D '+p.D+'</b>'+(r.kept_order?' · '+r.kept_order+' kept in your order':'')+
+      ' &nbsp;<button class="btn small ghost" type="button">Download answer key (CSV)</button>';
+    box.querySelector('button').onclick=function(){
+      A.download('kiu-cbt-answer-key-'+stamp()+'.csv', A.toCSV(['question_id','correct_option','correct_answer_text'], r.key.map(function(k){ return [k.question_id, k.correct, k.answer]; })));
+    };
+    $(id).appendChild(box);
+  }
+  function msg(id,text,bad){ $(id).innerHTML='<div class="'+(bad?'error':'ok-msg')+'">'+esc(text)+'</div>'; }
+  function stamp(){ return new Date().toISOString().slice(0,16).replace(/[:T-]/g,''); }
+  // date boxes hold the university's official time (A.toZoneInput / A.fromZoneInput), whatever this computer's time zone
+})();
+</script>
+</body>
+</html>

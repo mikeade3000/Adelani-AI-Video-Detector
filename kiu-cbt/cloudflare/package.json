@@ -1,0 +1,13 @@
+{
+  "name": "kiu-cbt-cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "deploy": "node tools/build.mjs && wrangler deploy --env=\"\"",
+    "dev": "node tools/build.mjs && wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "4.151.1"
+  }
+}

@@ -1,0 +1,6 @@
+exam_taker_id,username,password,full_name,programme,course,year_of_study,exam_venue
+2023-01-00101,kiu101,Kiu@2026a,Namubiru Sarah,BSc Computer Science,CSC 2201 Data Structures,Year 2,"Main Campus, ICT Lab 1"
+2023-01-00102,kiu102,Kiu@2026b,Okello Brian,BSc Computer Science,CSC 2201 Data Structures,Year 2,"Main Campus, ICT Lab 1"
+2023-01-00103,kiu103,Kiu@2026c,Achieng Mary,BSc Information Technology,CSC 2201 Data Structures,Year 2,"Main Campus, ICT Lab 2"
+2023-01-00104,kiu104,Kiu@2026d,Mugisha Daniel,BSc Software Engineering,CSC 2201 Data Structures,Year 2,Online (remote)
+2023-01-00105,kiu105,Kiu@2026e,Nakato Grace,BSc Mathematics,CSC 2201 Data Structures,Year 2,Online (remote)

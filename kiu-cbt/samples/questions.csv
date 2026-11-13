@@ -1,0 +1,11 @@
+question_id,area,question_text,option_a,option_b,option_c,option_d,correct_answer,marks
+DS001,Data Structures,"Which data structure follows the Last-In, First-Out (LIFO) principle?",Stack,Queue,Linked list,Heap,A,1
+DS002,Data Structures,"What is the worst-case time complexity of searching a balanced binary search tree with n nodes?",O(log n),O(1),O(n),O(n log n),A,1
+DS003,Data Structures,"Which data structure is most suitable for implementing a breadth-first search?",Queue,Stack,Binary tree,Hash table,A,1
+DS004,Data Structures,"In a singly linked list, each node contains data and:",A pointer to the next node,A pointer to the previous node,An index number,Two child pointers,A,0.5
+DS005,Algorithms,"Which sorting algorithm has an average-case complexity of O(n log n)?",Merge sort,Bubble sort,Insertion sort,Selection sort,A,1
+DS006,Algorithms,"Binary search requires the input array to be:",Sorted,Unsorted,Of even length,Stored in a linked list,A,0.5
+DS007,Algorithms,"What is the maximum number of comparisons binary search needs for 1,024 items?",11,10,512,1024,A,1
+DS008,Mathematics,"How many edges does a tree with 12 vertices have?",11,10,12,13,A,1.5
+DS009,Mathematics,"The number of subsets of a set with 5 elements is:",32,5,10,25,A,1
+DS010,Mathematics,"If log2(x) = 6, then x equals:",64,12,36,128,A,1

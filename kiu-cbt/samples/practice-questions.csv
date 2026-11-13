@@ -1,0 +1,11 @@
+﻿question_id,area,question_text,option_a,option_b,option_c,option_d,correct_answer,marks,course
+,Mathematics,What is 15 + 27?,42,32,43,52,A,1,PRACTICE
+,Mathematics,What is 9 × 8?,72,64,81,63,A,1,PRACTICE
+,Mathematics,What is half of 50?,25,20,30,15,A,1,PRACTICE
+,Mathematics,True or false: a triangle has three sides.,True,False,,,A,1,PRACTICE
+,Mathematics,True or false: 100 is less than 10.,False,True,,,A,1,PRACTICE
+,English,"What is the plural of ""child""?",children,childs,childes,childrens,A,1,PRACTICE
+,English,"Which word is the opposite of ""hot""?",cold,warm,heat,sunny,A,1,PRACTICE
+,English,Which word is spelt correctly?,necessary,neccessary,necesary,nesessary,A,1,PRACTICE
+,English,"True or false: a noun is a word that names a person, place or thing.",True,False,,,A,1,PRACTICE
+,English,"True or false: the past tense of ""go"" is ""goed"".",False,True,,,A,1,PRACTICE
