@@ -275,6 +275,12 @@ function route_(action, d) {
       return examUploads_(d);
     case "importKiu":
       return importKiu_(d);
+    case "changeProgrammes":
+      return changeProgrammes_(d);
+    case "reviewUnits":
+      return reviewUnits_(d);
+    case "answerReview":
+      return answerReview_(d);
     case "listSchedule":
       return listSchedule_(d);
     case "saveSchedule":
@@ -3625,6 +3631,159 @@ function importKiu_(d) {
     return { ok: true, report, credentials: creds };
   }, 3e4);
 }
+// ---------------- programme changes (Uploads → Change students' programme)
+// A student moving programme: their account gets the new programme, the course units of the new programme are
+// added, and the old ones listed for removal are taken away. Sent from the admin page (which reads the workbook):
+//   students: [{admission, name, programme}]               the new programme of each student
+//   add:      [{admission, code, course_id}]                course units of the new programme
+//   remove:   [{admission, code, course_id}]                old course units to take away
+// apply: false only checks and returns the plan; true makes the changes. Each student is all-or-nothing: if anything
+// for them cannot be done (unknown student, a course unit not in the system, a course_id with no course code), none
+// of their changes are made. A sitting with exam progress is never removed (it is kept and reported).
+function changeProgrammes_(d) {
+  var t = authStaff_(d.token), apply = d.apply === true;
+  return withLock_(function () {
+    clearDataCache_(); CacheService.getScriptCache().remove('studmap');
+    var smap = studentMap_(), known = knownCourses_(), rows = allCandidateRows_();
+    var cv = catSheet_(SHEETS.courses, COURSE_COLS).getDataRange().getValues(), progsOf = {};
+    for (var i = 1; i < cv.length; i++) if (cv[i][1] && cv[i][3]) {
+      var k = courseKey_(cv[i][1]); progsOf[k] = progsOf[k] || []; if (progsOf[k].indexOf(String(cv[i][3])) < 0) progsOf[k].push(String(cv[i][3]));
+    }
+    var clean = function (x) { return String(x == null ? '' : x).replace(/\s+/g, ' ').trim(); };
+    var by = {}, order = [];
+    var stu = function (adm) { adm = clean(adm); if (!by[adm]) { by[adm] = { admission: adm, programme_to: '', add: [], remove: [] }; order.push(adm); } return by[adm]; };
+    (d.students || []).forEach(function (x) { if (clean(x.admission)) { var s = stu(x.admission); s.programme_to = clean(x.programme); s.name_in_file = clean(x.name); } });
+    (d.add || []).forEach(function (x) { if (clean(x.admission)) stu(x.admission).add.push({ code: clean(x.code), course_id: clean(x.course_id) }); });
+    (d.remove || []).forEach(function (x) { if (clean(x.admission)) stu(x.admission).remove.push({ code: clean(x.code), course_id: clean(x.course_id) }); });
+    var plans = order.slice(0, 500).map(function (adm) {
+      var s = by[adm], acct = smap.byId[adm], p = { admission: adm, name: acct ? acct.full_name : (s.name_in_file || ''), programme_from: acct ? String(acct.programme || '') : '',
+        programme_to: s.programme_to, add: [], remove: [], remaining: [], problems: [], warnings: [], applied: false };
+      if (!acct) { p.problems.push('Student ' + adm + ' is not on the CBT (import them first with the KIU registration workbook).'); return p; }
+      var mine = rows.filter(function (c) { return String(c.student_id) === adm && !isPracticeSitting_(c); });
+      var sitOf = function (code) { var k = courseKey_(code); for (var j = 0; j < mine.length; j++) if (courseKey_(mine[j].course) === k) return mine[j]; return null; };
+      var label = function (x) { return x.code || ('course_id ' + x.course_id); };
+      var newKeys = {};
+      s.add.forEach(function (x) {
+        var o = { code: label(x), status: '' };
+        if (!x.code) { o.status = 'no course code'; p.problems.push('course_id ' + x.course_id + ' has no course code in the file: add a course_code column to Student Course Enrolments (or a Course Units row with this course_id and its code).'); p.add.push(o); return; }
+        var code = systemCourse_(known, x.code);
+        if (!code) { o.status = 'not in the system'; p.problems.push(x.code + ' is not a course unit in the system (add it first: Programmes & courses or the KIU workbook).'); p.add.push(o); return; }
+        o.code = code; newKeys[courseKey_(code)] = 1;
+        var ps = progsOf[courseKey_(code)] || [], prog = ps.indexOf(s.programme_to) >= 0 ? s.programme_to : (ps.length === 1 ? ps[0] : '');
+        if (!prog) { o.status = 'programme unclear'; p.problems.push(code + ' is registered under ' + (ps.length ? ps.length + ' programmes (' + ps.join('; ') + ')' : 'no programme') + ' and none is "' + s.programme_to + '".'); p.add.push(o); return; }
+        o.programme = prog;
+        var have = sitOf(code);
+        o.status = have ? (String(have.programme) === prog ? 'already enrolled' : 'already enrolled (moved to this programme)') : 'add';
+        o.exam_taker_id = have ? have.exam_taker_id : adm + '-' + code.toUpperCase();
+        p.add.push(o);
+      });
+      s.remove.forEach(function (x) {
+        var o = { code: label(x), status: '' };
+        var code = x.code ? (systemCourse_(known, x.code) || x.code) : '';
+        if (code) o.code = code;
+        var have = code ? sitOf(code) : null;
+        if (code && newKeys[courseKey_(code)]) o.status = 'kept (also in the new programme)';
+        else if (!have) o.status = 'not enrolled (nothing to remove)';
+        else if (have.started_at || have.submitted_at || have.answers_json || (have.current_step && have.current_step !== 'password' && have.current_step !== 'instructions')) {
+          o.status = 'kept: has exam progress'; p.warnings.push(code + ' was not removed because the student has already started it. Reset or remove it on the Students tab if it must go.');
+        } else { o.status = 'remove'; o.exam_taker_id = have.exam_taker_id; }
+        if (o.status === 'not enrolled (nothing to remove)' && !code) o.status = 'unknown course (course_id ' + x.course_id + ' only); nothing removed';
+        p.remove.push(o);
+      });
+      var going = {}; p.remove.forEach(function (o) { if (o.status === 'remove') going[o.exam_taker_id] = 1; });
+      p.remaining = mine.filter(function (c) { return !going[c.exam_taker_id] && !newKeys[courseKey_(c.course)]; }).map(function (c) { return String(c.course); });
+      if (!s.programme_to && !s.add.length && !s.remove.length) p.problems.push('Nothing to change for this student.');
+      if (apply && !p.problems.length) {
+        if (s.programme_to && s.programme_to !== p.programme_from) {
+          var sh = ensureSheet_(SpreadsheetApp.getActiveSpreadsheet(), SHEETS.students, STUDENT_COLS), v = sh.getDataRange().getValues();
+          for (var r = 1; r < v.length; r++) if (String(v[r][0]) === adm) { sh.getRange(r + 1, STUDENT_COLS.indexOf('programme') + 1).setValue(s.programme_to); break; }
+        }
+        var csh = sheet_(SHEETS.candidates), blank = CAND_COLS.map(function () { return ''; }), adds = [];
+        p.remove.forEach(function (o) {
+          if (o.status !== 'remove') return;
+          var c = candidateRow_(o.exam_taker_id); if (c) purgeMedia_(o.exam_taker_id, c, true);
+          var rn = rowNumFor_(o.exam_taker_id); if (rn) csh.getRange(rn, 1, 1, CAND_COLS.length).setValues([blank]);
+        });
+        p.add.forEach(function (o) {
+          if (o.status === 'add') {
+            var vals = { exam_taker_id: o.exam_taker_id, username: '', password_hash: '', full_name: acct.full_name, programme: o.programme, course: o.code,
+              exam_venue: 'Online', email: acct.email || '', phone: acct.phone || '', student_id: adm };
+            adds.push(CAND_COLS.map(function (col) {
+              if (col in vals) return vals[col];
+              if (col === 'current_step') return 'password';
+              if (col === 'focus_loss' || col === 'cam_events' || col === 'rec_segments' || col === 'rec_bytes') return 0;
+              return '';
+            }));
+          } else if (o.status === 'already enrolled (moved to this programme)') patchCandidate_(o.exam_taker_id, { programme: o.programme });
+        });
+        if (adds.length) appendRows_(csh, adds, CAND_COLS.length);
+        var removed = Object.keys(going);
+        if (removed.length) removeRowsWhere_(sheet_(SHEETS.assign), function (r) { return going[String(r[0])]; });
+        clearDataCache_(); CacheService.getScriptCache().remove('studmap');
+        p.applied = true;
+        logEvent_('programme_changed', adm, (p.programme_from || '?') + ' -> ' + (s.programme_to || '(same)') + '; added ' + adds.length + ', removed ' + removed.length + ', by ' + t.subject);
+      }
+      return p;
+    });
+    if (apply) clearSummaryCache_();
+    return { ok: true, applied: apply, plans: plans };
+  }, 30000);
+}
+
+// ---------------- answer review (Answer review tab)
+// How students answered each question, against the answer key held for the course unit. Read-only.
+// The examinations office sees every course unit; a lecturer sees the units they teach and their own students.
+// Answers are stored by the option's original letter, so a shuffled display never changes what is shown here.
+function reviewUnits_(d) {
+  var t = authAny_(d.token), data = candidateData_(), settings = settingsMap_(), units = {};
+  var unit = function (code, title, prog) {
+    var k = courseKey_(code); if (!k) return null;
+    var u = units[k] || (units[k] = { course: String(code).trim(), title: '', programmes: [], sittings: 0, started: 0, completed: 0, questions: 0, practice: false });
+    if (title && !u.title) u.title = String(title);
+    if (prog && u.programmes.indexOf(String(prog)) < 0) u.programmes.push(String(prog));
+    return u;
+  };
+  catalogue_(t.lecturer ? t.subject : null).courses.forEach(function (c) { unit(c.course_code, c.course_title, c.programme); });
+  allCandidateRows_().forEach(function (c) {
+    if (!c.course || !canSee_(t, c)) return;
+    var u = unit(c.course, data.courseTitle[normCourse_(c.course)] || '', isPracticeSitting_(c) ? '' : c.programme); if (!u) return;
+    u.sittings++; if (c.started_at) u.started++; if (mcqCompleted_(c, settings)) u.completed++;
+    if (isPracticeSitting_(c)) u.practice = true;
+  });
+  Object.keys(data.questions).forEach(function (q) { var u = units[courseKey_(data.questions[q].course)]; if (u) u.questions++; });
+  return { ok: true, units: Object.keys(units).sort().map(function (k) { return units[k]; }) };
+}
+function answerReview_(d) {
+  var t = authAny_(d.token), data = candidateData_(), settings = settingsMap_(), names = staffNames_();
+  var k = courseKey_(d.course);
+  if (!k) return { error: 'Choose a course unit.' };
+  var rows = allCandidateRows_().filter(function (c) { return courseKey_(c.course) === k && canSee_(t, c); });
+  if (t.lecturer && !rows.length && !catalogue_(t.subject).courses.some(function (c) { return courseKey_(c.course_code) === k; }))
+    return { error: 'This course unit is not one of yours.' };
+  var used = {}, ks = rows.length ? settingsFor_(rows[0], settings) : settings;
+  var students = rows.map(function (c) {
+    var paper = paperFor_(c, data, settings), sc = computeMcqScore_(c, data, settings), ans = c.answers_json ? safeParse_(c.answers_json, {}) : {}, mine = {};
+    paper.forEach(function (q) { used[q] = (used[q] || 0) + 1; if (ans[q]) mine[q] = String(ans[q]).toUpperCase().charAt(0); });
+    var done = mcqCompleted_(c, settings);
+    return { exam_taker_id: c.exam_taker_id, student_id: c.student_id || '', full_name: c.full_name, programme: c.programme || '',
+      status: c.current_step === 'submitted' || c.submitted_at ? 'submitted' : done ? 'time over (not submitted)' : c.started_at ? 'writing' : 'not started',
+      started_at: c.started_at || '', submitted_at: c.submitted_at || '', score: sc.score, max: sc.max, answered: sc.answered, paper: paper, answers: mine };
+  });
+  var order = {}; data.qorder.forEach(function (q, i) { order[q] = i; });
+  var ids = Object.keys(data.questions).filter(function (q) { return courseKey_(data.questions[q].course) === k || used[q]; });
+  ids.sort(function (a, b) { return (order[a] == null ? 1e9 : order[a]) - (order[b] == null ? 1e9 : order[b]); });
+  var key = ids.map(function (q) {
+    var x = data.questions[q];
+    return { question_id: q, area: x.area, text: String(x.question_text == null ? '' : x.question_text),
+      options: { A: String(x.option_a == null ? '' : x.option_a), B: String(x.option_b == null ? '' : x.option_b), C: String(x.option_c == null ? '' : x.option_c), D: String(x.option_d == null ? '' : x.option_d) },
+      correct: String(x.correct_answer || '').toUpperCase().charAt(0), mark: questionMark_(x, ks), owner: x.owner || '',
+      owner_name: x.owner ? (names[String(x.owner).toLowerCase()] || x.owner) : 'Examinations office', on_papers: used[q] || 0 };
+  });
+  logEvent_('answer_review_opened', '', String(d.course).slice(0, 40) + ' by ' + t.subject);
+  return { ok: true, course: rows.length ? String(rows[0].course) : String(d.course), title: data.courseTitle[normCourse_(d.course)] || '',
+    mark_per_question: markPerQuestion_(ks) || '', key: key, students: students };
+}
+
 function overlayLive_(rows) {
   var keys = [];
   rows.forEach(function(c) {

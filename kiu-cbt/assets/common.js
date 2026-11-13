@@ -37,7 +37,7 @@
   // Not idempotent: never auto-retry these (a retry could duplicate something).
   var NO_RETRY = { createObserver:1, createAdmin:1, toggleObserver:1, toggleAdmin:1,
                    theoryUpload:1, theoryDeleteScan:1, photoUpload:1, resetCandidate:1, changePassword:1,
-                   importKiu:1, saveStudents:1, resetStudentPassword:1, emailStudents:1, deleteCandidateMedia:1, ltiRedeem:1, deleteOrphanCourses:1 };
+                   importKiu:1, saveStudents:1, resetStudentPassword:1, emailStudents:1, deleteCandidateMedia:1, ltiRedeem:1, deleteOrphanCourses:1, changeProgrammes:1 };
 
   function wait(ms){ return new Promise(function (res) { setTimeout(res, ms); }); }
 

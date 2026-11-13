@@ -1,0 +1,30 @@
+// Answer review (API) on the local Cloudflare runtime.
+const { execFileSync } = require('child_process');
+const B = process.argv[2];
+const api = async (a, b) => (await fetch(B + '/api', { method: 'POST', body: JSON.stringify(Object.assign({ action: a }, b || {})) })).json();
+const res = []; const check = (n, ok, d) => { res.push(!!ok); console.log((ok ? 'PASS  ' : 'FAIL  ') + n + (d ? '  — ' + String(d).slice(0, 260) : '')); };
+(async () => {
+  const seed = JSON.parse(execFileSync('node', [__dirname + '/rvseed.js', B]).toString().trim().split('\n').pop());
+  const { key, chosen, results, tokens: { t, lec, lec2 } } = seed;
+  const resBefore = JSON.stringify((await api('results', { token: t })).rows);
+  const units = (await api('reviewUnits', { token: t })).units;
+  const m = units.find(u => u.course === 'MTH101') || {};
+  check('R1 the exams office sees every course unit with its counts (MTH101: 6 students, 4 completed, 5 questions)', units.length === 2 && m.sittings === 6 && m.completed === 4 && m.questions === 5 && m.title === 'Calculus', JSON.stringify(units));
+  const r = await api('answerReview', { token: t, course: 'MTH101' });
+  check('R2 the answer key is the one the system holds (5 questions, every correct letter matches)', r.ok && r.key.length === 5 && r.key.every(q => q.correct === key[q.question_id]), r.key && r.key.map(q => q.question_id + ':' + q.correct).join(' '));
+  check('R3 the correct letters are spread over A–D (moved off A on upload), with the correct text', r.key.some(q => q.correct !== 'A') && r.key.find(q => q.question_id === 'Q1').options[key.Q1] === '4', '');
+  const by = Object.fromEntries(r.students.map(x => [x.exam_taker_id.split('-')[0], x]));
+  check('R4 each student\'s answers are exactly what they chose (options were shuffled on screen)', ['S1', 'S2', 'S6', 'S7'].every(a => JSON.stringify(Object.keys(chosen[a]).sort().map(k => k + chosen[a][k])) === JSON.stringify(Object.keys(by[a].answers).sort().map(k => k + by[a].answers[k]))), JSON.stringify({ S2: by.S2.answers, chose: chosen.S2 }));
+  check('R5 scores agree with Results (S1 10/10, S2 4/10: 2 right, 2 wrong, 1 blank)', r.students.every(x => { const y = results.find(z => z.id === x.exam_taker_id); return y && y.score === x.score && y.max === x.max; }) && by.S1.score === 10 && by.S2.score === 4 && by.S2.answered === 4, JSON.stringify(r.students.map(x => x.exam_taker_id + ' ' + x.score + '/' + x.max)));
+  check('R6 statuses: submitted ×4, writing (S3), not started (S4)', ['S1', 'S2', 'S6', 'S7'].every(a => by[a].status === 'submitted') && by.S3.status === 'writing' && by.S4.status === 'not started', r.students.map(x => x.exam_taker_id + ':' + x.status).join(' '));
+  const lu = (await api('reviewUnits', { token: lec })).units.map(u => u.course), le = await api('answerReview', { token: lec, course: 'ENG102' }), lm = await api('answerReview', { token: lec, course: 'MTH101' });
+  check('R7 a lecturer sees only their own unit (MTH101), with all its students; ENG102 is refused', lu.join() === 'MTH101' && !!le.error && lm.ok && lm.students.length === 6, lu.join() + ' | ' + le.error);
+  const l2 = await api('answerReview', { token: lec2, course: 'MTH101' });
+  check('R8 another lecturer cannot open MTH101', !!l2.error, l2.error);
+  const s = await api('candidateLogin', { username: 'S1', password: 'pw' }), stu = await api('answerReview', { token: s.student_token, course: 'MTH101' }), none = await api('answerReview', { course: 'MTH101' });
+  check('R9 students and anyone not signed in cannot see answers or the key', !!stu.error && !!none.error, stu.error + ' | ' + none.error);
+  check('R10 looking changes nothing (results identical before and after)', JSON.stringify((await api('results', { token: t })).rows) === resBefore, '');
+  const p = await api('answerReview', { token: t, course: 'ENG102' });
+  check('R11 a unit with nobody started still shows its answer key', p.ok && p.key.length === 1 && p.students.length === 1 && p.students[0].status === 'not started', '');
+  console.log('\n' + res.filter(Boolean).length + '/' + res.length + ' passed');
+})().catch(e => { console.log('ERROR', e); process.exit(1); });

@@ -41,6 +41,7 @@
     <button class="tab" data-tab="links">Exam links</button>
     <button class="tab adm hidden" data-tab="upload">Uploads</button>
     <button class="tab" data-tab="results">Results</button>
+    <button class="tab" data-tab="review">Answer review</button>
     <button class="tab adm hidden" data-tab="marking">Theory marking</button>
     <button class="tab" data-tab="timetable">Timetable</button>
     <button class="tab adm hidden" data-tab="settings">Settings</button>
@@ -281,6 +282,13 @@
         <div class="toolbar"><input type="file" id="f-kiu" accept=".xlsx,.xls" class="panel-input"><button class="btn small gold" id="kiu-go">Import workbook</button></div>
         <div id="kiu-out"></div>
       </div>
+      <div class="card" style="border-left:6px solid var(--gold)" id="pc-card">
+        <h2>Change students' programme</h2>
+        <p class="hint">For students moving to another programme. Upload an Excel file with the sheets <code>Students</code> (admission number + the <b>new</b> programme), <code>Student Course Enrolments</code> (the course units of the new programme) and, optionally, a sheet of removals (its name contains <i>Removal</i>; rows whose Area is <i>Student Course Enrolments</i> and Action contains <i>REMOVE</i>). The KIU VP developer-handoff workbook works as it is. Course units may be given by course code, or by <code>course_id</code> when the same file says which code that id is.</p>
+        <p class="hint"><b>Check file</b> shows exactly what will change and changes nothing. <b>Apply changes</b> then does it. Each student is all-or-nothing: if anything for a student cannot be done, nothing is changed for that student. A course unit the student has already started is never removed.</p>
+        <div class="toolbar"><input type="file" id="f-pc" accept=".xlsx,.xls" class="panel-input"><button class="btn small" id="pc-check">Check file</button><button class="btn small gold hidden" id="pc-apply">Apply changes</button></div>
+        <div id="pc-out"></div>
+      </div>
       <div class="card">
         <h2>1. Candidates</h2>
         <p class="hint">Columns: <code>exam_taker_id, username, password, full_name, programme, course, year_of_study, exam_venue</code>. <code>exam_taker_id</code> is the registration number. <code>course</code>, when given, must be a course unit already in the system (rows with any other course are not uploaded). Re-uploading a candidate updates their details without touching their progress. (.csv or .xlsx)</p>
@@ -345,6 +353,35 @@
       <div class="card"><div style="overflow-x:auto"><table id="r-tbl"><thead><tr>
         <th>Name</th><th>Reg. no.</th><th class="adm-col">Lecturer</th><th>Course</th><th>Section A</th><th>Section B</th><th>Total</th><th>Status</th><th>Flags</th><th>Submitted</th><th></th>
       </tr></thead><tbody></tbody></table></div></div>
+    </div>
+
+    <div id="t-review" class="tabpage hidden">
+      <h1>Answer review</h1>
+      <p class="hint">How each student answered, question by question, against the course unit's answer key. Read-only: nothing here changes answers or marks.</p>
+      <div class="card">
+        <div class="toolbar">
+          <label class="fld" for="rv-unit" style="margin:0">Course unit</label>
+          <select id="rv-unit" class="panel-input" style="width:auto;min-width:min(420px,100%);margin:0"><option value="">Loading…</option></select>
+          <button class="btn small gold" id="rv-load">Show</button>
+        </div>
+        <div id="rv-msg"></div>
+      </div>
+      <div id="rv-body" class="hidden">
+        <div class="card">
+          <h2 id="rv-title" style="margin-bottom:4px"></h2>
+          <p class="hint" id="rv-meta"></p>
+          <div class="toolbar">
+            <button class="btn small rv-view" data-v="students">Students</button>
+            <button class="btn small ghost rv-view" data-v="questions">Questions</button>
+            <button class="btn small ghost rv-view" data-v="key">Answer key</button>
+            <span style="flex:1"></span>
+            <button class="btn small ghost" id="rv-dl-ans">Download answers (CSV)</button>
+            <button class="btn small ghost" id="rv-dl-items">Download question analysis (CSV)</button>
+            <button class="btn small ghost" id="rv-dl-key">Download answer key (CSV)</button>
+          </div>
+        </div>
+        <div class="card" id="rv-pane"></div>
+      </div>
     </div>
 
     <div id="t-marking" class="tabpage hidden">
@@ -631,7 +668,7 @@
     document.querySelectorAll('.tabpage').forEach(function(p){ p.classList.add('hidden'); });
     $('t-'+tab).classList.remove('hidden');
     if(pollTimer){ clearInterval(pollTimer); pollTimer=null; }
-    var loaders={dashboard:loadDashboard, monitor:loadMonitor, wall:loadWall, upload:function(){ loadSummary(); loadOrphans(); loadPracticeTiming(); }, results:loadResults,
+    var loaders={dashboard:loadDashboard, monitor:loadMonitor, wall:loadWall, upload:function(){ loadSummary(); loadOrphans(); loadPracticeTiming(); }, results:loadResults, review:loadReview,
       marking:loadMarking, settings:loadSettings, admins:loadAdmins, observers:loadObservers,
       lecturers:loadLecturers, uploads:loadUploads, students:loadStudents, catalog:loadCatalog, questions:loadQuestions, assign:loadAssign, links:loadLinks, timetable:loadTimetable};
     if(loaders[tab]) loaders[tab]();
@@ -941,6 +978,189 @@
     };
   });
 
+  /* ---- answer review: how students answered, against the answer key ---- */
+  var RV=null, RVV='students', RVS=null;
+  var RVSTAT={'submitted':['Submitted','on'],'time over (not submitted)':['Time over','mid'],'writing':['Writing','mid'],'not started':['Not started','off']};
+  function loadReview(){
+    A.api('reviewUnits',{token:T.token}).then(function(r){
+      var cur=$('rv-unit').value;
+      $('rv-unit').innerHTML='<option value="">Choose a course unit…</option>'+r.units.map(function(u){
+        return '<option value="'+esc(u.course)+'">'+esc(u.course)+(u.title?' — '+esc(u.title):'')+(u.practice?' (practice)':'')+' · '+u.completed+' of '+u.sittings+' completed · '+u.questions+' question'+(u.questions===1?'':'s')+'</option>';
+      }).join('');
+      if(cur) $('rv-unit').value=cur;
+      if(!r.units.length) msg('rv-msg','No course units yet.',false);
+    }).catch(function(e){ msg('rv-msg',e.message,true); });
+  }
+  $('rv-load').onclick=function(){
+    var u=$('rv-unit').value, b=this; if(!u){ msg('rv-msg','Choose a course unit first.',true); return; }
+    $('rv-msg').innerHTML=''; busy(b,true,'Loading…');
+    A.api('answerReview',{token:T.token, course:u}).then(function(r){
+      RV=r; RVS=null; RVV='students';
+      RV.byId={}; r.key.forEach(function(q,i){ q.n=i+1; RV.byId[q.question_id]=q; });
+      $('rv-body').classList.remove('hidden');
+      $('rv-title').textContent=r.course+(r.title?' — '+r.title:'');
+      var done=r.students.filter(function(x){ return /submitted|time over/.test(x.status); }).length;
+      $('rv-meta').innerHTML=r.students.length+' student'+(r.students.length===1?'':'s')+' · <b>'+done+'</b> completed · '+r.key.length+' question'+(r.key.length===1?'':'s')+(r.mark_per_question?' · every question worth <b>'+esc(r.mark_per_question)+'</b> mark'+(+r.mark_per_question===1?'':'s')+' (Settings)':'');
+      rvDraw();
+    }).catch(function(e){ msg('rv-msg',e.message,true); }).finally(function(){ busy(b,false); });
+  };
+  document.querySelectorAll('.rv-view').forEach(function(b){ b.onclick=function(){ RVV=b.dataset.v; RVS=null; rvDraw(); }; });
+  function rvOpt(q,l){ return l?'<b>'+esc(l)+'</b>'+(q&&q.options[l]?' — '+esc(q.options[l]):''):''; }
+  function rvShort(t,n){ t=String(t||''); return t.length>n?t.slice(0,n-1)+'…':t; }
+  // per question: how the students who completed their paper answered it
+  function rvItems(){
+    var done=RV.students.filter(function(x){ return /submitted|time over/.test(x.status); });
+    return RV.key.map(function(q){
+      var c={A:0,B:0,C:0,D:0,blank:0}, n=0;
+      done.forEach(function(x){ if(x.paper.indexOf(q.question_id)<0) return; n++; var a=x.answers[q.question_id]; if(a&&c[a]!=null) c[a]++; else c.blank++; });
+      var right=q.correct?c[q.correct]:0, top=null;
+      ['A','B','C','D'].forEach(function(l){ if(l!==q.correct && c[l]>right && (!top||c[l]>c[top])) top=l; });
+      return {q:q, n:n, c:c, right:right, pct:n?Math.round(100*right/n):null, top:top};
+    });
+  }
+  function rvDraw(){
+    document.querySelectorAll('.rv-view').forEach(function(b){ b.classList.toggle('ghost', b.dataset.v!==RVV); });
+    var pane=$('rv-pane');
+    if(RVV==='students' && RVS){ return rvStudent(pane, RVS); }
+    if(RVV==='students'){
+      pane.innerHTML='<div class="toolbar"><input id="rv-q" class="panel-input" placeholder="Search name or registration number" style="max-width:340px;margin:0"></div>'+
+        '<div style="overflow-x:auto"><table id="rv-st"><thead><tr><th>Name</th><th>Reg. no.</th><th>Programme</th><th>Status</th><th>Answered</th><th>Score</th><th></th></tr></thead><tbody></tbody></table></div>';
+      var draw=function(){
+        var q=$('rv-q').value.trim().toLowerCase();
+        $('rv-st').querySelector('tbody').innerHTML=RV.students.filter(function(x){ return !q || (x.full_name+' '+x.exam_taker_id+' '+x.student_id).toLowerCase().indexOf(q)>=0; }).map(function(x){
+          var st=RVSTAT[x.status]||[x.status,'off'];
+          return '<tr><td><b>'+esc(x.full_name)+'</b></td><td>'+esc(x.student_id||x.exam_taker_id)+'</td><td>'+esc(x.programme||'—')+'</td><td>'+pill(st[0],st[1])+'</td>'+
+            '<td>'+x.answered+' / '+x.paper.length+'</td><td><b>'+esc(x.score)+'</b> / '+esc(x.max)+'</td>'+
+            '<td><button class="btn small" data-rv="'+esc(x.exam_taker_id)+'">View answers</button></td></tr>';
+        }).join('')||'<tr><td colspan="7" class="hint">No students.</td></tr>';
+        pane.querySelectorAll('[data-rv]').forEach(function(b){ b.onclick=function(){ RVS=b.dataset.rv; rvDraw(); window.scrollTo(0,$('rv-pane').offsetTop-80); }; });
+      };
+      $('rv-q').oninput=draw; draw(); return;
+    }
+    if(RVV==='questions'){
+      var items=rvItems(), done=RV.students.filter(function(x){ return /submitted|time over/.test(x.status); }).length;
+      pane.innerHTML='<p class="hint">Based on the <b>'+done+'</b> completed paper'+(done===1?'':'s')+'. The correct option is shaded. <b>Check the key</b> marks a question where more students chose one wrong option than the correct one — often a sign that the answer key is wrong.</p>'+
+        '<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Question</th><th>Correct</th><th>A</th><th>B</th><th>C</th><th>D</th><th>No answer</th><th>% correct</th><th></th></tr></thead><tbody>'+
+        items.map(function(it){
+          var cell=function(l){ var on=it.q.correct===l; return '<td style="'+(on?'background:#e3f6ea;font-weight:700':'')+'">'+(it.q.options[l]?it.c[l]:'—')+'</td>'; };
+          return '<tr><td>'+it.q.n+'</td><td title="'+esc(it.q.text)+'">'+esc(rvShort(it.q.text,90))+'<div class="hint">'+esc(it.q.question_id)+'</div></td><td><b>'+esc(it.q.correct||'?')+'</b></td>'+
+            cell('A')+cell('B')+cell('C')+cell('D')+'<td>'+it.c.blank+'</td><td><b>'+(it.pct==null?'—':it.pct+'%')+'</b>'+(it.n?'<div class="hint">'+it.right+' of '+it.n+'</div>':'<div class="hint">not on any completed paper</div>')+'</td>'+
+            '<td>'+(it.top?pill('Check the key: most chose '+it.top,'bad'):'')+'</td></tr>';
+        }).join('')+'</tbody></table></div>';
+      return;
+    }
+    pane.innerHTML='<p class="hint">The correct option of every question, as the system holds it (when a file is uploaded the correct answer is moved from A to an even spread of A–D; this shows where each one is now). The correct option is shaded.</p>'+
+      '<div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Question</th><th>A</th><th>B</th><th>C</th><th>D</th><th>Correct</th><th>Marks</th><th>Set by</th><th>On papers</th></tr></thead><tbody>'+
+      RV.key.map(function(q){
+        var cell=function(l){ var on=q.correct===l; return '<td style="'+(on?'background:#e3f6ea;font-weight:700':'')+'">'+(q.options[l]?(on?'✓ ':'')+esc(q.options[l]):'—')+'</td>'; };
+        return '<tr><td>'+q.n+'</td><td>'+esc(q.text)+'<div class="hint">'+esc(q.question_id)+(q.area&&q.area!=='General'?' · '+esc(q.area):'')+'</div></td>'+cell('A')+cell('B')+cell('C')+cell('D')+
+          '<td><b>'+esc(q.correct||'?')+'</b></td><td>'+esc(q.mark)+'</td><td>'+esc(q.owner_name)+'</td><td>'+q.on_papers+'</td></tr>';
+      }).join('')+'</tbody></table></div>';
+  }
+  function rvStudent(pane, id){
+    var x=RV.students.filter(function(s){ return s.exam_taker_id===id; })[0]; if(!x){ RVS=null; return rvDraw(); }
+    var st=RVSTAT[x.status]||[x.status,'off'], right=0, wrong=0, blank=0;
+    var rows=x.paper.map(function(qid,i){
+      var q=RV.byId[qid]||{question_id:qid,text:'(question no longer in the bank)',options:{},correct:'',mark:''}, a=x.answers[qid]||'';
+      var res=!a?'blank':(a===q.correct?'right':'wrong'); if(res==='right') right++; else if(res==='wrong') wrong++; else blank++;
+      return {i:i+1,q:q,a:a,res:res};
+    });
+    pane.innerHTML='<div class="toolbar"><button class="btn small ghost" id="rv-back">← All students</button><span style="flex:1"></span>'+
+        '<label style="font-size:15px"><input type="checkbox" id="rv-only"> Show only wrong and unanswered</label></div>'+
+      '<h3 style="margin:6px 0">'+esc(x.full_name)+' <span class="hint">'+esc(x.student_id||x.exam_taker_id)+(x.programme?' · '+esc(x.programme):'')+'</span> '+pill(st[0],st[1])+'</h3>'+
+      '<p style="margin:4px 0 10px">Score <b>'+esc(x.score)+' / '+esc(x.max)+'</b> · '+pill(right+' right','on')+' '+pill(wrong+' wrong','bad')+' '+pill(blank+' not answered','off')+
+        (x.submitted_at?' · <span class="hint">submitted '+esc(A.fmtWhen(x.submitted_at,'at'))+' ('+esc(A.zoneLabel(A.zone(),new Date(x.submitted_at)))+')</span>':'')+'</p>'+
+      '<div style="overflow-x:auto"><table id="rv-ans"><thead><tr><th>#</th><th>Question</th><th>Student\'s answer</th><th>Correct answer</th><th>Result</th><th>Marks</th></tr></thead><tbody>'+
+      rows.map(function(r){
+        var res=r.res==='right'?pill('✓ Right','on'):r.res==='wrong'?pill('✗ Wrong','bad'):pill('Not answered','off');
+        return '<tr data-res="'+r.res+'"><td>'+r.i+'</td><td>'+esc(r.q.text)+'<div class="hint">'+esc(r.q.question_id)+'</div></td>'+
+          '<td style="'+(r.res==='wrong'?'color:var(--bad)':'')+'">'+(r.a?rvOpt(r.q,r.a):'<span class="hint">—</span>')+'</td><td>'+rvOpt(r.q,r.q.correct)+'</td><td>'+res+'</td>'+
+          '<td>'+(r.res==='right'?esc(r.q.mark):'0')+' / '+esc(r.q.mark)+'</td></tr>';
+      }).join('')+'</tbody></table></div>';
+    $('rv-back').onclick=function(){ RVS=null; rvDraw(); };
+    $('rv-only').onchange=function(){ var on=this.checked; pane.querySelectorAll('#rv-ans tbody tr').forEach(function(tr){ tr.style.display=(on&&tr.dataset.res==='right')?'none':''; }); };
+  }
+  function rvFile(kind){ return 'kiu-cbt-'+kind+'-'+String(RV.course).replace(/[^\w-]+/g,'_')+'-'+stamp()+'.csv'; }
+  $('rv-dl-ans').onclick=function(){
+    if(!RV) return;
+    var head=['Reg. no.','Name','Programme','Status','Score','Out of','Answered'].concat(RV.key.map(function(q){ return q.question_id; }));
+    var keyRow=['ANSWER KEY','','','','','',''].concat(RV.key.map(function(q){ return q.correct; }));
+    var rows=RV.students.map(function(x){ return [x.student_id||x.exam_taker_id, x.full_name, x.programme, x.status, x.score, x.max, x.answered].concat(RV.key.map(function(q){ return x.paper.indexOf(q.question_id)<0?'':(x.answers[q.question_id]||'-'); })); });
+    A.download(rvFile('answers'), A.toCSV(head,[keyRow].concat(rows)));
+  };
+  $('rv-dl-items').onclick=function(){
+    if(!RV) return;
+    A.download(rvFile('question-analysis'), A.toCSV(['#','Question ID','Question','Correct','A','B','C','D','No answer','Completed papers with it','% correct','Note'],
+      rvItems().map(function(it){ return [it.q.n,it.q.question_id,it.q.text,it.q.correct,it.c.A,it.c.B,it.c.C,it.c.D,it.c.blank,it.n,it.pct==null?'':it.pct,it.top?'Check the key: most chose '+it.top:'']; })));
+  };
+  $('rv-dl-key').onclick=function(){
+    if(!RV) return;
+    A.download(rvFile('answer-key'), A.toCSV(['#','Question ID','Area','Question','Option A','Option B','Option C','Option D','Correct option','Correct answer','Marks','Set by','On papers'],
+      RV.key.map(function(q){ return [q.n,q.question_id,q.area,q.text,q.options.A,q.options.B,q.options.C,q.options.D,q.correct,q.options[q.correct]||'',q.mark,q.owner_name,q.on_papers]; })));
+  };
+
+  /* ---- change students' programme ---- */
+  var PC=null;
+  function pcRead(f, done){
+    if(typeof XLSX==='undefined'){ msg('pc-out','Excel support did not load (check the internet connection) — refresh the page and try again.',true); return; }
+    var rd=new FileReader();
+    rd.onload=function(){
+      var wb; try{ wb=XLSX.read(new Uint8Array(rd.result),{type:'array'}); } catch(e){ msg('pc-out','Could not read the workbook: '+e.message,true); return; }
+      var key=function(k){ return String(k).toLowerCase().replace(/[\s_]+/g,' ').trim(); };
+      var rowsOf=function(name){ return XLSX.utils.sheet_to_json(wb.Sheets[name],{defval:'',raw:false}).map(function(o){ var n={}; Object.keys(o).forEach(function(k){ n[key(k)]=String(o[k]).replace(/\s+/g,' ').trim(); }); return n; }); };
+      var find=function(test){ return Object.keys(wb.Sheets).filter(function(n){ return test(n.trim().toLowerCase()); })[0]; };
+      var get=function(r,names){ for(var i=0;i<names.length;i++){ if(r[names[i]]) return r[names[i]]; } return ''; };
+      var ADM=['admission number','admission no','admission','student id','reg no','registration number'], PROG=['new programme','programme cohort','programme name','programme','program'];
+      // course_id → course code, from every sheet that gives both
+      var idCode={};
+      Object.keys(wb.Sheets).forEach(function(n){ rowsOf(n).forEach(function(r){ if(r['course id'] && r['course code']) idCode[r['course id']]=r['course code']; }); });
+      var item=function(r){ var id=r['course id']||'', code=r['course code']||idCode[id]||''; return {admission:get(r,ADM), course_id:id, code:code}; };
+      var sn=find(function(n){ return n==='students' || n==='programme changes'; }), en=find(function(n){ return n==='student course enrolments' || n==='new enrolments'; }), rn=find(function(n){ return /remov/.test(n); });
+      if(!sn && !en){ msg('pc-out','The workbook needs a Students sheet (admission number + new programme) and a Student Course Enrolments sheet.',true); return; }
+      var data={ students:(sn?rowsOf(sn):[]).map(function(r){ return {admission:get(r,ADM), name:get(r,['student name','name','full name']), programme:get(r,PROG)}; }).filter(function(x){ return x.admission; }),
+        add:(en?rowsOf(en):[]).map(item).filter(function(x){ return x.admission; }),
+        remove:(rn?rowsOf(rn):[]).filter(function(r){ return (!r['area'] || /enrol/i.test(r['area'])) && (!r['action'] || /remov/i.test(r['action'])); }).map(item).filter(function(x){ return x.admission; }) };
+      done(data);
+    };
+    rd.readAsArrayBuffer(f);
+  }
+  function pcShow(r){
+    var ST={'add':'will be added','already enrolled':'already enrolled','already enrolled (moved to this programme)':'already enrolled — moved to the new programme','remove':'will be removed'};
+    var ok=r.plans.filter(function(p){ return !p.problems.length; }).length;
+    var tick=function(st,done){ var t=done?st.replace('will be added','added').replace('will be removed','removed'):st; return t; };
+    $('pc-out').innerHTML=(r.applied?'<div class="ok-msg">Done: '+r.plans.filter(function(p){ return p.applied; }).length+' student(s) changed.'+(r.plans.length-ok?' '+(r.plans.length-ok)+' not changed (see the reasons below).':'')+'</div>':
+        '<p class="hint" style="margin-top:10px"><b>Nothing has been changed yet.</b> '+ok+' of '+r.plans.length+' student(s) can be changed'+(ok<r.plans.length?'; the others show why not':'')+'.</p>')+
+      r.plans.map(function(p){
+        var li=function(list){ return list.length?'<ul style="margin:4px 0 0 18px">'+list.map(function(o){ return '<li><b>'+esc(o.code)+'</b> — '+esc(tick(ST[o.status]||o.status, r.applied && p.applied))+(o.programme&&o.status==='add'?' <span class="hint">('+esc(o.programme)+')</span>':'')+'</li>'; }).join('')+'</ul>':'<div class="hint">none</div>'; };
+        return '<div class="card" style="margin-top:12px;border-left:6px solid '+(p.problems.length?'var(--bad)':'var(--ok)')+'">'+
+          '<h3 style="margin:0">'+esc(p.admission)+' · '+esc(p.name||'')+(p.applied?' <span class="pill on">changed</span>':p.problems.length?' <span class="pill bad">cannot be changed</span>':'')+'</h3>'+
+          '<p style="margin:6px 0">Programme: <b>'+esc(p.programme_from||'—')+'</b> → <b>'+esc(p.programme_to||'(unchanged)')+'</b></p>'+
+          (p.problems.length?'<div class="error" style="margin-top:6px">'+p.problems.map(esc).join('<br>')+'</div>':'')+
+          (p.warnings.length?'<div class="hint" style="color:var(--warn);margin-top:6px">'+p.warnings.map(esc).join('<br>')+'</div>':'')+
+          '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:8px">'+
+            '<div><b>New programme\'s course units</b>'+li(p.add)+'</div><div><b>Old course units to remove</b>'+li(p.remove)+'</div>'+
+            '<div><b>Other course units the student keeps</b>'+(p.remaining.length?'<div>'+p.remaining.map(esc).join(', ')+'</div>':'<div class="hint">none</div>')+'</div></div></div>';
+      }).join('');
+    $('pc-apply').classList.toggle('hidden', r.applied || !ok);
+  }
+  $('pc-check').onclick=function(){
+    var b=this, f=$('f-pc').files[0]; $('pc-apply').classList.add('hidden');
+    if(!f){ msg('pc-out','Choose the Excel file first.',true); return; }
+    pcRead(f, function(data){
+      if(!data.students.length && !data.add.length && !data.remove.length){ msg('pc-out','No student rows found in the workbook.',true); return; }
+      PC=data; busy(b,true,'Checking…');
+      A.api('changeProgrammes',{token:T.token, students:data.students, add:data.add, remove:data.remove, apply:false}).then(pcShow)
+        .catch(function(e){ msg('pc-out',e.message,true); }).finally(function(){ busy(b,false); });
+    });
+  };
+  $('pc-apply').onclick=function(){
+    if(!PC) return;
+    if(!confirm('Apply these programme changes now? Students marked "cannot be changed" are left as they are. Course units marked "will be removed" are taken off the students (none of them has been started).')) return;
+    var b=this; busy(b,true,'Applying…');
+    A.api('changeProgrammes',{token:T.token, students:PC.students, add:PC.add, remove:PC.remove, apply:true}).then(function(r){ pcShow(r); PC=null; loadSummary(); })
+      .catch(function(e){ msg('pc-out',e.message,true); }).finally(function(){ busy(b,false); });
+  };
+
   /* ---- KIU registration workbook import ---- */
   $('kiu-go').onclick=function(){
     var b=this, f=$('f-kiu').files[0], out=$('kiu-out');
@@ -955,6 +1175,12 @@
         return XLSX.utils.sheet_to_json(wb.Sheets[key],{defval:'',raw:false}).map(function(o){ var n={}; Object.keys(o).forEach(function(k){ n[String(k).trim().toLowerCase()]=String(o[k]).replace(/\s+/g,' ').trim(); }); return n; });
       }
       var U=sheet('Course Units'), L=sheet('Course Lecturers'), S=sheet('Students'), E=sheet('Student Course Enrolments');
+      // another format (e.g. the VP handoff: programme_cohort, course_id …) would import nothing: say so instead
+      var heads={};
+      try{ Object.keys(wb.Sheets).forEach(function(n){ var a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:''}); a=Array.isArray(a)&&Array.isArray(a[0])?a[0]:(Array.isArray(a)&&a[0]?Object.keys(a[0]):[]); a.forEach(function(k){ heads[String(k).trim().toLowerCase()]=1; }); }); }catch(e){ heads={}; }
+      if(!heads['programme name'] && (heads['programme_cohort']||heads['course_id']||heads['programme cohort'])){
+        out.innerHTML='<div class="error">This workbook is in another format (columns such as <code>programme_cohort</code> and <code>course_id</code>), so it cannot be imported here. To move students to another programme use <b>Change students\' programme</b> below. For this import the columns must be: Course Units — Programme Name, Course Code, Course Description; Course Lecturers — Programme Name, Course Code, Lecturer Name, Lecturer Email; Students — Admission Number, Student Name, Student Email, Programme Name; Student Course Enrolments — Programme Name, Course Code, Admission Number.</div>'; return;
+      }
       // With several backends, each imports only the programmes listed for it in config.js.
       var progs=(A.CFG.BACKEND&&A.CFG.BACKEND.programmes||[]).map(function(p){ return String(p).replace(/\s+/g,' ').trim().toLowerCase(); });
       var mine=function(r){ return !progs.length || progs.indexOf(String(r['programme name']||'').toLowerCase())>=0; };
