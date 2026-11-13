@@ -2,7 +2,7 @@
 # database) and one R2 bucket (photos, recordings, Section B pages). See DEPLOY.md.
 name = "kiu-cbt"
 main = "src/index.js"
-compatibility_date = "2025-10-01"
+compatibility_date = "2024-09-01"   # reproduces the deployed build exactly (Cloudflare → Settings shows the live value)
 compatibility_flags = ["nodejs_compat"]
 
 [assets]
