@@ -3,7 +3,7 @@
  * first visit, then serve them from the cache (network first for the app's
  * own HTML/JS so updates arrive when online).
  */
-const CACHE = 'hwgrader-v4';
+const CACHE = 'hwgrader-v5';
 const SHELL = [
   './', 'index.html', 'css/app.css', 'icon.svg', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',
   'js/words.js', 'js/scoring.js', 'js/stats.js', 'js/preprocess.js', 'js/ocr.js', 'js/store.js', 'js/evaluation.js', 'js/auth.js', 'js/app.js',

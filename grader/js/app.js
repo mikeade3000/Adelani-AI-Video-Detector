@@ -369,6 +369,7 @@ Keywords:
   function renderPrivacy() {
     const b = $('privacyBadge');
     const e = state.settings.engine;
+    const agents = e === 'server' || (SRV.enabled && e === 'best');
     if (e === 'tesseract') {
       b.className = 'badge green';
       b.textContent = '● Offline OCR · scripts stay on this device';
@@ -380,10 +381,12 @@ Keywords:
       b.className = 'badge amber';
       b.textContent = '● Cloud OCR on · page images are sent to ' + dest;
     }
+    b.classList.toggle('hidden', agents); // after className is set above, so it is not overwritten
     const n = $('netBadge');
     n.className = 'badge ' + (navigator.onLine ? 'grey' : 'blue');
     n.textContent = navigator.onLine ? 'online' : 'offline';
-    $('engineLabel').textContent = 'Engine: ' + { tesseract: 'Tesseract.js (offline)', server: 'AI handwriting reader (server)', claude: 'AI handwriting reader (Claude, cloud)', ocrspace: 'OCR.space (cloud)', best: 'best of Tesseract.js + configured cloud engines' }[state.settings.engine] +
+    if (agents) $('engineLabel').textContent = 'Engine: Adelani Super Intelligent Agents';
+    else $('engineLabel').textContent = 'Engine: ' + { tesseract: 'Tesseract.js (offline)', server: 'AI handwriting reader (server)', claude: 'AI handwriting reader (Claude, cloud)', ocrspace: 'OCR.space (cloud)', best: 'best of Tesseract.js + configured cloud engines' }[state.settings.engine] +
       (state.settings.pp.enabled ? ' · handwriting boost on' : ' · preprocessing off');
     $('cloudFields').classList.toggle('hidden', !['ocrspace', 'best'].includes(state.settings.engine));
     $('claudeFields').classList.toggle('hidden', SRV.enabled || !['claude', 'best'].includes(state.settings.engine));
@@ -1343,9 +1346,9 @@ Keywords:
     if (SRV.enabled) {
       // Hosted: the server's AI reader replaces browser-side keys.
       ['claude', 'ocrspace'].forEach(v => { const o = opt(v); if (o) o.remove(); });
-      if (serverAI && !opt('server')) sel.insertBefore(el('option', { value: 'server', text: 'AI handwriting reader (on the server; best for cursive, no key needed)' }), sel.firstChild);
+      if (serverAI && !opt('server')) sel.insertBefore(el('option', { value: 'server', text: 'Adelani Super Intelligent Agents (best for cursive and joined-up writing)' }), sel.firstChild);
       const best = opt('best');
-      if (best) { if (serverAI) best.textContent = 'Best of AI reader + Tesseract'; else best.remove(); }
+      if (best) { if (serverAI) best.textContent = 'Best of Adelani Super Intelligent Agents + Tesseract'; else best.remove(); }
     }
   }
 
