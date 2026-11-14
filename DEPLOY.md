@@ -25,8 +25,8 @@ On the first deploy, Cloudflare creates the `ma-grader.portals.com.ng` DNS recor
 
 1. Cloudflare dashboard → **Workers & Pages → Create → Import a repository** → connect GitHub and pick `mikeade3000/Adelani-AI-Video-Detector`.
 2. Settings:
-   - **Production branch:** `main` (after the code is merged) or `claude/sweet-johnson-1e8kdt`.
-   - **Root directory:** `worker`
+   - **Production branch:** the branch that contains the `worker/` folder: `claude/sweet-johnson-1e8kdt`, or `main` once the code is merged into it. Each push to this branch redeploys the site.
+   - **Root directory:** `worker` (or `/worker`). This matters: the build fails with a blank root directory, because `package.json` lives in `worker/`.
    - **Build command:** `npm ci`
    - **Deploy command:** `npx wrangler deploy`
 3. Click **Deploy**. The first deploy creates the Worker, the `grader-db` database and the `ma-grader.portals.com.ng` address.
