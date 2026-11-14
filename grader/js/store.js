@@ -6,15 +6,24 @@
 (function (root) {
   'use strict';
 
+  // With accounts, each signed-in user gets separate storage on a shared device.
+  var NS = '';
   var KEY = 'hwgrader.session.v1';
   var dbp = null;
+
+  function setNamespace(ns) {
+    NS = ns ? String(ns).replace(/[^A-Za-z0-9_-]/g, '') : '';
+    KEY = 'hwgrader.' + (NS ? NS + '.' : '') + 'session.v1';
+    dbp = null;
+    memory.clear();
+  }
   var memory = new Map();
 
   function openDb() {
     if (dbp) return dbp;
     dbp = new Promise(function (resolve) {
       try {
-        var req = indexedDB.open('hwgrader', 1);
+        var req = indexedDB.open(NS ? 'hwgrader-' + NS : 'hwgrader', 1);
         req.onupgradeneeded = function () { req.result.createObjectStore('blobs'); };
         req.onsuccess = function () { resolve(req.result); };
         req.onerror = function () { resolve(null); };
@@ -69,11 +78,11 @@
     try { var s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; }
   }
 
-  function getPref(k, d) { try { var v = localStorage.getItem('hwgrader.' + k); return v === null ? d : v; } catch (e) { return d; } }
-  function setPref(k, v) { try { if (v === null) localStorage.removeItem('hwgrader.' + k); else localStorage.setItem('hwgrader.' + k, v); } catch (e) { /* ignore */ } }
+  function getPref(k, d) { try { var v = localStorage.getItem('hwgrader.' + (NS ? NS + '.' : '') + k); return v === null ? d : v; } catch (e) { return d; } }
+  function setPref(k, v) { var key = 'hwgrader.' + (NS ? NS + '.' : '') + k; try { if (v === null) localStorage.removeItem(key); else localStorage.setItem(key, v); } catch (e) { /* ignore */ } }
 
   root.GraderStore = {
     putBlob: putBlob, getBlob: getBlob, deleteBlob: deleteBlob, clearBlobs: clearBlobs,
-    saveState: saveState, loadState: loadState, getPref: getPref, setPref: setPref
+    saveState: saveState, loadState: loadState, getPref: getPref, setPref: setPref, setNamespace: setNamespace
   };
 })(typeof self !== 'undefined' ? self : this);

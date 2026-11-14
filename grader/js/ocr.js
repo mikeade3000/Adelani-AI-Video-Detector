@@ -279,6 +279,23 @@
     });
   }
 
+  // ------------------------------------------------------------ AI reader via the grader server
+
+  // Hosted version: the server holds the API key and returns both the exact
+  // transcription and a readable version of the page.
+  function serverRecognize(canvas) {
+    var S = root.GraderServer;
+    if (!S || !S.enabled) return Promise.reject(new Error('the AI reader needs the grader server.'));
+    return S.api('ai/read', { image: canvasToBase64Jpeg(canvas, 2000), mediaType: 'image/jpeg' })
+      .then(function (r) {
+        return { engine: 'server', text: r.transcription || '', readable: r.readable || '', legibility: r.legibility, notes: r.notes, confidence: null };
+      })
+      .catch(function (e) {
+        if (S.handleAuthError) S.handleAuthError(e);
+        throw e;
+      });
+  }
+
   // ------------------------------------------------------------ dispatcher
 
   /**
@@ -292,13 +309,15 @@
     if (mode === 'tesseract' || mode === 'best') tasks.push(tesseractRecognize(canvas, opts.onProgress).catch(function (e) { return { engine: 'tesseract', error: e.message }; }));
     if (mode === 'ocrspace' || (mode === 'best' && opts.apiKey)) tasks.push(ocrSpaceRecognize(canvas, opts.apiKey, opts.ocrSpaceEngine).catch(function (e) { return { engine: 'ocrspace', error: e.message }; }));
     // The AI reader gets the original colour image: binarisation only removes cues it can use.
+    if (mode === 'server' || (mode === 'best' && opts.serverAI)) tasks.push(serverRecognize(opts.original || canvas).catch(function (e) { return { engine: 'server', error: e.message }; }));
     if (mode === 'claude' || (mode === 'best' && opts.claudeKey)) tasks.push(claudeRecognize(opts.original || canvas, opts.claudeKey).catch(function (e) { return { engine: 'claude', error: e.message }; }));
     return Promise.all(tasks).then(function (results) {
       results.forEach(function (r) { if (!r.error) r.dictRatio = opts.score(r.text); });
       var ok = results.filter(function (r) { return !r.error; });
       if (!ok.length) throw new Error(results.map(function (r) { return r.engine + ': ' + r.error; }).join(' · '));
       // Prefer the AI transcription in best-of mode unless it is clearly worse.
-      ok.sort(function (a, b) { return (b.dictRatio + (b.engine === 'claude' ? 0.1 : 0)) - (a.dictRatio + (a.engine === 'claude' ? 0.1 : 0)); });
+      var bonus = function (r) { return r.engine === 'claude' || r.engine === 'server' ? 0.1 : 0; };
+      ok.sort(function (a, b) { return (b.dictRatio + bonus(b)) - (a.dictRatio + bonus(a)); });
       return { chosen: ok[0], candidates: results };
     });
   }

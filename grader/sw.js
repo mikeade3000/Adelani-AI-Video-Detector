@@ -3,10 +3,10 @@
  * first visit, then serve them from the cache (network first for the app's
  * own HTML/JS so updates arrive when online).
  */
-const CACHE = 'hwgrader-v3';
+const CACHE = 'hwgrader-v4';
 const SHELL = [
   './', 'index.html', 'css/app.css', 'icon.svg', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',
-  'js/words.js', 'js/scoring.js', 'js/stats.js', 'js/preprocess.js', 'js/ocr.js', 'js/store.js', 'js/evaluation.js', 'js/app.js',
+  'js/words.js', 'js/scoring.js', 'js/stats.js', 'js/preprocess.js', 'js/ocr.js', 'js/store.js', 'js/evaluation.js', 'js/auth.js', 'js/app.js',
   'vendor/pdfjs/pdf.min.js', 'vendor/pdfjs/pdf.worker.min.js',
   'vendor/tesseract/tesseract.min.js', 'vendor/tesseract/worker.min.js', 'vendor/anthropic/anthropic-sdk.min.js'
 ];
@@ -28,6 +28,7 @@ self.addEventListener('fetch', e => {
   const sameOrigin = url.origin === self.location.origin;
   const cdn = /cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com/.test(url.host);
   if (!sameOrigin && !cdn) return; // e.g. OCR.space API: never cached
+  if (sameOrigin && /\/api\//.test(url.pathname)) return; // account data and AI calls: never cached
   const cacheFirst = cdn || LAZY.test(url.pathname) || /vendor\//.test(url.pathname);
   if (cacheFirst) {
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => {

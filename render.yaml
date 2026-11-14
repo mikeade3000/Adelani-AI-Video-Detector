@@ -1,0 +1,22 @@
+# One-click deploy on Render (render.com → New → Blueprint → pick this repository).
+# Secrets (ANTHROPIC_API_KEY, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD) are entered
+# in Render's dashboard when prompted; they are never stored in this repository.
+services:
+  - type: web
+    name: handwritten-theory-grader
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/health
+    disk:
+      name: grader-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SUPERADMIN_EMAIL
+        sync: false
+      - key: SUPERADMIN_PASSWORD
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"

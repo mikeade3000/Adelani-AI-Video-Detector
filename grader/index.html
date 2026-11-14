@@ -23,6 +23,11 @@
     </div>
     <span id="privacyBadge" class="badge green">● Offline · scripts stay on this device</span>
     <span id="netBadge" class="badge grey">online</span>
+    <span id="userChip" class="row hidden" style="gap:6px">
+      <span class="badge blue" id="userName"></span>
+      <button class="btn small" id="changePwBtn" type="button">Change password</button>
+      <button class="btn small" id="signOutBtn" type="button">Sign out</button>
+    </span>
     <button class="btn small" id="themeBtn" title="Toggle light/dark theme">Theme</button>
   </div>
   <nav class="tabs" role="tablist">
@@ -32,6 +37,7 @@
     <button role="tab" data-tab="results">4 · Results</button>
     <button role="tab" data-tab="evaluation">5 · Evaluation</button>
     <button role="tab" data-tab="settings">Settings</button>
+    <button role="tab" data-tab="users" data-role="superadmin" class="hidden">Users</button>
     <button role="tab" data-tab="help">Help</button>
   </nav>
 </header>
@@ -47,6 +53,7 @@
             <button class="btn small" id="rubricSample">Load sample</button>
             <label class="btn small">Import .txt<input type="file" id="rubricImport" accept=".txt,text/plain" /></label>
             <button class="btn small" id="rubricExport">Export</button>
+            <label class="btn small primary hidden" data-needs="server-ai" title="Upload the lecturer's marking guide (PDF, Word, photo or text) and let the AI turn it into a rubric">Import marking guide<input type="file" id="guideImport" accept=".pdf,.docx,.txt,image/jpeg,image/png,image/webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" /></label>
           </div>
         </div>
         <p class="muted small">For each question, give a header with the maximum mark, a <code>Model:</code> answer and
@@ -119,6 +126,7 @@
             <div><div class="small muted">Marking time</div><span class="mono" id="timer">0:00</span></div>
           </div>
           <div class="row">
+            <button class="btn primary hidden" id="aiMarkAllBtn" type="button" title="Mark every answer that has no up-to-date AI mark">Mark all with AI</button>
             <button class="btn" id="acceptAllBtn" title="Accept every green suggestion that is still pending">Accept all green</button>
             <button class="btn primary" id="confirmBtn">Confirm script</button>
           </div>
@@ -160,7 +168,7 @@
           <button class="btn small" id="exportCsvWide">Export marks CSV (per script)</button>
           <button class="btn small" id="exportJson">Save session (.json)</button>
           <label class="btn small">Load session<input type="file" id="importJson" accept=".json,application/json" /></label>
-          <button class="btn small" onclick="window.print()">Print</button>
+          <button class="btn small" id="printBtn">Print</button>
           <button class="btn small danger" id="clearAll">Clear everything</button>
         </div>
       </div>
@@ -222,6 +230,17 @@
   <section class="tab" id="tab-settings">
     <div class="grid2">
       <div class="card">
+        <div class="hidden" data-needs="server-ai">
+          <h2>Marking method</h2>
+          <div class="field"><span>How suggested marks are produced</span>
+            <select id="setMethod">
+              <option value="ai">AI rubric marker (reads the answer like an examiner, explains each mark)</option>
+              <option value="formula">Formula only (similarity + keywords, as in the paper)</option>
+            </select>
+            <small>The formula score is always shown alongside as a cross-check. Answers where the two disagree are flagged for checking.</small></div>
+          <label class="check"><input type="checkbox" id="setReadable" /> Mark the readable version (spelling and layout tidied by the AI reader; the exact transcription is kept for reference)</label>
+          <hr style="border:none;border-top:1px solid var(--border);margin:14px 0" />
+        </div>
         <h2>Scoring model</h2>
         <p class="small muted">S = M × [ w · cos(answer, model) + (1 − w) · keyword coverage ]. Fix these before marking a session and keep them the same for every script.</p>
         <div class="field"><span>Similarity weight w</span><input type="number" id="setW" min="0" max="1" step="0.05" /><small>0 = keywords only, 1 = similarity only (default 0.50)</small></div>
@@ -283,6 +302,38 @@
   </section>
 
   <!-- ======================================================= HELP -->
+  <!-- ======================================================= USERS (super admin) -->
+  <section class="tab" id="tab-users">
+    <div class="grid2">
+      <div class="card">
+        <h2>Create a user</h2>
+        <form id="newUserForm" class="stack" autocomplete="off">
+          <div class="field"><span>E-mail (used to sign in)</span><input type="text" id="nuEmail" inputmode="email" required /></div>
+          <div class="field"><span>Name</span><input type="text" id="nuName" /></div>
+          <div class="field"><span>Role</span><select id="nuRole"><option value="lecturer">Lecturer (marks scripts)</option><option value="superadmin">Super admin (also manages users)</option></select></div>
+          <div class="field"><span>AI-read pages per month (0 = no limit)</span><input type="number" id="nuLimit" min="0" value="0" /></div>
+          <div class="field"><span>Password (leave blank to generate a temporary one)</span><input type="text" id="nuPassword" autocomplete="new-password" /></div>
+          <button class="btn primary" type="submit">Create user</button>
+        </form>
+        <p class="small muted">New users must change their password the first time they sign in.</p>
+        <div id="newUserResult"></div>
+      </div>
+      <div class="card">
+        <h2>How accounts work</h2>
+        <ul class="small">
+          <li>Only a super admin can create, disable or delete accounts and reset passwords.</li>
+          <li>Temporary passwords are shown once. Pass them on privately; they are never stored in readable form.</li>
+          <li>Each lecturer's scripts and marks are kept in their own browser, separately for each account. Use <em>Results → Save session</em> to keep a copy.</li>
+          <li>AI reading and marking use the server's API key. Users never see it. Set a monthly page limit to control cost.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row spread"><h2>Users</h2><button class="btn small" id="refreshUsers" type="button">Refresh</button></div>
+      <div class="table-wrap"><table class="data" id="usersTable"></table></div>
+    </div>
+  </section>
+
   <section class="tab" id="tab-help">
     <div class="card">
       <h2>How to use the tool</h2>
@@ -316,6 +367,13 @@ Keywords: firewall; filter* | block; rule* | policy</pre>
         <li>Mathematical notation, formulae and diagrams are not recognised reliably. Use the tool for prose answers.</li>
         <li>Faint, skewed, shadowed or low-resolution scans (below about 150 dpi) give much worse OCR.</li>
       </ul>
+      <h3>Hosted version (with sign-in)</h3>
+      <ul>
+        <li>Your administrator creates your account. Sign in, change the temporary password, and you're ready. No API key is needed.</li>
+        <li><strong>Rubric:</strong> click <em>Import marking guide</em> and choose the lecturer's marking guide (PDF, Word, photo or text). The AI builds the rubric; check each question and its marks before marking.</li>
+        <li><strong>Scripts:</strong> photograph or upload pages and run them. The AI reader writes out each page exactly as the student wrote it, then produces a readable version (spelling and layout tidied, content unchanged) and marks every answer against the rubric.</li>
+        <li><strong>Review:</strong> each answer shows the readable text, the exact transcription, the AI's mark with a point-by-point breakdown, feedback for the student, and the formula score as a cross-check. Answers where they disagree are flagged. You confirm every mark.</li>
+      </ul>
       <h3>Using it on a phone or tablet</h3>
       <ul>
         <li>Open the app's web address in Chrome (Android) or Safari (iPhone/iPad). On Android, choose <em>⋮ → Add to Home screen / Install app</em>. On iPhone, tap <em>Share → Add to Home Screen</em>. It then opens like an ordinary app.</li>
@@ -331,6 +389,26 @@ Keywords: firewall; filter* | block; rule* | policy</pre>
   </section>
 </main>
 
+<!-- Sign-in (hosted version only) -->
+<div id="authScreen" class="auth hidden" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+  <div class="auth-card card">
+    <h1 id="authTitle" style="font-size:1.3rem">Handwritten Theory Grader</h1>
+    <p class="muted small">Sign in with the account your administrator created for you.</p>
+    <div id="authMessage" class="notice warn hidden" role="alert"></div>
+    <form id="loginForm" class="stack">
+      <div class="field"><span>E-mail</span><input type="text" id="loginEmail" autocomplete="username" inputmode="email" required /></div>
+      <div class="field"><span>Password</span><input type="password" id="loginPassword" autocomplete="current-password" required /></div>
+      <button class="btn primary" type="submit" id="loginBtn">Sign in</button>
+    </form>
+    <form id="pwForm" class="stack hidden">
+      <div class="field"><span>Current (or temporary) password</span><input type="password" id="pwCurrent" autocomplete="current-password" required /></div>
+      <div class="field"><span>New password</span><input type="password" id="pwNext" autocomplete="new-password" required /><small>At least 10 characters, with letters and numbers.</small></div>
+      <div class="field"><span>New password again</span><input type="password" id="pwNext2" autocomplete="new-password" required /></div>
+      <div class="row"><button class="btn primary" type="submit">Save new password</button><button class="btn" type="button" id="pwCancel">Cancel</button></div>
+    </form>
+  </div>
+</div>
+
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true"><div class="inner"><div class="row spread"><strong id="modalTitle"></strong><button class="btn small" id="modalClose">Close</button></div><div id="modalBody" style="margin-top:8px"></div></div></div>
 <div id="toast" class="toast hidden" role="status"></div>
 
@@ -341,6 +419,6 @@ Keywords: firewall; filter* | block; rule* | policy</pre>
 <script src="js/ocr.js"></script>
 <script src="js/store.js"></script>
 <script src="js/evaluation.js"></script>
-<script src="js/app.js"></script>
+<script src="js/auth.js"></script>
 </body>
 </html>

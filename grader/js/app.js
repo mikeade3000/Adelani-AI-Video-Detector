@@ -81,19 +81,28 @@ Keywords:
     w: 0.5, theta: 0.8, tau: 0.1, step: 0.5, removeStopwords: true, stem: true,
     passPct: 50, bandPct: 10, segMode: 'strict',
     engine: 'tesseract', ocrSpaceEngine: '2',
+    method: 'ai', readable: true,
     subs: G.DEFAULT_SUBSTITUTIONS,
     pp: Object.assign({}, P.DEFAULTS)
   };
 
   // ------------------------------------------------------------ state
 
+  // Hosted version (see js/auth.js): signed-in user, AI via the server.
+  const SRV = window.GraderServer || { enabled: false };
+  const serverAI = !!(SRV.enabled && SRV.ai && SRV.ai.enabled);
+
   let state = ST.loadState();
   if (!state || state.version !== 1) {
     state = { version: 1, rubricText: SAMPLE_RUBRIC, settings: clone(DEFAULT_SETTINGS), scripts: [], selectedId: null, cerPairs: [], evalCsv: '', timeCsv: '' };
+    if (serverAI) state.settings.engine = 'server';
   }
   state.settings = Object.assign(clone(DEFAULT_SETTINGS), state.settings || {});
   state.settings.pp = Object.assign({}, P.DEFAULTS, state.settings.pp || {});
   state.cerPairs = state.cerPairs || [];
+  if (!serverAI && state.settings.engine === 'server') state.settings.engine = 'tesseract';
+  if (SRV.enabled && state.settings.engine === 'claude') state.settings.engine = serverAI ? 'server' : 'tesseract';
+  const useAIMarking = () => serverAI && state.settings.method === 'ai';
 
   let apiKey = ST.getPref('ocrspaceKey', '') || '';
   let claudeKey = ST.getPref('claudeKey', '') || '';
@@ -246,9 +255,72 @@ Keywords:
     return G.scoreResponse(text, q, scoringOpts(), subsMap, info);
   }
 
+  // Identifies the exact text + rubric an AI mark was given for, so edits or
+  // rubric changes mark it as out of date.
+  function aiKey(text, q) { return [text, q.max, q.model, JSON.stringify(q.keywordGroups)].join('\u0000'); }
+
   function scoreAnswer(a, q) {
-    a.result = scoreText(a.text, q);
-    a.originalSuggested = a.textEdited ? scoreText(a.ocrText, q).suggested : a.result.suggested;
+    const r = scoreText(a.text, q);
+    const formulaOriginal = a.textEdited ? scoreText(a.ocrText, q).suggested : r.suggested;
+    r.formula = r.suggested;
+    a.result = r;
+    a.originalSuggested = formulaOriginal;
+    if (!useAIMarking()) return;
+    const ai = a.ai && a.ai.key === aiKey(a.text, q) ? a.ai : null;
+    // Rebuild the confidence flags for AI marking; keep the OCR-quality ones.
+    const keep = r.reasons.filter(x => /OCR quality|No text was recognised|close to half/.test(x));
+    let level = r.empty ? 'red' : keep.some(x => /Poor OCR/.test(x)) ? 'red' : keep.length ? 'amber' : 'green';
+    const reasons = keep.slice();
+    const flag = (lv, msg) => { reasons.push(msg); if (lv === 'red' || (lv === 'amber' && level === 'green')) level = lv; };
+    if (ai) {
+      r.method = 'ai';
+      r.suggested = ai.mark;
+      if (ai.confidence === 'low') flag('amber', 'The AI marker was unsure about this answer.');
+      if (Math.abs(ai.mark - r.formula) >= Math.max(1, 0.3 * q.max)) flag('amber', 'AI mark (' + fmtMark(ai.mark) + ') and formula mark (' + fmtMark(r.formula) + ') differ.');
+    } else {
+      r.aiPending = true;
+      flag('amber', a.aiError ? 'AI marking failed: ' + a.aiError : (a.ai ? 'Text or rubric changed since the AI marked it. Click "Mark with AI".' : 'Not yet marked by the AI. Showing the formula mark.'));
+    }
+    r.confidence = level;
+    r.reasons = reasons;
+    a.originalSuggested = a.aiOriginal !== undefined && a.aiOriginal !== null ? a.aiOriginal : (ai ? ai.mark : formulaOriginal);
+  }
+
+  async function aiMarkAnswer(a, q) {
+    const key = aiKey(a.text, q);
+    if (!a.text.trim()) {
+      a.ai = { mark: 0, criteria: [], rationale: 'No answer was found for this question.', feedback: '', confidence: 'high', key: key };
+    } else {
+      const r = await SRV.api('ai/grade', {
+        question: { label: q.label, title: q.title, max: q.max, model: q.model, keywordGroups: q.keywordGroups },
+        answer: a.text, step: +state.settings.step
+      });
+      a.ai = Object.assign({}, r, { key: key });
+    }
+    a.aiError = null;
+    if ((a.aiOriginal === undefined || a.aiOriginal === null) && !a.textEdited) a.aiOriginal = a.ai.mark;
+    scoreAnswer(a, q);
+  }
+
+  /** Mark every answer in the script whose AI mark is missing or out of date. */
+  async function aiMarkScript(s, onEach) {
+    const todo = rubric.questions.filter(q => { const a = s.answers[q.id]; return a && !(a.ai && a.ai.key === aiKey(a.text, q)); });
+    let done = 0;
+    const worker = async () => {
+      while (todo.length) {
+        const q = todo.shift();
+        const a = s.answers[q.id];
+        try { await aiMarkAnswer(a, q); } catch (e) {
+          if (SRV.handleAuthError && SRV.handleAuthError(e)) throw e;
+          a.aiError = e.message;
+          scoreAnswer(a, q);
+        }
+        done++;
+        if (onEach) onEach(q, done);
+        save();
+      }
+    };
+    await Promise.all([worker(), worker()]);
   }
 
   function rescoreAll() {
@@ -261,23 +333,34 @@ Keywords:
   /** Build per-question answers from page OCR text (assigned pages + marker segmentation). */
   function compileScript(s) {
     const ids = rubric.questions.map(q => q.id);
-    const assigned = {};
-    const auto = [];
-    s.pages.forEach(p => {
-      const t = p.ocr ? p.ocr.text : '';
-      if (p.assign && p.assign !== 'auto' && ids.includes(p.assign)) assigned[p.assign] = (assigned[p.assign] ? assigned[p.assign] + '\n' : '') + t;
-      else auto.push(t);
-    });
-    const seg = G.segmentAnswers(auto.join('\n'), ids, state.settings.segMode);
+    const split = field => {
+      const assigned = {};
+      const auto = [];
+      s.pages.forEach(p => {
+        const t = p.ocr ? (p.ocr[field] || '') : '';
+        if (p.assign && p.assign !== 'auto' && ids.includes(p.assign)) assigned[p.assign] = (assigned[p.assign] ? assigned[p.assign] + '\n' : '') + t;
+        else auto.push(t);
+      });
+      const seg = G.segmentAnswers(auto.join('\n'), ids, state.settings.segMode);
+      seg.per = {};
+      ids.forEach(id => { seg.per[id] = [assigned[id], seg.answers[id]].filter(Boolean).join('\n').trim(); });
+      return seg;
+    };
+    const seg = split('text');
+    // The AI reader also returns a readable version (spelling and layout tidied).
+    const hasReadable = s.pages.some(p => p.ocr && p.ocr.readable);
+    const readable = hasReadable ? split('readable') : null;
+    const useReadable = readable && state.settings.readable !== false;
     s.answers = {};
     rubric.questions.forEach(q => {
-      const text = [assigned[q.id], seg.answers[q.id]].filter(Boolean).join('\n').trim();
       const a = blankAnswer();
-      a.text = a.ocrText = text;
+      a.verbatim = seg.per[q.id];
+      a.readable = readable ? readable.per[q.id] : '';
+      a.text = a.ocrText = useReadable && (a.readable || !a.verbatim) ? a.readable : a.verbatim;
       scoreAnswer(a, q);
       s.answers[q.id] = a;
     });
-    s.unassigned = seg.unassigned;
+    s.unassigned = (useReadable ? readable : seg).unassigned;
     s.markersFound = seg.markersFound;
   }
 
@@ -289,6 +372,9 @@ Keywords:
     if (e === 'tesseract') {
       b.className = 'badge green';
       b.textContent = '● Offline OCR · scripts stay on this device';
+    } else if (e === 'server' || (SRV.enabled && e === 'best')) {
+      b.className = 'badge amber';
+      b.textContent = '● AI reading on · page images go to the grader server and Anthropic';
     } else {
       const dest = e === 'claude' ? 'Anthropic (Claude)' : e === 'ocrspace' ? 'OCR.space' : [claudeKey && 'Anthropic', apiKey && 'OCR.space'].filter(Boolean).join(' + ') || 'cloud OCR';
       b.className = 'badge amber';
@@ -297,10 +383,11 @@ Keywords:
     const n = $('netBadge');
     n.className = 'badge ' + (navigator.onLine ? 'grey' : 'blue');
     n.textContent = navigator.onLine ? 'online' : 'offline';
-    $('engineLabel').textContent = 'Engine: ' + { tesseract: 'Tesseract.js (offline)', claude: 'AI handwriting reader (Claude, cloud)', ocrspace: 'OCR.space (cloud)', best: 'best of Tesseract.js + configured cloud engines' }[state.settings.engine] +
+    $('engineLabel').textContent = 'Engine: ' + { tesseract: 'Tesseract.js (offline)', server: 'AI handwriting reader (server)', claude: 'AI handwriting reader (Claude, cloud)', ocrspace: 'OCR.space (cloud)', best: 'best of Tesseract.js + configured cloud engines' }[state.settings.engine] +
       (state.settings.pp.enabled ? ' · handwriting boost on' : ' · preprocessing off');
     $('cloudFields').classList.toggle('hidden', !['ocrspace', 'best'].includes(state.settings.engine));
-    $('claudeFields').classList.toggle('hidden', !['claude', 'best'].includes(state.settings.engine));
+    $('claudeFields').classList.toggle('hidden', SRV.enabled || !['claude', 'best'].includes(state.settings.engine));
+    if (SRV.enabled) $('cloudFields').classList.add('hidden');
   }
 
   // ------------------------------------------------------------ uploads
@@ -381,9 +468,10 @@ Keywords:
     if (busy) return;
     if (rubric.errors.length || !rubric.questions.length) { toast('Fix the rubric first (tab 1).'); switchTab('rubric'); return; }
     const eng = state.settings.engine;
+    if (eng === 'server' && !serverAI) { toast('AI reading is not configured on this server. Choose Tesseract in Settings.'); switchTab('settings'); return; }
     if (eng === 'ocrspace' && !apiKey) { toast('Enter an OCR.space API key in Settings, or switch engine.'); switchTab('settings'); return; }
     if (eng === 'claude' && !claudeKey) { toast('Enter an Anthropic API key in Settings for the AI handwriting reader.'); switchTab('settings'); return; }
-    if (eng === 'best' && !apiKey && !claudeKey) { toast('Best-of mode needs at least one cloud key (Anthropic or OCR.space) in Settings.'); switchTab('settings'); return; }
+    if (eng === 'best' && !apiKey && !claudeKey && !serverAI) { toast('Best-of mode needs at least one cloud key (Anthropic or OCR.space) in Settings.'); switchTab('settings'); return; }
     busy = true;
     stopRequested = false;
     $('stopBtn').disabled = false;
@@ -414,6 +502,7 @@ Keywords:
               mode: state.settings.engine,
               apiKey: apiKey,
               claudeKey: claudeKey,
+              serverAI: serverAI,
               original: canvas,
               ocrSpaceEngine: state.settings.ocrSpaceEngine,
               score: t => G.dictionaryRatio(t, vocab, subsMap),
@@ -424,6 +513,7 @@ Keywords:
             });
             p.ocr = {
               text: res.chosen.text, engine: res.chosen.engine, dictRatio: res.chosen.dictRatio,
+              readable: res.chosen.readable || '', legibility: res.chosen.legibility || null, notes: res.chosen.notes || '',
               candidates: res.candidates.map(c => ({ engine: c.engine, dictRatio: c.dictRatio, error: c.error || null, text: c.text || '' }))
             };
             p.error = null;
@@ -441,6 +531,12 @@ Keywords:
           compileScript(s);
           s.status = 'review';
           if (!state.selectedId) state.selectedId = s.id;
+          if (useAIMarking() && !stopRequested) {
+            setProgress(n / total, s.name + ': marking answers against the rubric with AI…');
+            try {
+              await aiMarkScript(s, (q, k) => setProgress(n / total, s.name + ': AI marked ' + k + ' of ' + rubric.questions.length + ' answers'));
+            } catch (e) { toast(s.name + ': AI marking stopped: ' + e.message, 7000); }
+          }
         } else if (s.status === 'processing') s.status = 'new';
         renderScripts();
         if (stopRequested) break;
@@ -662,9 +758,11 @@ Keywords:
     else { st.className = 'badge amber'; st.textContent = pending ? pending + ' question' + (pending > 1 ? 's' : '') + ' to review' : 'All reviewed — confirm'; }
     $('confirmBtn').textContent = s.status === 'confirmed' ? 'Reopen script' : 'Confirm script';
     $('acceptAllBtn').disabled = s.status === 'confirmed';
+    const aiPending = useAIMarking() && s.status !== 'confirmed' && rubric.questions.some(q => s.answers[q.id] && s.answers[q.id].result && s.answers[q.id].result.aiPending);
+    $('aiMarkAllBtn').classList.toggle('hidden', !aiPending);
     const flags = $('scriptFlags');
     flags.innerHTML = '';
-    if (t.nearPass) flags.append(el('div', { class: 'notice warn' }, el('strong', { text: 'Re-mark in full: ' }), 'the suggested total (' + fmtMark(t.suggested) + ') is within ' + fmtMark(state.settings.bandPct / 100 * t.max) + ' marks of the pass mark. Errors near the pass mark change decisions.'));
+    if (t.nearPass) flags.append(el('div', { class: 'notice warn' }, el('strong', { text: 'Re-mark in full: ' }), 'the suggested total (' + fmtMark(t.suggested) + ') is within ' + fmtMark(state.settings.bandPct / 100 * t.max) + (state.settings.bandPct / 100 * t.max === 1 ? ' mark' : ' marks') + ' of the pass mark. Errors near the pass mark change decisions.'));
     const counts = { red: 0, amber: 0 };
     rubric.questions.forEach(q => { const a = s.answers[q.id]; if (a && a.result && counts[a.result.confidence] !== undefined) counts[a.result.confidence]++; });
     if (counts.red || counts.amber) flags.append(el('div', { class: 'small muted', text: 'Check first: ' + counts.red + ' red and ' + counts.amber + ' amber question(s).' }));
@@ -716,6 +814,38 @@ Keywords:
     const textArea = el('textarea', { rows: 8, value: a.text, 'aria-label': 'Recognised text for ' + q.label, disabled: locked, spellcheck: true });
     const metrics = el('div');
     const hl = el('div', { class: 'highlight' });
+    const aiPanel = el('div', { class: 'ai-panel' });
+    const aiBtn = el('button', { class: 'btn small', disabled: locked, title: 'Ask the AI marker to mark this answer against the rubric' }, 'Mark with AI');
+    const formulaWrap = el('details', null, el('summary', { text: 'Formula cross-check (similarity + keywords)' }), metrics);
+
+    function renderAIPanel() {
+      aiPanel.innerHTML = '';
+      const ai = a.ai && a.ai.key === aiKey(a.text, q) ? a.ai : null;
+      aiPanel.append(el('div', { class: 'row spread' },
+        el('strong', { text: ai ? 'AI marker: ' + fmtMark(ai.mark) + ' / ' + fmtMark(q.max) : 'AI marker' }),
+        ai ? el('span', { class: 'badge ' + ({ high: 'green', medium: 'blue', low: 'amber' }[ai.confidence] || 'grey'), text: ai.confidence + ' confidence' }) : null,
+        aiBtn));
+      if (!ai) {
+        aiPanel.append(el('p', { class: 'small muted', text: a.aiError ? 'Failed: ' + a.aiError : a.ai ? 'The text or rubric changed after the AI marked this answer.' : 'Not marked by the AI yet.' }));
+        aiBtn.textContent = 'Mark with AI';
+        return;
+      }
+      aiBtn.textContent = 'Re-mark';
+      aiPanel.append(el('p', { class: 'small', text: ai.rationale }));
+      if (ai.criteria && ai.criteria.length) {
+        aiPanel.append(el('table', null,
+          el('tr', null, el('th', { text: 'Rubric point' }), el('th', { text: 'Marks' }), el('th', { text: 'Evidence in the answer' })),
+          ai.criteria.map(c => el('tr', null, el('td', { text: c.point }), el('td', { text: fmtMark(c.awarded) + '/' + fmtMark(c.available) }), el('td', { text: c.evidence })))));
+      }
+      if (ai.feedback) aiPanel.append(el('p', { class: 'small', style: 'margin-top:6px' }, el('strong', { text: 'Feedback for the student: ' }), ai.feedback));
+    }
+    aiBtn.addEventListener('click', async () => {
+      aiBtn.disabled = true;
+      aiBtn.textContent = 'Marking…';
+      try { await aiMarkAnswer(a, q); } catch (e) { if (!(SRV.handleAuthError && SRV.handleAuthError(e))) { a.aiError = e.message; scoreAnswer(a, q); } }
+      aiBtn.disabled = locked;
+      afterChange();
+    });
 
     function update() {
       const r = a.result;
@@ -739,7 +869,7 @@ Keywords:
       metrics.append(...[
         bar('Similarity (cos)', r.cosine, 'Cosine similarity between the answer and the model answer'),
         bar('Keyword coverage', r.coverage, 'Share of keyword groups found'),
-        el('div', { class: 'small muted', text: 'Raw score ' + fmt(r.raw) + ' → rounded ' + fmtMark(r.suggested) + (a.textEdited ? ' · tool score on unedited OCR text: ' + fmtMark(a.originalSuggested) : '') + ' · ' + r.wordCount + ' words' }),
+        el('div', { class: 'small muted', text: 'Raw score ' + fmt(r.raw) + ' → rounded ' + fmtMark(r.formula) + (a.textEdited ? ' · tool score on unedited OCR text: ' + fmtMark(a.originalSuggested) : '') + ' · ' + r.wordCount + ' words' }),
         el('div', { style: 'margin-top:6px' }, el('div', { class: 'small', text: 'Matched keywords' }),
           r.matched.length ? r.matched.map(m => el('span', { class: 'chip hit', title: 'Matched "' + m.found + '" (similarity ' + fmt(m.similarity) + ')' }, m.keyword + (m.found !== m.keyword.replace(/\*$/, '') ? ' ← ' + m.found : ''))) : el('span', { class: 'small muted', text: 'none' })),
         el('div', { style: 'margin-top:4px' }, el('div', { class: 'small', text: 'Missing keywords' }),
@@ -748,6 +878,13 @@ Keywords:
       ].filter(Boolean));
       hl.innerHTML = '';
       hl.append(a.text.trim() ? highlightNodes(a.text, r.matched) : el('span', { class: 'muted', text: '(no text)' }));
+      const aiOn = useAIMarking();
+      aiPanel.classList.toggle('hidden', !aiOn);
+      formulaWrap.open = !aiOn;
+      if (aiOn) {
+        renderAIPanel();
+        if (r.reasons.length) aiPanel.append(el('ul', { class: 'reasons' }, r.reasons.map(x => el('li', { text: x }))));
+      }
     }
 
     function afterChange() {
@@ -793,16 +930,18 @@ Keywords:
         assignedPage >= 0 ? el('button', { class: 'btn small', onclick: () => { viewer.pageIdx = assignedPage; renderViewer(s); } }, 'Show page') : null),
       el('div', { class: 'qbody' },
         el('div', { class: 'stack' },
-          el('div', { class: 'row spread' }, el('span', { class: 'small', text: 'Recognised text (edit to correct OCR errors; the score updates)' }),
+          el('div', { class: 'row spread' }, el('span', { class: 'small', text: a.readable ? 'Answer, readable version (edit to correct; the formula score updates, then re-mark with AI)' : 'Recognised text (edit to correct OCR errors; the score updates)' }),
             el('button', { class: 'btn small', disabled: locked, title: 'Restore the OCR output', onclick: () => { textArea.value = a.ocrText; textArea.dispatchEvent(new Event('input')); } }, 'Reset')),
           textArea,
+          a.verbatim && a.verbatim !== a.text ? el('details', null, el('summary', { text: 'Exact transcription (as the student wrote it)' }), el('div', { class: 'highlight', text: a.verbatim })) : null,
           el('details', null, el('summary', { text: 'Matched words in context' }), hl),
           el('details', null, el('summary', { text: 'Model answer' }), el('div', { class: 'highlight', text: q.model }))),
         el('div', { class: 'stack' },
           el('div', { class: 'mark-box' }, el('span', { class: 'small muted', text: 'Suggested' }), suggestEl),
           el('div', { class: 'mark-box' }, el('span', { class: 'small muted', text: 'Final mark' }), finalInput, acceptBtn),
           reasonWrap,
-          metrics))
+          aiPanel,
+          formulaWrap))
     );
     update();
     cardUpdaters.set(q.id, update);
@@ -890,7 +1029,8 @@ Keywords:
 
   function longCsv() {
     const rows = [['script', 'question', 'max', 'ocr_engines', 'ocr_recognisable_words', 'cosine', 'keyword_coverage', 'matched_keywords', 'missing_keywords',
-      'tool_suggested', 'suggested_after_text_edits', 'final', 'review_status', 'overridden', 'override_reason', 'text_edited', 'confidence', 'off_topic', 'recognised_text']];
+      'tool_suggested', 'suggested_after_text_edits', 'final', 'review_status', 'overridden', 'override_reason', 'text_edited', 'confidence', 'off_topic', 'recognised_text',
+      'formula_mark', 'ai_mark', 'ai_confidence', 'ai_rationale', 'ai_feedback', 'exact_transcription']];
     reviewable().forEach(s => {
       const engines = Array.from(new Set(s.pages.map(p => p.ocr && p.ocr.engine).filter(Boolean))).join('+');
       rubric.questions.forEach(q => {
@@ -901,7 +1041,8 @@ Keywords:
         rows.push([s.name, q.label, q.max, engines, a.text.trim() ? fmt(G.dictionaryRatio(a.text, vocab, subsMap), 3) : '', fmt(r.cosine, 3), r.coverage === null ? '' : fmt(r.coverage, 3),
           r.matched.map(m => m.keyword).join('; '), r.missed.map(m => m.keywords[0]).join('; '),
           a.originalSuggested, r.suggested, effective(a), a.status, over ? 1 : 0, over ? (a.reason || (a.textEdited ? 'text' : 'judgement')) : '',
-          a.textEdited ? 1 : 0, r.confidence, r.offTopic ? 1 : 0, a.text]);
+          a.textEdited ? 1 : 0, r.confidence, r.offTopic ? 1 : 0, a.text,
+          r.formula, a.ai ? a.ai.mark : '', a.ai ? a.ai.confidence : '', a.ai ? a.ai.rationale : '', a.ai ? a.ai.feedback : '', a.verbatim || '']);
       });
     });
     return E.toCsv(rows);
@@ -1191,11 +1332,25 @@ Keywords:
   const bindings = [
     ['setW', 'w', 'num'], ['setTheta', 'theta', 'num'], ['setTau', 'tau', 'num'], ['setStep', 'step', 'num'],
     ['setStop', 'removeStopwords', 'bool'], ['setStem', 'stem', 'bool'], ['setPass', 'passPct', 'num'], ['setBand', 'bandPct', 'num'],
-    ['setSeg', 'segMode', 'str'], ['setSubs', 'subs', 'str'], ['setEngine', 'engine', 'str'], ['setOcrEngine', 'ocrSpaceEngine', 'str']
+    ['setSeg', 'segMode', 'str'], ['setSubs', 'subs', 'str'], ['setEngine', 'engine', 'str'], ['setOcrEngine', 'ocrSpaceEngine', 'str'],
+    ['setMethod', 'method', 'str'], ['setReadable', 'readable', 'bool']
   ];
   const ppBindings = [['ppEnabled', 'enabled', 'bool'], ['ppInk', 'inkOnly', 'bool'], ['ppLines', 'removeLines', 'bool'], ['ppMedian', 'median', 'num'], ['ppContrast', 'contrast', 'num'], ['ppSharpen', 'sharpen', 'num'], ['ppBinarize', 'binarize', 'str'], ['ppClosing', 'closing', 'num']];
 
+  function engineOptions() {
+    const sel = $('setEngine');
+    const opt = v => sel.querySelector('option[value="' + v + '"]');
+    if (SRV.enabled) {
+      // Hosted: the server's AI reader replaces browser-side keys.
+      ['claude', 'ocrspace'].forEach(v => { const o = opt(v); if (o) o.remove(); });
+      if (serverAI && !opt('server')) sel.insertBefore(el('option', { value: 'server', text: 'AI handwriting reader (on the server; best for cursive, no key needed)' }), sel.firstChild);
+      const best = opt('best');
+      if (best) { if (serverAI) best.textContent = 'Best of AI reader + Tesseract'; else best.remove(); }
+    }
+  }
+
   function loadSettingsUI() {
+    engineOptions();
     bindings.forEach(([id, k, t]) => { const n = $(id); if (t === 'bool') n.checked = !!state.settings[k]; else n.value = state.settings[k]; });
     ppBindings.forEach(([id, k, t]) => { const n = $(id); if (t === 'bool') n.checked = !!state.settings.pp[k]; else n.value = state.settings.pp[k]; });
     $('setKey').value = apiKey;
@@ -1300,6 +1455,73 @@ Keywords:
     state.scripts.forEach(s => s.pages.forEach((p, i) => sel.append(el('option', { value: s.id + '|' + p.id, text: s.name + ' — page ' + (i + 1), selected: cur === s.id + '|' + p.id }))));
   }
 
+  // ------------------------------------------------------------ users (super admin)
+
+  function showTempPassword(box, email, pw) {
+    box.innerHTML = '';
+    box.append(el('div', { class: 'notice info' },
+      el('div', null, 'Temporary password for ', el('strong', { text: email }), ' (shown only now; they must change it at first sign-in):'),
+      el('div', { class: 'row', style: 'margin-top:6px' }, el('span', { class: 'temp-pw', text: pw }),
+        el('button', { class: 'btn small', type: 'button', onclick: () => { navigator.clipboard && navigator.clipboard.writeText(pw).then(() => toast('Copied.')); } }, 'Copy'))));
+  }
+
+  async function createUser(e) {
+    e.preventDefault();
+    const box = $('newUserResult');
+    box.innerHTML = '';
+    try {
+      const r = await SRV.api('admin/users', {
+        email: $('nuEmail').value, name: $('nuName').value, role: $('nuRole').value,
+        monthlyPageLimit: $('nuLimit').value, password: $('nuPassword').value || undefined
+      });
+      if (r.temporaryPassword) showTempPassword(box, r.user.email, r.temporaryPassword);
+      else box.append(el('div', { class: 'notice info', text: 'Account created for ' + r.user.email + ' with the password you entered. They must change it at first sign-in.' }));
+      ['nuEmail', 'nuName', 'nuPassword'].forEach(id => { $(id).value = ''; });
+      $('nuLimit').value = 0;
+      renderUsers();
+    } catch (err) {
+      if (!(SRV.handleAuthError && SRV.handleAuthError(err))) box.append(el('div', { class: 'notice err', text: err.message }));
+    }
+  }
+
+  async function renderUsers() {
+    const table = $('usersTable');
+    if (!SRV.enabled || !SRV.user || SRV.user.role !== 'superadmin') { table.innerHTML = ''; return; }
+    let data;
+    try { data = await SRV.api('admin/users'); } catch (err) { if (!(SRV.handleAuthError && SRV.handleAuthError(err))) toast(err.message); return; }
+    table.innerHTML = '';
+    table.append(el('thead', null, el('tr', null, ['Name', 'E-mail', 'Role', 'Status', 'AI pages this month', 'Monthly page limit', 'Last sign-in', 'Actions'].map(h => el('th', { text: h })))));
+    const body = el('tbody');
+    const act = async (u, patch, confirmText) => {
+      if (confirmText && !confirm(confirmText)) return;
+      try {
+        const r = await SRV.api('admin/users/' + u.id, patch, 'PATCH');
+        if (r.temporaryPassword) showTempPassword($('newUserResult'), u.email, r.temporaryPassword);
+        renderUsers();
+      } catch (err) { toast(err.message, 6000); }
+    };
+    data.users.forEach(u => {
+      const me = u.id === SRV.user.id;
+      const limit = el('input', { type: 'number', min: 0, value: u.monthlyPageLimit, style: 'width:80px', 'aria-label': 'Monthly page limit for ' + u.email,
+        onchange: e => act(u, { monthlyPageLimit: e.target.value }) });
+      const role = el('select', { 'aria-label': 'Role for ' + u.email, onchange: e => act(u, { role: e.target.value }, 'Change ' + u.email + ' to ' + e.target.value + '?') },
+        el('option', { value: 'lecturer', text: 'Lecturer', selected: u.role === 'lecturer' }), el('option', { value: 'superadmin', text: 'Super admin', selected: u.role === 'superadmin' }));
+      body.append(el('tr', null,
+        el('td', { text: u.name + (me ? ' (you)' : '') }), el('td', { text: u.email }), el('td', null, role),
+        el('td', null, el('span', { class: 'badge ' + (u.disabled ? 'red' : u.mustChangePassword ? 'amber' : 'green'), text: u.disabled ? 'Disabled' : u.mustChangePassword ? 'Must change password' : 'Active' })),
+        el('td', { class: 'num', text: u.pagesThisMonth }), el('td', null, limit),
+        el('td', { class: 'small', text: u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : 'never' }),
+        el('td', null, el('div', { class: 'row' },
+          el('button', { class: 'btn small', type: 'button', onclick: () => act(u, { resetPassword: true }, 'Reset the password for ' + u.email + '? They will be signed out and get a new temporary password.') }, 'Reset password'),
+          me ? null : el('button', { class: 'btn small', type: 'button', onclick: () => act(u, { disabled: !u.disabled }, (u.disabled ? 'Enable ' : 'Disable ') + u.email + '?') }, u.disabled ? 'Enable' : 'Disable'),
+          me ? null : el('button', { class: 'btn small danger', type: 'button', onclick: async () => {
+            if (!confirm('Delete the account ' + u.email + '? This cannot be undone. Their marking data stays only in their own browser.')) return;
+            try { await SRV.api('admin/users/' + u.id, undefined, 'DELETE'); renderUsers(); } catch (err) { toast(err.message, 6000); }
+          } }, 'Delete')))));
+    });
+    table.append(body);
+  }
+
   // ------------------------------------------------------------ tabs & wiring
 
   function switchTab(name) {
@@ -1313,6 +1535,7 @@ Keywords:
     if (name === 'results') renderResults();
     if (name === 'evaluation') renderEvaluation();
     if (name === 'settings') refreshPreviewPages();
+    if (name === 'users') renderUsers();
     try { sessionStorage.setItem('hwgrader.tab', name); } catch (e) { /* ignore */ }
   }
 
@@ -1346,6 +1569,41 @@ Keywords:
       applyRubric(); renderRubric(); save();
     });
     $('rubricExport').addEventListener('click', () => download('rubric.txt', rt.value));
+    $('guideImport').addEventListener('change', async e => {
+      const f = e.target.files[0];
+      e.target.value = '';
+      if (!f) return;
+      if (f.size > 12 * 1024 * 1024) { toast('That file is larger than 12 MB. Use a smaller PDF or photo.'); return; }
+      const msgs = $('rubricMessages');
+      msgs.innerHTML = '';
+      msgs.append(el('div', { class: 'notice info', text: 'Reading "' + f.name + '" and building the rubric… this can take up to a minute.' }));
+      try {
+        let mediaType = f.type || '';
+        if (!mediaType && /\.docx$/i.test(f.name)) mediaType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        if (!mediaType && /\.txt$/i.test(f.name)) mediaType = 'text/plain';
+        let body;
+        if (/^image\//.test(mediaType) && !/^image\/(jpeg|png|webp)$/.test(mediaType)) {
+          // e.g. HEIC from iPhones: convert to JPEG in the browser first.
+          const c = await O.blobToCanvas(f, 0, 2400);
+          body = { file: c.toDataURL('image/jpeg', 0.9).split(',')[1], mediaType: 'image/jpeg', filename: f.name };
+        } else {
+          const dataUrl = await blobToDataUrl(f);
+          body = { file: dataUrl.split(',')[1], mediaType: mediaType, filename: f.name };
+        }
+        const r = await SRV.api('ai/rubric', body);
+        msgs.innerHTML = '';
+        if (!r.questions) { msgs.append(el('div', { class: 'notice err', text: 'No prose questions were found in that document.' })); renderRubric(); return; }
+        if (rt.value.trim() && !confirm('Replace the current rubric with the ' + r.questions + ' question(s) read from "' + f.name + '"?')) { renderRubric(); return; }
+        rt.value = state.rubricText = r.rubricText;
+        applyRubric(); renderRubric(); save();
+        if (r.warnings && r.warnings.length) $('rubricMessages').prepend(el('div', { class: 'notice warn' }, el('strong', { text: 'Check these points from the marking guide:' }), el('ul', null, r.warnings.map(w => el('li', { text: w })))));
+        toast('Rubric created from the marking guide. Check each question before marking.', 6000);
+      } catch (err) {
+        if (SRV.handleAuthError && SRV.handleAuthError(err)) return;
+        msgs.innerHTML = '';
+        msgs.append(el('div', { class: 'notice err', text: 'Could not read the marking guide: ' + err.message }));
+      }
+    });
 
     // uploads
     $('fileInput').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
@@ -1375,6 +1633,18 @@ Keywords:
       const s = selected();
       if (!s || !confirm('Rebuild every answer from the page OCR text? Text edits and marks for this script will be lost.')) return;
       compileScript(s); save(); renderReview();
+    });
+    $('aiMarkAllBtn').addEventListener('click', async () => {
+      const s = selected();
+      if (!s) return;
+      const btn = $('aiMarkAllBtn');
+      btn.disabled = true;
+      btn.textContent = 'Marking…';
+      try { await aiMarkScript(s, (q, k) => { btn.textContent = 'Marked ' + k + '…'; }); } catch (e) { toast('AI marking stopped: ' + e.message, 6000); }
+      btn.disabled = false;
+      btn.textContent = 'Mark all with AI';
+      save();
+      renderReview();
     });
     $('acceptAllBtn').addEventListener('click', () => {
       const s = selected();
@@ -1416,6 +1686,9 @@ Keywords:
     $('exportCsvLong').addEventListener('click', () => download('marks-per-question.csv', longCsv(), 'text/csv'));
     $('exportCsvWide').addEventListener('click', () => download('marks-per-script.csv', wideCsv(), 'text/csv'));
     $('exportJson').addEventListener('click', exportSession);
+    $('printBtn').addEventListener('click', () => window.print());
+    $('newUserForm').addEventListener('submit', createUser);
+    $('refreshUsers').addEventListener('click', renderUsers);
     $('importJson').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) importSession(f); });
     $('clearAll').addEventListener('click', async () => {
       if (!confirm('Delete all scripts, page images and marks from this browser? Export first if you need them.')) return;
@@ -1498,6 +1771,8 @@ Keywords:
   applyRubric();
   let startTab = 'rubric';
   try { startTab = sessionStorage.getItem('hwgrader.tab') || (state.scripts.length ? 'scripts' : 'rubric'); } catch (e) { /* ignore */ }
+  const startBtn = document.querySelector('nav.tabs button[data-tab="' + startTab + '"]');
+  if (!startBtn || startBtn.classList.contains('hidden')) startTab = 'rubric';
   currentTab = startTab;
   renderAll();
 
