@@ -252,12 +252,12 @@
             <small>Tesseract reads print and neat writing well but struggles with cursive. For real handwritten scripts, use the AI handwriting reader.</small></div>
           <div id="claudeFields">
             <div class="field"><span>Anthropic API key (AI handwriting reader)</span><input type="password" id="setClaudeKey" autocomplete="off" placeholder="sk-ant-…  (console.anthropic.com → API keys)" /></div>
-            <label class="check"><input type="checkbox" id="setClaudeRemember" /> Remember the key in this browser</label>
-            <div class="notice warn small">With the AI reader on, page photos are sent to Anthropic's Claude API for transcription, at roughly US$0.01–0.03 per page billed to your key. Check your institution's data-protection rules first, and only save the key on a device you control.</div>
+            <div class="row"><span id="claudeKeyStatus" class="small muted"></span><button class="btn small" id="forgetClaudeKey" type="button">Forget key</button></div>
+            <div class="notice warn small">With the AI reader on, page photos are sent to Anthropic's Claude API for transcription, at roughly US$0.01–0.03 per page billed to your key. Check your institution's data-protection rules first, The key is saved in this browser on this device only (never in the app's files), so you are not asked again. Use <em>Forget key</em> before handing the device to someone else.</div>
           </div>
           <div id="cloudFields">
             <div class="field"><span>OCR.space API key</span><input type="password" id="setKey" autocomplete="off" placeholder="Get a free key at ocr.space/ocrapi" /></div>
-            <label class="check"><input type="checkbox" id="setRemember" /> Remember the key in this browser</label>
+            <div class="row"><span id="ocrKeyStatus" class="small muted"></span><button class="btn small" id="forgetOcrKey" type="button">Forget key</button></div>
             <div class="field"><span>OCR.space engine</span>
               <select id="setOcrEngine"><option value="2">Engine 2 (better for handwriting)</option><option value="1">Engine 1</option><option value="3">Engine 3</option></select></div>
             <div class="notice warn small">With the cloud engine on, page images are sent to OCR.space. Check your institution's data-protection rules first.</div>

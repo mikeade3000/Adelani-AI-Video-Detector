@@ -1200,10 +1200,20 @@ Keywords:
     ppBindings.forEach(([id, k, t]) => { const n = $(id); if (t === 'bool') n.checked = !!state.settings.pp[k]; else n.value = state.settings.pp[k]; });
     $('setKey').value = apiKey;
     $('setClaudeKey').value = claudeKey;
-    $('setClaudeRemember').checked = ST.getPref('claudeKey', null) !== null;
-    $('setRemember').checked = ST.getPref('ocrspaceKey', null) !== null;
+    renderKeyStatus();
     $('ppContrastV').textContent = fmt(state.settings.pp.contrast);
     $('ppSharpenV').textContent = fmt(state.settings.pp.sharpen, 1);
+  }
+
+  function renderKeyStatus() {
+    const show = (statusId, btnId, key) => {
+      const saved = !!key && ST.getPref(statusId === 'claudeKeyStatus' ? 'claudeKey' : 'ocrspaceKey', '') === key;
+      $(statusId).textContent = !key ? 'No key entered.' : saved ? '✓ Key saved on this device. You won\'t be asked again.' : 'Key in use for this session (this browser blocks saving it).';
+      $(statusId).style.color = key ? 'var(--green)' : '';
+      $(btnId).classList.toggle('hidden', !key);
+    };
+    show('claudeKeyStatus', 'forgetClaudeKey', claudeKey);
+    show('ocrKeyStatus', 'forgetOcrKey', apiKey);
   }
 
   let rescoreTimer = null;
@@ -1230,17 +1240,24 @@ Keywords:
         save();
       });
     });
-    $('setKey').addEventListener('change', e => {
-      apiKey = e.target.value.trim();
-      if ($('setRemember').checked) ST.setPref('ocrspaceKey', apiKey);
+    // Keys are saved automatically in this browser (localStorage) as soon as they are entered,
+    // so the examiner is not asked again on this device. "Forget key" removes them.
+    const saveKey = (input, pref, set) => {
+      let t = null;
+      const commit = () => { const v = input.value.trim(); set(v); ST.setPref(pref, v || null); renderKeyStatus(); renderPrivacy(); };
+      input.addEventListener('input', () => { clearTimeout(t); t = setTimeout(commit, 400); });
+      input.addEventListener('change', commit);
+    };
+    saveKey($('setClaudeKey'), 'claudeKey', v => { claudeKey = v; });
+    saveKey($('setKey'), 'ocrspaceKey', v => { apiKey = v; });
+    $('forgetClaudeKey').addEventListener('click', () => {
+      if (!confirm('Remove the Anthropic API key from this device?')) return;
+      claudeKey = ''; $('setClaudeKey').value = ''; ST.setPref('claudeKey', null); renderKeyStatus(); renderPrivacy();
     });
-    $('setRemember').addEventListener('change', e => ST.setPref('ocrspaceKey', e.target.checked ? apiKey : null));
-    $('setClaudeKey').addEventListener('change', e => {
-      claudeKey = e.target.value.trim();
-      renderPrivacy();
-      if ($('setClaudeRemember').checked) ST.setPref('claudeKey', claudeKey);
+    $('forgetOcrKey').addEventListener('click', () => {
+      if (!confirm('Remove the OCR.space API key from this device?')) return;
+      apiKey = ''; $('setKey').value = ''; ST.setPref('ocrspaceKey', null); renderKeyStatus(); renderPrivacy();
     });
-    $('setClaudeRemember').addEventListener('change', e => ST.setPref('claudeKey', e.target.checked ? claudeKey : null));
     $('resetSettings').addEventListener('click', () => {
       if (!confirm('Restore all scoring, OCR and preprocessing settings to their defaults?')) return;
       state.settings = clone(DEFAULT_SETTINGS);
