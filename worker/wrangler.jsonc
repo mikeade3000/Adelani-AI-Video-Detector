@@ -1,0 +1,31 @@
+// Cloudflare Worker for the Handwritten Theory Grader.
+// Secrets (never put them in this file): set them in the Cloudflare dashboard
+// (Worker → Settings → Variables and Secrets) or with `npx wrangler secret put NAME`:
+//   ANTHROPIC_API_KEY, SUPERADMIN_EMAIL, SUPERADMIN_PASSWORD
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "handwritten-theory-grader",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // The browser app (../grader) is served as static assets; only /api/* runs the Worker.
+  "assets": {
+    "directory": "../grader",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+
+  // Accounts, sessions and usage. Wrangler creates this database on the first deploy.
+  "d1_databases": [
+    { "binding": "DB", "database_name": "grader-db" }
+  ],
+
+  // Serve the app on your domain. The domain must be on Cloudflare (DNS managed in
+  // your Cloudflare account). Remove this block to use the free *.workers.dev address only.
+  "routes": [
+    { "pattern": "portal.com.ng", "custom_domain": true }
+  ],
+
+  "observability": { "enabled": true }
+}

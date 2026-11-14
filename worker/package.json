@@ -1,0 +1,21 @@
+{
+  "name": "handwritten-grader-worker",
+  "version": "2.1.0",
+  "private": true,
+  "description": "Cloudflare Worker for the Handwritten Theory Grader: accounts (D1), super-admin user management and AI reading/marking.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --test test/*.test.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "jszip": "^3.10.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "wrangler": "^4.162.0"
+  }
+}

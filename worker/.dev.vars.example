@@ -1,0 +1,5 @@
+# For local testing with `npx wrangler dev` only: copy to .dev.vars (never commit it).
+ANTHROPIC_API_KEY=
+SUPERADMIN_EMAIL=admin@example.edu
+SUPERADMIN_PASSWORD=ChangeThisPassword2026
+COOKIE_SECURE=false

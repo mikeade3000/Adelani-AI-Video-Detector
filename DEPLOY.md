@@ -9,6 +9,71 @@ The hosted version adds what a static page cannot do safely:
 
 It is one Node.js app (`server/`) that also serves the browser app (`grader/`). It runs on any host that runs Node 20+ or Docker. It needs a **persistent disk** for `DATA_DIR`, which holds accounts and usage.
 
+## Cloudflare Workers on portal.com.ng (recommended)
+
+The `worker/` folder is the Cloudflare version. The Worker serves the app and the `/api` routes, accounts live in a **Cloudflare D1** database (created automatically on the first deploy), and your Anthropic key is a **Cloudflare secret**. It was tested in Cloudflare's own runtime (workerd + D1) with the real Claude API.
+
+**You need:** a Cloudflare account on the **Workers Paid plan (US$5/month)**. Hashing a password at a safe strength takes about 18 ms of CPU, and the free plan allows only 10 ms per request, so sign-in could fail there.
+
+### 1. Put portal.com.ng on Cloudflare (once)
+
+1. Cloudflare dashboard → **Add a domain** → enter `portal.com.ng` → choose a plan (Free is fine for the domain).
+2. Cloudflare shows two nameservers. At your `.com.ng` registrar, replace the domain's nameservers with those two. This can take from a few minutes to 24 hours.
+3. Wait until the domain shows **Active** in Cloudflare.
+
+If `portal.com.ng` already hosts another website, use a subdomain such as `grader.portal.com.ng` instead. Change `"pattern"` in `worker/wrangler.jsonc` to match.
+
+### 2. Deploy from GitHub (no command line)
+
+1. Cloudflare dashboard → **Workers & Pages → Create → Import a repository** → connect GitHub and pick `mikeade3000/Adelani-AI-Video-Detector`.
+2. Settings:
+   - **Production branch:** `main` (after the code is merged) or `claude/sweet-johnson-1e8kdt`.
+   - **Root directory:** `worker`
+   - **Build command:** `npm ci`
+   - **Deploy command:** `npx wrangler deploy`
+3. Click **Deploy**. The first deploy creates the Worker, the `grader-db` database and the `portal.com.ng` custom domain.
+
+### 3. Add the secrets
+
+Worker → **Settings → Variables and Secrets → Add**. Choose type **Secret** for each:
+
+| Name | Value |
+|---|---|
+| `ANTHROPIC_API_KEY` | your key from console.anthropic.com |
+| `SUPERADMIN_EMAIL` | the super admin's e-mail |
+| `SUPERADMIN_PASSWORD` | 10+ characters, letters and numbers |
+
+Saving a secret redeploys the Worker. Open **https://portal.com.ng**, sign in as the super admin, then change the password (top right). The `SUPERADMIN_*` secrets are only used to create the first account; you may delete them afterwards.
+
+### Alternatively, with the command line
+
+```bash
+cd worker
+npm install
+npx wrangler login
+npx wrangler secret put ANTHROPIC_API_KEY      # paste the key when asked
+npx wrangler secret put SUPERADMIN_EMAIL
+npx wrangler secret put SUPERADMIN_PASSWORD
+npx wrangler deploy
+```
+
+### Local testing
+
+Copy `worker/.dev.vars.example` to `worker/.dev.vars` (git ignores it), fill it in, then run `npx wrangler dev` and open http://localhost:8787. Run the tests with `npm test`.
+
+### Looking after it
+
+- **Users:** in the app, **Users** tab (super admin only).
+- **Usage and cost:** the Users table shows AI-read pages per person this month. Set monthly limits there. Also set a spending limit in the Anthropic console.
+- **Logs:** Worker → **Logs** in the Cloudflare dashboard.
+- **Backups:** dashboard → **Storage & Databases → D1 → grader-db** (Time Travel restores to any minute in the last 30 days), or `npx wrangler d1 export grader-db --remote --output backup.sql`.
+
+---
+
+# Other hosts (Node.js server)
+
+The `server/` folder is the same backend as a Node.js/Express app, for hosts other than Cloudflare.
+
 ## Settings (environment variables)
 
 | Variable | Required | What it is |
@@ -70,6 +135,7 @@ ANTHROPIC_API_KEY=… SUPERADMIN_EMAIL=… SUPERADMIN_PASSWORD=… DATA_DIR=/var
 ## Running the tests
 
 ```bash
-cd server && npm install && npm test   # accounts, permissions, AI routes (Claude API stubbed)
+cd worker && npm install && npm test   # Cloudflare version: accounts, permissions, AI routes (Claude API stubbed)
+cd ../server && npm install && npm test # Node version, same checks
 cd ../grader && npm test               # scoring, statistics, preprocessing
 ```
