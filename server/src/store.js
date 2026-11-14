@@ -1,3 +1,4 @@
+/*! © 2026 Michael Adelani Adewusi · Adelani Super Intelligent Agents. All rights reserved. No part or section of this application may be copied. */
 // Small JSON-file data store (users, sessions, usage). Writes are atomic
 // (temp file + rename) and serialised, which is plenty for one school's
 // lecturers. Point DATA_DIR at a persistent disk/volume when hosting.

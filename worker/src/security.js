@@ -1,3 +1,4 @@
+/*! © 2026 Michael Adelani Adewusi · Adelani Super Intelligent Agents. All rights reserved. No part or section of this application may be copied. */
 // Password hashing and tokens with the Web Crypto API (available in Workers).
 // PBKDF2-SHA256 at 100,000 iterations, the most Workers allows. The iteration
 // count is stored in each hash, so it can be raised later without breaking logins.

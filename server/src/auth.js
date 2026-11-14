@@ -1,3 +1,4 @@
+/*! © 2026 Michael Adelani Adewusi · Adelani Super Intelligent Agents. All rights reserved. No part or section of this application may be copied. */
 // Accounts and sessions: scrypt password hashes, random session tokens stored
 // only as SHA-256 hashes, HttpOnly SameSite=Strict cookies, login throttling.
 import crypto from 'node:crypto';

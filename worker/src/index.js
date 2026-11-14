@@ -1,3 +1,4 @@
+/*! © 2026 Michael Adelani Adewusi · Adelani Super Intelligent Agents. All rights reserved. No part or section of this application may be copied. */
 // Handwritten Theory Grader — Cloudflare Worker.
 // /api/* is handled here (sign-in, super-admin user management, AI reading and
 // marking); every other path is the browser app, served from static assets.

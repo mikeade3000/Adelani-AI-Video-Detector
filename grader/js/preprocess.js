@@ -1,3 +1,4 @@
+/*! © 2026 Michael Adelani Adewusi · Adelani Super Intelligent Agents. All rights reserved. No part or section of this application may be copied. */
 /*
  * "Handwriting boost" image preprocessing (manuscript §3.2):
  * greyscale → median filter → contrast stretch → sharpen →

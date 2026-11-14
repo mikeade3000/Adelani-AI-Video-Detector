@@ -1,0 +1,17 @@
+Copyright (c) 2026 Michael Adelani Adewusi. All rights reserved.
+Handwritten Theory Grader · Adelani Super Intelligent Agents
+
+This software and its source code, design, text and documentation are
+proprietary. No part or section of this application may be copied,
+reproduced, modified, distributed, published or used to create derivative
+works, in any form or by any means, without the prior written permission of
+the copyright holder.
+
+Third-party components keep their own licences, which apply to those
+components only:
+- grader/vendor/pdfjs           Mozilla PDF.js, Apache License 2.0 (grader/vendor/pdfjs/LICENSE)
+- grader/vendor/tesseract       Tesseract.js, Apache License 2.0 (grader/vendor/tesseract/LICENSE.md)
+- grader/vendor/tesseract-core  tesseract.js-core, Apache License 2.0 (grader/vendor/tesseract-core/LICENSE)
+- grader/vendor/lang            Tesseract English model, Apache License 2.0
+- grader/vendor/anthropic       Anthropic TypeScript SDK, MIT License (grader/vendor/anthropic/LICENSE)
+- npm dependencies of server/ and worker/ under their respective licences.

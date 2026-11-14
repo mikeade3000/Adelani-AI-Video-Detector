@@ -1,3 +1,4 @@
+/*! © 2026 Michael Adelani Adewusi · Adelani Super Intelligent Agents. All rights reserved. No part or section of this application may be copied. */
 /*
  * Compact general-English word list used by the "best-of-two" OCR selector.
  * The selector prefers the OCR output whose tokens are most often found in

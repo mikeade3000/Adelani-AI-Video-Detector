@@ -1,3 +1,4 @@
+/*! © 2026 Michael Adelani Adewusi · Adelani Super Intelligent Agents. All rights reserved. No part or section of this application may be copied. */
 /*
  * Sign-in for the hosted version. When the app is served by the grader
  * server (server/), users must sign in; the super admin manages accounts and

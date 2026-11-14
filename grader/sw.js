@@ -1,12 +1,13 @@
+/*! © 2026 Michael Adelani Adewusi · Adelani Super Intelligent Agents. All rights reserved. No part or section of this application may be copied. */
 /*
  * Offline support: cache the app shell and the bundled OCR engine/model on
  * first visit, then serve them from the cache (network first for the app's
  * own HTML/JS so updates arrive when online).
  */
-const CACHE = 'hwgrader-v5';
+const CACHE = 'hwgrader-v6';
 const SHELL = [
   './', 'index.html', 'css/app.css', 'icon.svg', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',
-  'js/words.js', 'js/scoring.js', 'js/stats.js', 'js/preprocess.js', 'js/ocr.js', 'js/store.js', 'js/evaluation.js', 'js/auth.js', 'js/app.js',
+  'js/protect.js', 'js/words.js', 'js/scoring.js', 'js/stats.js', 'js/preprocess.js', 'js/ocr.js', 'js/store.js', 'js/evaluation.js', 'js/auth.js', 'js/app.js',
   'vendor/pdfjs/pdf.min.js', 'vendor/pdfjs/pdf.worker.min.js',
   'vendor/tesseract/tesseract.min.js', 'vendor/tesseract/worker.min.js', 'vendor/anthropic/anthropic-sdk.min.js'
 ];

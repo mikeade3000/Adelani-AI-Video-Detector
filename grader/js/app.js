@@ -1,3 +1,4 @@
+/*! © 2026 Michael Adelani Adewusi · Adelani Super Intelligent Agents. All rights reserved. No part or section of this application may be copied. */
 /*
  * Handwritten Theory Grader — application controller.
  * Workflow (manuscript §3.1): upload → render/check → preprocess + OCR →

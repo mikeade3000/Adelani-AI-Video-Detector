@@ -1,3 +1,4 @@
+/*! © 2026 Michael Adelani Adewusi · Adelani Super Intelligent Agents. All rights reserved. No part or section of this application may be copied. */
 /*
  * Evaluation of tool marks against examiners (manuscript §4.3–4.7, Tables 5–8).
  * Pure data functions; rendering lives in app.js.

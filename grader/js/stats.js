@@ -1,3 +1,4 @@
+/*! © 2026 Michael Adelani Adewusi · Adelani Super Intelligent Agents. All rights reserved. No part or section of this application may be copied. */
 /*
  * Agreement and classification statistics for evaluating the tool against
  * examiners (manuscript §4.6–4.7): MAE, RMSE, bias, Bland–Altman limits,

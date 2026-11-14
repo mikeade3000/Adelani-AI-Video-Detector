@@ -1,3 +1,4 @@
+/*! © 2026 Michael Adelani Adewusi · Adelani Super Intelligent Agents. All rights reserved. No part or section of this application may be copied. */
 // Handwritten Theory Grader — server.
 // Serves the browser app, handles sign-in and super-admin user management,
 // and proxies AI reading/grading so the Anthropic key never leaves the server.

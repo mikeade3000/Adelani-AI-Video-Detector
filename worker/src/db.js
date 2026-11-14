@@ -1,3 +1,4 @@
+/*! © 2026 Michael Adelani Adewusi · Adelani Super Intelligent Agents. All rights reserved. No part or section of this application may be copied. */
 // Cloudflare D1 (SQLite) storage for accounts, sessions, usage and login throttling.
 // Tables are created on first use, so no separate migration step is needed.
 import { hashPassword, passwordProblem, normEmail, validEmail } from './security.js';

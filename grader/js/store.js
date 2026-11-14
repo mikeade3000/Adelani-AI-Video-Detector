@@ -1,3 +1,4 @@
+/*! © 2026 Michael Adelani Adewusi · Adelani Super Intelligent Agents. All rights reserved. No part or section of this application may be copied. */
 /*
  * Local persistence. Session metadata goes to localStorage; page images
  * (Blobs) go to IndexedDB. Both are wrapped so the app keeps working in

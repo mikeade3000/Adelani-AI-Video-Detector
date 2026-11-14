@@ -1,3 +1,4 @@
+/*! © 2026 Michael Adelani Adewusi · Adelani Super Intelligent Agents. All rights reserved. No part or section of this application may be copied. */
 // Claude calls for the grader: read a handwritten page, mark one answer against
 // the lecturer's rubric, and turn a lecturer's marking guide into a rubric.
 // The API key stays on the server (ANTHROPIC_API_KEY); browsers never see it.

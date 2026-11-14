@@ -1,3 +1,4 @@
+/*! © 2026 Michael Adelani Adewusi · Adelani Super Intelligent Agents. All rights reserved. No part or section of this application may be copied. */
 /*
  * File rendering (PDF.js) and dual-engine OCR (manuscript §3.1, §3.3).
  *
