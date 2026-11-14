@@ -21,10 +21,11 @@
     { "binding": "DB", "database_name": "grader-db" }
   ],
 
-  // Serve the app on your domain. The domain must be on Cloudflare (DNS managed in
-  // your Cloudflare account). Remove this block to use the free *.workers.dev address only.
+  // The app's address. portals.com.ng is managed in Cloudflare; deploying creates the
+  // ma-grader DNS record and HTTPS certificate automatically. Remove this block to use
+  // only the free *.workers.dev address.
   "routes": [
-    { "pattern": "portal.com.ng", "custom_domain": true }
+    { "pattern": "ma-grader.portals.com.ng", "custom_domain": true }
   ],
 
   "observability": { "enabled": true }

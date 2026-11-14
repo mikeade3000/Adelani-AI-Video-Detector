@@ -9,19 +9,17 @@ The hosted version adds what a static page cannot do safely:
 
 It is one Node.js app (`server/`) that also serves the browser app (`grader/`). It runs on any host that runs Node 20+ or Docker. It needs a **persistent disk** for `DATA_DIR`, which holds accounts and usage.
 
-## Cloudflare Workers on portal.com.ng (recommended)
+## Cloudflare Workers at ma-grader.portals.com.ng (recommended)
 
 The `worker/` folder is the Cloudflare version. The Worker serves the app and the `/api` routes, accounts live in a **Cloudflare D1** database (created automatically on the first deploy), and your Anthropic key is a **Cloudflare secret**. It was tested in Cloudflare's own runtime (workerd + D1) with the real Claude API.
 
-**You need:** a Cloudflare account on the **Workers Paid plan (US$5/month)**. Hashing a password at a safe strength takes about 18 ms of CPU, and the free plan allows only 10 ms per request, so sign-in could fail there.
+**You need:**
+- The **Cloudflare account that manages portals.com.ng**. The domain already uses Cloudflare's nameservers, so no DNS changes are needed.
+- That account on the **Workers Paid plan (US$5/month)**. Hashing a password at a safe strength takes about 18 ms of CPU, and the free plan allows only 10 ms per request, so sign-in could fail there.
 
-### 1. Put portal.com.ng on Cloudflare (once)
+### 1. Nothing to do for the domain
 
-1. Cloudflare dashboard → **Add a domain** → enter `portal.com.ng` → choose a plan (Free is fine for the domain).
-2. Cloudflare shows two nameservers. At your `.com.ng` registrar, replace the domain's nameservers with those two. This can take from a few minutes to 24 hours.
-3. Wait until the domain shows **Active** in Cloudflare.
-
-If `portal.com.ng` already hosts another website, use a subdomain such as `grader.portal.com.ng` instead. Change `"pattern"` in `worker/wrangler.jsonc` to match.
+On the first deploy, Cloudflare creates the `ma-grader.portals.com.ng` DNS record and its HTTPS certificate automatically. Your main site on `portals.com.ng` is not touched. If a `ma-grader` DNS record already exists in Cloudflare by then, delete it first, or the deploy will report a conflict.
 
 ### 2. Deploy from GitHub (no command line)
 
@@ -31,7 +29,7 @@ If `portal.com.ng` already hosts another website, use a subdomain such as `grade
    - **Root directory:** `worker`
    - **Build command:** `npm ci`
    - **Deploy command:** `npx wrangler deploy`
-3. Click **Deploy**. The first deploy creates the Worker, the `grader-db` database and the `portal.com.ng` custom domain.
+3. Click **Deploy**. The first deploy creates the Worker, the `grader-db` database and the `ma-grader.portals.com.ng` address.
 
 ### 3. Add the secrets
 
@@ -43,7 +41,7 @@ Worker → **Settings → Variables and Secrets → Add**. Choose type **Secret*
 | `SUPERADMIN_EMAIL` | the super admin's e-mail |
 | `SUPERADMIN_PASSWORD` | 10+ characters, letters and numbers |
 
-Saving a secret redeploys the Worker. Open **https://portal.com.ng**, sign in as the super admin, then change the password (top right). The `SUPERADMIN_*` secrets are only used to create the first account; you may delete them afterwards.
+Saving a secret redeploys the Worker. Open **https://ma-grader.portals.com.ng**, sign in as the super admin, then change the password (top right). The `SUPERADMIN_*` secrets are only used to create the first account; you may delete them afterwards.
 
 ### Alternatively, with the command line
 
