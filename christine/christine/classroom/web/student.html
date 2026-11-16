@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Join Class</title>
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  .wrap { max-width: 640px; }
+  header { background: var(--accent); color: #fff; padding: 14px 16px; }
+  header h1 { font-size: 1.2rem; margin: 0; }
+  header .sub { opacity: .85; font-size: .9rem; }
+  .card { margin-bottom: 14px; }
+  .q { border-top: 1px solid var(--line); padding: .6em 0; }
+  .q:first-child { border-top: 0; }
+  .opt { display: flex; gap: .6em; align-items: flex-start; padding: .55em .6em; border: 1px solid var(--line);
+         border-radius: 8px; margin: .35em 0; cursor: pointer; }
+  .opt input { width: auto; margin-top: .25em; }
+  .quizq { margin: 1em 0 1.4em; }
+  .quizq h3 { font-family: inherit; font-size: 1rem; }
+  .score { font-size: 1.6rem; font-weight: 700; }
+  button.primary { width: 100%; padding: .8em; font-size: 1.05rem; }
+</style>
+</head>
+<body>
+<header><h1 id="title">Christine Classroom</h1><div class="sub" id="sub">Join the class</div></header>
+<div class="wrap">
+  <div id="msg" class="error" role="alert"></div>
+
+  <div class="card" id="joinCard" style="display:none">
+    <h2>Join the class</h2>
+    <label for="name">Full name</label><input id="name" autocomplete="name">
+    <label for="matric">Matric number</label><input id="matric" autocomplete="off" style="text-transform:uppercase">
+    <p></p><button class="primary" id="joinBtn">Join</button>
+  </div>
+
+  <div id="main" style="display:none">
+    <div class="card" id="quizCard" style="display:none"></div>
+    <div class="card" id="resultsCard" style="display:none"></div>
+    <div class="card">
+      <h2>Ask Christine a question</h2>
+      <textarea id="question" rows="3" maxlength="500" placeholder="Type your question about the lesson…"></textarea>
+      <p></p><button class="primary" id="askBtn">Send question</button>
+      <p class="muted" style="font-size:.85rem">Christine answers questions for the whole class at the end of each section.</p>
+    </div>
+    <div class="card" id="myQs" style="display:none"><h2>Your questions</h2><div id="qList"></div></div>
+  </div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+let token = "";
+try { token = localStorage.getItem("christine-token") || ""; } catch (e) {}
+let quizShown = false, lastResults = "";
+
+function el(tag, text, cls) { const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; }
+function msg(t, ok) { $("msg").textContent = t || ""; $("msg").className = ok ? "ok" : "error"; }
+
+async function api(url, body) {
+  const opts = { headers: { "Content-Type": "application/json", "X-Student": token } };
+  if (body !== undefined) { opts.method = "POST"; opts.body = JSON.stringify(body); }
+  const r = await fetch(url, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(data.error || "Something went wrong."); e.status = r.status; throw e; }
+  return data;
+}
+
+$("joinBtn").onclick = async () => {
+  try {
+    const d = await api("/api/s/join", { name: $("name").value, matric: $("matric").value });
+    token = d.token; try { localStorage.setItem("christine-token", token); } catch (e) {}
+    msg(""); refresh();
+  } catch (e) { msg(e.message); }
+};
+
+$("askBtn").onclick = async () => {
+  const text = $("question").value.trim();
+  if (!text) return;
+  $("askBtn").disabled = true;
+  try { await api("/api/s/ask", { text }); $("question").value = ""; msg("Question sent. Christine will answer it soon.", true); refresh(); }
+  catch (e) { msg(e.message); }
+  $("askBtn").disabled = false;
+};
+
+function renderQuiz(quiz) {
+  const card = $("quizCard"); card.textContent = "";
+  card.appendChild(el("h2", "Quiz"));
+  card.appendChild(el("p", "Answer every question, then press Submit. You can only submit once.", "muted"));
+  quiz.mcqs.forEach((q, i) => {
+    const box = el("div", null, "quizq"); box.appendChild(el("h3", `${i + 1}. ${q.question}`));
+    q.options.forEach((o, j) => {
+      const lab = el("label", null, "opt");
+      const r = document.createElement("input"); r.type = "radio"; r.name = "mcq" + i; r.value = j;
+      lab.appendChild(r); lab.appendChild(el("span", `${"ABCD"[j] || j + 1}. ${o}`));
+      box.appendChild(lab);
+    });
+    card.appendChild(box);
+  });
+  quiz.short.forEach((q, i) => {
+    const box = el("div", null, "quizq");
+    box.appendChild(el("h3", `${quiz.mcqs.length + i + 1}. ${q.question} (${q.marks} mark${q.marks === 1 ? "" : "s"})`));
+    const t = document.createElement("textarea"); t.rows = 4; t.id = "short" + i; t.maxLength = 3000; box.appendChild(t);
+    card.appendChild(box);
+  });
+  const b = el("button", "Submit quiz", "primary");
+  b.onclick = async () => {
+    const mcq = quiz.mcqs.map((_, i) => { const c = document.querySelector(`input[name=mcq${i}]:checked`); return c ? +c.value : null; });
+    const unanswered = mcq.filter(x => x === null).length;
+    if (unanswered && !confirm(`${unanswered} multiple-choice question(s) are unanswered. Submit anyway?`)) return;
+    b.disabled = true;
+    try { await api("/api/s/quiz", { mcq, short: quiz.short.map((_, i) => $("short" + i).value) });
+          msg("Quiz submitted. Your results will appear here after marking.", true); quizShown = false; refresh(); }
+    catch (e) { msg(e.message); b.disabled = false; }
+  };
+  card.appendChild(b);
+}
+
+function renderResults(results) {
+  const key = JSON.stringify(results);
+  if (key === lastResults) return;
+  lastResults = key;
+  const card = $("resultsCard"); card.textContent = ""; card.style.display = "block";
+  const got = results.reduce((a, r) => a + (r.score || 0), 0), max = results.reduce((a, r) => a + r.max, 0);
+  card.appendChild(el("h2", "Your results"));
+  card.appendChild(el("div", `${got} / ${max}`, "score"));
+  for (const r of results) {
+    const d = el("div", null, "q");
+    d.appendChild(el("b", `${r.kind === "mcq" ? "Question" : "Short answer"} ${r.n}: ${r.score === null ? "being marked" : r.score + " / " + r.max}`));
+    if (r.answer) d.appendChild(el("div", "Your answer: " + r.answer, "muted"));
+    if (r.feedback) d.appendChild(el("div", r.feedback));
+    card.appendChild(d);
+  }
+}
+
+async function refresh() {
+  if (!token) { $("joinCard").style.display = "block"; $("main").style.display = "none"; return; }
+  try {
+    const s = await api("/api/s/state");
+    $("joinCard").style.display = "none"; $("main").style.display = "block";
+    $("title").textContent = s.title;
+    $("sub").textContent = `${s.name} · ` + (s.quiz_open ? "Quiz open" : s.status === "finished" ? "Class finished"
+                           : s.status === "ready" ? "Starting soon" : `Section ${s.section} of ${s.sections}: ${s.section_title}`);
+    if (s.quiz && !quizShown) { renderQuiz(s.quiz); quizShown = true; }
+    $("quizCard").style.display = s.quiz ? "block" : "none";
+    if (!s.quiz) quizShown = false;
+    if (s.results) renderResults(s.results);
+    else if (s.submitted) { $("resultsCard").style.display = "block"; $("resultsCard").textContent = "Quiz submitted. Results will appear here after marking."; lastResults = ""; }
+    $("myQs").style.display = s.my_questions.length ? "block" : "none";
+    const list = $("qList"); list.textContent = "";
+    for (const q of s.my_questions.slice().reverse()) {
+      const d = el("div", null, "q"); d.appendChild(el("b", q.text));
+      const label = { pending: "Waiting to be answered", approved: "Waiting to be answered", answered: "Answered",
+                      hidden: "Not taken in class — please ask your lecturer", skipped: "Not taken in class" }[q.status] || q.status;
+      d.appendChild(el("div", label, "muted"));
+      if (q.answer && q.status === "answered") d.appendChild(el("div", q.answer));
+      list.appendChild(d);
+    }
+  } catch (e) {
+    if (e.status === 401) { token = ""; try { localStorage.removeItem("christine-token"); } catch (x) {} $("joinCard").style.display = "block"; $("main").style.display = "none"; }
+    else if (e.status === 400) msg(e.message);
+  }
+}
+refresh();
+setInterval(refresh, 2500);
+</script>
+</body>
+</html>

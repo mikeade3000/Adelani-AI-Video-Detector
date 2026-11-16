@@ -22,6 +22,70 @@ long as you like, and remember things about you between sessions.
 
 You'll need a microphone and speakers. A headset works best in noisy rooms.
 
+## Christine Classroom: teaching a course unit
+
+Christine can teach a whole course unit on a projector, take questions from students'
+phones, run a quiz, mark it and give you the results in Excel.
+
+![The projector display](docs/classroom-projector.png)
+![Christine's expressions: neutral, speaking, smiling, thinking, curious](docs/christine-expressions.png)
+
+### Before the first class (once)
+1. Run **Classroom network setup (run once as admin)** from the Start Menu. It lets
+   students' phones reach the laptop through Windows Firewall, and raises the laptop
+   hotspot's limit from 8 to 100 devices.
+2. **Connecting 30–100 students.** The phones must be on the same network as the laptop:
+   - **Laptop hotspot** (built in): press *Turn on hotspot* on the dashboard. Students
+     scan the Wi-Fi QR code. Many laptops' Wi-Fi cards still cap the hotspot at around
+     8–30 devices, even after the setup step. Test it with your own class size first.
+   - **A portable Wi-Fi router** (a travel router or MiFi, ideally one rated for 32+
+     devices) is the reliable option for 50–100 students. Connect the laptop and the
+     students to it.
+   - **Campus Wi-Fi** works only if it lets devices see each other. Many campus networks
+     block this.
+
+### Preparing a lesson
+1. Double-click **Christine Classroom** on the Desktop. The dashboard opens in your browser.
+2. Under **New lesson**, give the title, course code, level and teaching time, then upload
+   the unit's files: **PDF, Word (.docx), PowerPoint (.pptx), or photos of handwritten
+   notes** (JPG/PNG). Save old .doc/.ppt files in the new format first.
+3. Christine reads everything (including handwriting), plans the sections, writes the full
+   lecture script and builds the quiz (multiple choice plus short answers with a rubric).
+   This takes a few minutes.
+4. **Review everything.** Edit any script, key point, slide choice, quiz question, answer or
+   rubric. Christine speaks the scripts exactly as approved. Then press **Approve lesson**.
+
+### Teaching
+1. Connect the laptop to the projector. Press **Start class**: the classroom display opens
+   in a new window. Drag it to the projector and click **Start display** (this turns on
+   sound and full screen).
+2. Students scan the QR code on screen, then enter their **name and matric number**.
+3. Press **Begin lesson** on the dashboard. Christine teaches section by section. Her face
+   moves with her voice, and captions run along the bottom. Your PowerPoint or PDF page
+   is shown, or a slide she draws when there isn't one.
+4. Students type questions at any time. After each section, Christine reads each question
+   out (rephrased neutrally) and answers it from the course material. Inappropriate
+   questions are skipped and listed for you. You can hide any question. To approve each
+   question before she answers it, set `approve_questions = true` in the settings.
+5. Control her from the dashboard, from your phone (open the *phone remote* address shown
+   on the dashboard and enter the PIN), or from the keyboard on the display: **Space**
+   pause/resume, **→** next section, **←** previous section, **R** repeat, **Q** take
+   questions now, **E** give another example.
+6. At the end she opens the quiz on students' phones. Press **Close quiz and mark**.
+   Multiple choice is marked instantly; Christine marks the short answers with your rubric
+   and announces the class average.
+7. **Check her marking** on the dashboard and change any mark. Then press **Release results**
+   so students see their scores and feedback, and **Download Excel** for the records
+   (scores, every answer, every question asked).
+
+The lecturing voice is Nigerian English (`en-NG-EzinneNeural`) by default. Change it in the
+settings file under `[classroom]`, for example to `en-NG-AbeoNeural` (male) or
+`en-GB-SoniaNeural` (British). If the internet voice is unavailable, the projector uses
+the laptop's own voice.
+
+**Cost:** a 50-minute lesson, including preparation, questions and marking for about 100
+students, typically costs around US$1–3 in Claude usage with the default model.
+
 ## Talking to Christine
 
 Say **"Christine"** followed by what you want, or press **Ctrl+Alt+C** and then speak.

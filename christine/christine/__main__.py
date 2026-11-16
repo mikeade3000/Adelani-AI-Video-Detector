@@ -4,6 +4,7 @@
     python -m christine --text     type instead of talking (good for testing)
     python -m christine --setup    enter or change your Claude API key
     python -m christine --check    test the API key and the connection to Claude
+    python -m christine --classroom  Christine Classroom (teach a course unit on a projector)
 """
 from __future__ import annotations
 
@@ -82,6 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--text", action="store_true", help="type instead of talking")
     parser.add_argument("--setup", action="store_true", help="enter your Claude API key")
     parser.add_argument("--check", action="store_true", help="test the connection to Claude")
+    parser.add_argument("--classroom", action="store_true", help="start Christine Classroom")
     args = parser.parse_args(argv)
 
     cfg = load_config()
@@ -91,6 +93,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.check:
         from .diagnose import run
         run(cfg)
+        return 0
+    if args.classroom:
+        from .classroom.server import run as run_classroom
+        run_classroom(cfg)
         return 0
 
     from .app import Christine

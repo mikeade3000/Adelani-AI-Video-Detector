@@ -18,3 +18,12 @@ rapidfuzz>=3.9
 pypdf>=5.0
 python-docx>=1.1
 trafilatura>=2.0
+# Christine Classroom
+fastapi>=0.115
+uvicorn>=0.30
+python-multipart>=0.0.9
+python-pptx>=1.0
+pypdfium2>=4.30
+pillow>=10.4
+openpyxl>=3.1
+qrcode>=7.4

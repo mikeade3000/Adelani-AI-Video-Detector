@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Christine Classroom</title>
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  header { background: var(--accent); color: #fff; padding: 12px 16px; }
+  header .row { max-width: 1100px; margin: 0 auto; }
+  header h1 { font-size: 1.25rem; margin: 0; flex: 1; }
+  header button { background: transparent; color: #fff; border-color: rgba(255,255,255,.4); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .two { grid-template-columns: 1fr; } }
+  .lesson { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: .7em 0; border-bottom: 1px solid var(--line); }
+  .lesson:last-child { border-bottom: 0; }
+  .log { font-family: Consolas, monospace; font-size: .85rem; background: var(--chip); padding: 10px; border-radius: 8px;
+         max-height: 260px; overflow: auto; white-space: pre-wrap; }
+  .section { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin: 12px 0; }
+  .thumbs { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0; }
+  .thumbs label { margin: 0; flex: 0 0 auto; width: 120px; font-size: .75rem; text-align: center; cursor: pointer; }
+  .thumbs img { width: 120px; height: 80px; object-fit: contain; background: #fff; border: 2px solid var(--line); border-radius: 6px; display: block; }
+  .thumbs input { width: auto; }
+  .thumbs input:checked + img { border-color: var(--accent-2); }
+  .controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .controls button { padding: 1em .6em; font-size: 1rem; }
+  .big { font-size: 1.15rem; }
+  .sticky { position: sticky; top: 0; background: var(--bg); padding: 10px 0; z-index: 2; }
+  .opts input[type=radio] { width: auto; }
+  .opts .row { flex-wrap: nowrap; }
+</style>
+</head>
+<body>
+<header><div class="row"><h1>Christine Classroom</h1>
+  <button id="homeBtn">Lessons</button><button id="liveBtn">Live class</button></div></header>
+<div class="wrap">
+  <div id="msg" role="alert"></div>
+  <div id="view"></div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const remote = !["localhost", "127.0.0.1"].includes(location.hostname);
+let pin = ""; try { pin = localStorage.getItem("christine-pin") || ""; } catch (e) {}
+let timer = null;
+
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const k in attrs || {}) {
+    if (k === "on") for (const ev in attrs.on) e.addEventListener(ev, attrs.on[ev]);
+    else if (k === "text") e.textContent = attrs[k];
+    else if (k in e && k !== "list") e[k] = attrs[k];
+    else e.setAttribute(k, attrs[k]);
+  }
+  for (const c of kids.flat()) if (c != null) e.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  return e;
+}
+function msg(t, ok) { const m = $("msg"); m.textContent = t || ""; m.className = ok ? "ok" : "error"; if (t) window.scrollTo(0, 0); }
+async function api(url, body, method) {
+  const opts = { method: method || (body !== undefined ? "POST" : "GET"), headers: { "X-Pin": pin } };
+  if (body instanceof FormData) opts.body = body;
+  else if (body !== undefined) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
+  const r = await fetch(url, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) { const e = new Error(data.error || data.detail || "Request failed"); e.status = r.status; throw e; }
+  return data;
+}
+function stop() { if (timer) clearTimeout(timer); timer = null; }
+function show(...nodes) { stop(); const v = $("view"); v.textContent = ""; nodes.forEach(n => v.appendChild(n)); }
+
+$("homeBtn").onclick = () => home();
+$("liveBtn").onclick = () => live();
+if (remote) $("homeBtn").style.display = "none";
+
+// ---------------------------------------------------------------- PIN (phone remote)
+function askPin() {
+  const inp = el("input", { inputMode: "numeric", placeholder: "6-digit PIN" });
+  show(el("div", { className: "card" }, el("h2", { text: "Phone remote" }),
+    el("p", { text: "Enter the PIN shown on the lecturer's laptop.", className: "muted" }), inp, el("p"),
+    el("button", { className: "primary", text: "Connect", on: { click: () => {
+      pin = inp.value.trim(); try { localStorage.setItem("christine-pin", pin); } catch (e) {} live(); } } })));
+}
+
+// ---------------------------------------------------------------- lessons
+async function home() {
+  let data;
+  try { data = await api("/api/lessons"); } catch (e) { if (e.status === 403) return askPin(); return msg(e.message); }
+  msg(data.ai ? "" : "Christine's cloud brain isn't set up. Run the 'Christine - set API key' shortcut, then restart the classroom.");
+  const list = el("div", { className: "card" }, el("h2", { text: "Your lessons" }));
+  if (!data.lessons.length) list.appendChild(el("p", { className: "muted", text: "No lessons yet. Create one below." }));
+  for (const l of data.lessons) {
+    const label = { new: "Not prepared", reading: "Reading files…", planning: "Planning…", writing: "Writing lecture…",
+                    review: "Ready for review", approved: "Approved", taught: "Taught", error: "Problem" }[l.status] || l.status;
+    list.appendChild(el("div", { className: "lesson" },
+      el("div", {}, el("b", { text: l.title }), el("div", { className: "muted", text: `${l.course_code || ""} · ${l.level || ""}` })),
+      el("div", { className: "row" }, el("span", { className: "chip", text: label }),
+        el("button", { text: "Open", on: { click: () => lesson(l.id) } }))));
+  }
+  const files = el("input", { type: "file", multiple: true, accept: ".pdf,.docx,.pptx,.txt,.md,.jpg,.jpeg,.png,.webp" });
+  const title = el("input", { placeholder: "e.g. Elasticity of Demand" });
+  const code = el("input", { placeholder: "e.g. ECO 201" });
+  const level = el("select", {}, ...["100 level", "200 level", "300 level", "400 level", "500 level", "Postgraduate"].map(x => el("option", { text: x })));
+  const minutes = el("input", { type: "number", value: 50, min: 10, max: 180 });
+  const guidance = el("textarea", { rows: 3, placeholder: "Optional: what to emphasise, examples to use, topics to skip…" });
+  const go = el("button", { className: "primary", text: "Upload and prepare lesson", on: { click: async () => {
+    if (!files.files.length) return msg("Please choose the course files.");
+    const fd = new FormData();
+    fd.append("title", title.value); fd.append("course_code", code.value); fd.append("level", level.value);
+    for (const f of files.files) fd.append("files", f);
+    go.disabled = true; msg("Uploading…", true);
+    try {
+      const { id } = await api("/api/lessons", fd);
+      await api(`/api/lessons/${id}/prepare`, { minutes: +minutes.value, guidance: guidance.value });
+      msg(""); lesson(id);
+    } catch (e) { msg(e.message); go.disabled = false; }
+  } } });
+  const form = el("div", { className: "card" }, el("h2", { text: "New lesson" }),
+    el("p", { className: "muted", text: "Upload the course unit: PDF, Word (.docx), PowerPoint (.pptx), or photos of handwritten notes. Christine reads everything, plans the lesson, writes the lecture and the quiz. You review it all before class." }),
+    el("div", { className: "two" },
+      el("div", {}, el("label", { text: "Lesson title" }), title),
+      el("div", {}, el("label", { text: "Course code" }), code),
+      el("div", {}, el("label", { text: "Level" }), level),
+      el("div", {}, el("label", { text: "Teaching time (minutes)" }), minutes)),
+    el("label", { text: "Course files" }), files,
+    el("label", { text: "Guidance for Christine" }), guidance, el("p"), go);
+  show(el("div", { className: "grid" }, list, form));
+}
+
+// ---------------------------------------------------------------- one lesson
+async function lesson(id) {
+  let data;
+  try { data = await api(`/api/lessons/${id}`); } catch (e) { return msg(e.message); }
+  const m = data.meta;
+  if (["new", "reading", "planning", "writing", "error"].includes(m.status) || !data.plan || !data.plan.sections.length) {
+    const busy = ["reading", "planning", "writing"].includes(m.status);
+    const box = el("div", { className: "card" }, el("h2", { text: m.title }),
+      el("p", { text: busy ? "Christine is preparing this lesson. This usually takes a few minutes." :
+                m.status === "error" ? "Preparation stopped: " + (m.error || "") : "This lesson hasn't been prepared yet." }),
+      el("div", { className: "log", text: (m.log || []).join("\n") || "…" }));
+    if (!busy) box.appendChild(el("p", {}, el("button", { className: "primary", text: "Prepare lesson", on: { click: async () => {
+      try { await api(`/api/lessons/${id}/prepare`, { minutes: 50, guidance: "" }); lesson(id); } catch (e) { msg(e.message); } } } })));
+    show(box);
+    if (busy) timer = setTimeout(() => lesson(id), 2500);
+    return;
+  }
+  review(id, data);
+}
+
+function review(id, data) {
+  const plan = data.plan, m = data.meta, assets = data.assets;
+  const fields = [];
+  const bind = (input, set) => { fields.push(() => set(input)); return input; };
+  const top = el("div", { className: "card" },
+    el("h2", { text: plan.title }), el("p", { text: plan.summary }),
+    el("div", { className: "muted", text: "Objectives: " + plan.objectives.join("; ") }),
+    el("p", { className: "chip", text: m.status === "approved" || m.status === "taught" ? "Approved" : "Please review, edit if needed, then approve" }));
+
+  const sections = el("div", { className: "card" }, el("h2", { text: "Lecture sections" }),
+    el("p", { className: "muted", text: "Christine speaks each script exactly as written here. Pick the slide or page to show for each section." }));
+  plan.sections.forEach((s, i) => {
+    const thumbs = el("div", { className: "thumbs" });
+    const groupName = "slide" + i;
+    thumbs.appendChild(el("label", {}, el("input", { type: "radio", name: groupName, value: "", checked: !s.slide_ids.length }),
+      el("div", { style: "width:120px;height:80px;border:2px dashed var(--line);border-radius:6px;display:flex;align-items:center;justify-content:center", text: "Text slide" })));
+    for (const a of assets.filter(a => a.image)) {
+      thumbs.appendChild(el("label", { title: a.label },
+        el("input", { type: "radio", name: groupName, value: a.id, checked: s.slide_ids[0] === a.id }),
+        el("img", { src: `/lesson-assets/${id}/${a.image}`, loading: "lazy", alt: a.label }), a.id));
+    }
+    fields.push(() => { const c = thumbs.querySelector("input:checked"); s.slide_ids = c && c.value ? [c.value, ...s.slide_ids.filter(x => x !== c.value)] : []; });
+    sections.appendChild(el("div", { className: "section" },
+      el("label", { text: `Section ${i + 1} title` }), bind(el("input", { value: s.title }), x => s.title = x.value),
+      el("label", { text: "Key points on screen (one per line)" }),
+      bind(el("textarea", { rows: 4, value: s.key_points.join("\n") }), x => s.key_points = x.value.split("\n").map(t => t.trim()).filter(Boolean)),
+      el("label", { text: `Lecture script (about ${s.minutes} min)` }),
+      bind(el("textarea", { rows: 10, value: s.script }), x => s.script = x.value),
+      el("label", { text: "Check question asked at the end of the section" }),
+      bind(el("input", { value: s.check_question }), x => s.check_question = x.value),
+      el("label", { text: "Slide to show" }), thumbs));
+  });
+
+  const quiz = el("div", { className: "card" }, el("h2", { text: "Quiz" }));
+  plan.mcqs.forEach((q, i) => {
+    const opts = el("div", { className: "opts" });
+    q.options.forEach((o, j) => {
+      const radio = el("input", { type: "radio", name: "ans" + i, checked: q.answer_index === j });
+      fields.push(() => { if (radio.checked) q.answer_index = j; });
+      opts.appendChild(el("div", { className: "row" }, radio, bind(el("input", { value: o }), x => q.options[j] = x.value)));
+    });
+    quiz.appendChild(el("div", { className: "section" },
+      el("label", { text: `Multiple choice ${i + 1}` }), bind(el("textarea", { rows: 2, value: q.question }), x => q.question = x.value),
+      el("label", { text: "Options (select the correct one)" }), opts,
+      el("label", { text: "Explanation" }), bind(el("input", { value: q.explanation }), x => q.explanation = x.value),
+      el("button", { className: "danger", text: "Remove question", on: { click: () => { plan.mcqs.splice(i, 1); collectAndSave(true); } } })));
+  });
+  plan.short_questions.forEach((q, i) => {
+    quiz.appendChild(el("div", { className: "section" },
+      el("label", { text: `Short answer ${i + 1}` }), bind(el("textarea", { rows: 2, value: q.question }), x => q.question = x.value),
+      el("label", { text: "Model answer" }), bind(el("textarea", { rows: 3, value: q.model_answer }), x => q.model_answer = x.value),
+      el("label", { text: "Marking rubric (Christine marks with this)" }), bind(el("textarea", { rows: 3, value: q.rubric }), x => q.rubric = x.value),
+      el("label", { text: "Marks" }), bind(el("input", { type: "number", min: 1, max: 20, value: q.marks }), x => q.marks = Math.max(1, +x.value || 1))));
+  });
+
+  async function collectAndSave(reload) {
+    fields.forEach(f => f());
+    try { await api(`/api/lessons/${id}/plan`, plan, "PUT"); msg("Saved.", true); if (reload) lesson(id); return true; }
+    catch (e) { msg(e.message); return false; }
+  }
+  const bar = el("div", { className: "row sticky" },
+    el("button", { text: "Save changes", on: { click: () => collectAndSave(false) } }),
+    el("button", { className: "primary", text: "Approve lesson", on: { click: async () => {
+      if (!(await collectAndSave(false))) return;
+      try { await api(`/api/lessons/${id}/approve`, {}); msg("Approved. You can start the class.", true); lesson(id); } catch (e) { msg(e.message); } } } }),
+    el("button", { className: "primary", text: "Start class ▶", on: { click: async () => {
+      try { await api(`/api/lessons/${id}/start`, {}); window.open("/display", "christine-display"); live(); } catch (e) { msg(e.message); } } } }),
+    el("a", { className: "btn", href: `/api/lessons/${id}/export.xlsx`, text: "Download results (Excel)" }));
+  show(bar, el("div", { className: "grid" }, top, sections, quiz));
+}
+
+// ---------------------------------------------------------------- live class
+async function live() {
+  let data;
+  try { data = await api("/api/class/lecturer"); } catch (e) { if (e.status === 403) return askPin(); return msg(e.message); }
+  if (!data.live) {
+    show(el("div", { className: "card" }, el("h2", { text: "No class running" }),
+      el("p", { text: remote ? "Start a class on the laptop first." : "Open a lesson and press 'Start class'." })));
+    timer = setTimeout(live, 3000);
+    return;
+  }
+  const L = data.live;
+  const cmd = (c) => api("/api/class/command", { cmd: c }).then(() => live()).catch(e => msg(e.message));
+  const B = (text, c, cls) => el("button", { className: cls || "", text, on: { click: () => cmd(c) } });
+  const controls = el("div", { className: "controls" });
+  if (L.status === "ready") controls.appendChild(el("button", { className: "primary", text: "▶ Begin lesson",
+    on: { click: () => api("/api/class/begin", {}).then(live).catch(e => msg(e.message)) } }));
+  else {
+    controls.append(L.paused ? B("▶ Resume", "resume", "primary") : B("⏸ Pause", "pause"),
+      B("⏮ Previous section", "previous"), B("⏭ Next section", "next"), B("↺ Repeat that", "repeat"),
+      B("✋ Take questions now", "questions"), B("💡 Another example", "example"));
+    if (!L.quiz_open && !["marking", "finished"].includes(L.status)) controls.append(B("📝 Open quiz now", "end"));
+    if (L.quiz_open) controls.append(B("✅ Close quiz and mark", "close_quiz", "primary"));
+    if (L.status === "finished" && !L.results_released) controls.append(B("📤 Release results to students", "release_results", "primary"));
+  }
+  const statusText = { ready: "Waiting to begin — students can join now", teaching: "Teaching", paused: "Paused",
+    questions: "Taking questions", quiz_intro: "Introducing the quiz", quiz: "Quiz open", marking: "Marking…",
+    finished: "Finished", error: "Problem" }[L.status] || L.status;
+  const head = el("div", { className: "card" },
+    el("h2", { text: L.title }),
+    el("div", { className: "big", text: `${statusText}${L.status === "teaching" || L.status === "paused" ? ` · Section ${L.section + 1}/${L.sections}: ${L.section_title}` : ""}` }),
+    el("p", { className: "muted", text: `${L.students} students joined · ${L.pending_questions} questions waiting${L.notice ? " · " + L.notice : ""}` }),
+    el("p", { text: L.caption ? "Now: " + L.caption.slice(0, 220) : "" }), controls);
+
+  const qs = el("div", { className: "card" }, el("h2", { text: "Questions from students" }));
+  if (data.approve_questions) qs.appendChild(el("p", { className: "muted", text: "Approve the questions Christine should answer." }));
+  if (!data.questions.length) qs.appendChild(el("p", { className: "muted", text: "No questions yet." }));
+  for (const q of data.questions.slice().reverse()) {
+    const actions = el("div", { className: "row" });
+    if (["pending", "approved"].includes(q.status)) {
+      if (data.approve_questions && q.status === "pending") actions.appendChild(el("button", { text: "Approve",
+        on: { click: () => api(`/api/questions/${q.id}`, { status: "approved" }).then(live) } }));
+      actions.appendChild(el("button", { className: "danger", text: "Hide",
+        on: { click: () => api(`/api/questions/${q.id}`, { status: "hidden" }).then(live) } }));
+    }
+    qs.appendChild(el("div", { className: "lesson" },
+      el("div", {}, el("b", { text: q.text }), el("div", { className: "muted", text: `${q.name} (${q.matric}) · ${q.status}` }),
+        q.answer ? el("div", { text: q.answer }) : null), actions));
+  }
+
+  const scores = el("div", { className: "card" }, el("h2", { text: "Quiz results" }),
+    el("p", {}, el("a", { className: "btn", href: `/api/lessons/${data.lesson_id}/export.xlsx` + (pin ? `?pin=${pin}` : ""), text: "Download Excel" })));
+  const submitted = data.scores.filter(s => s.answered);
+  if (!submitted.length) scores.appendChild(el("p", { className: "muted", text: "No submissions yet." }));
+  else {
+    const t = el("table", {}, el("tr", {}, ...["Student", "Matric", "MCQ", "Short", "Total", "Unmarked"].map(h => el("th", { text: h }))));
+    for (const s of submitted) t.appendChild(el("tr", {}, ...[s.name, s.matric, s.mcq ?? 0, s.short ?? 0,
+      `${s.total ?? 0} / ${s.max_total}`, s.unmarked || ""].map(v => el("td", { text: String(v) }))));
+    scores.appendChild(t);
+  }
+  const marking = el("div", { className: "card" }, el("h2", { text: "Short answers (check Christine's marking)" }));
+  if (!data.short_responses.length) marking.appendChild(el("p", { className: "muted", text: "Nothing to check yet." }));
+  for (const r of data.short_responses) {
+    const score = el("input", { type: "number", step: 0.5, min: 0, max: r.max_score, value: r.score ?? "", style: "width:90px" });
+    const fb = el("input", { value: r.feedback || "" });
+    marking.appendChild(el("div", { className: "section" },
+      el("b", { text: `${r.name} (${r.matric}) · Short answer ${r.qindex + 1}` }),
+      el("p", { text: r.answer || "(no answer)" }),
+      el("div", { className: "row" }, score, el("span", { text: `/ ${r.max_score} · marked by ${r.marked_by || "not yet"}`, className: "muted" })),
+      el("label", { text: "Feedback" }), fb, el("p"),
+      el("button", { text: "Save mark", on: { click: () => api(`/api/responses/${r.id}/mark`, { score: +score.value, feedback: fb.value })
+        .then(() => msg("Mark saved.", true)).catch(e => msg(e.message)) } })));
+  }
+  const parts = [head, qs, scores];
+  if (L.status === "finished" || L.status === "marking") parts.push(marking);
+  if (!remote) parts.push(await networkCard());
+  // Don't rebuild while the lecturer is typing a mark.
+  const focus = document.activeElement;
+  if (focus && ["INPUT", "TEXTAREA"].includes(focus.tagName) && $("view").contains(focus)) { timer = setTimeout(live, 2500); return; }
+  show(el("div", { className: "grid" }, ...parts));
+  timer = setTimeout(live, 2500);
+}
+
+let netCache = null, netTime = 0;
+async function networkCard() {
+  if (!netCache || Date.now() - netTime > 15000) { try { netCache = await api("/api/network"); netTime = Date.now(); } catch (e) { netCache = null; } }
+  const n = netCache;
+  if (!n) return el("div");
+  const qr = el("div", { className: "qr", style: "width:160px" }); qr.innerHTML = n.join_qr;  // server-generated SVG
+  const hs = n.hotspot || {};
+  const hsBox = el("div", {}, el("h3", { text: "Classroom Wi-Fi (laptop hotspot)" }));
+  if (hs.on) hsBox.append(el("p", { className: "ok", text: `On · Network: ${hs.ssid} · Password: ${hs.pass} · ${hs.clients || ""} connected` }));
+  else hsBox.append(el("p", { className: "muted", text: hs.message || "Off." }),
+    el("button", { text: "Turn on hotspot", on: { click: async () => { try { await api("/api/hotspot/start", {}); netCache = null; live(); } catch (e) { msg(e.message); } } } }));
+  if (n.wifi_qr) { const w = el("div", { className: "qr", style: "width:140px" }); w.innerHTML = n.wifi_qr; hsBox.append(el("p", { className: "muted", text: "Students scan this to join the Wi-Fi:" }), w); }
+  return el("div", { className: "card" }, el("h2", { text: "Connecting students" }),
+    el("div", { className: "row", style: "align-items:flex-start" }, qr,
+      el("div", {}, el("p", { text: "Students open: " }), el("p", { className: "big", text: n.join_url }),
+        el("p", { className: "muted", text: `Phone remote for you: ${n.remote_url} · PIN ${n.pin}` }))), hsBox);
+}
+
+remote ? live() : home();
+</script>
+</body>
+</html>

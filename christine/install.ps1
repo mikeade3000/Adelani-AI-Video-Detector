@@ -45,6 +45,8 @@ Copy-Item -Force (Join-Path $Source "run_christine.bat") $AppDir
 Copy-Item -Force (Join-Path $Source "run_christine_text.bat") $AppDir
 Copy-Item -Force (Join-Path $Source "run_christine_check.bat") $AppDir
 Copy-Item -Force (Join-Path $Source "run_christine_setup.bat") $AppDir
+Copy-Item -Force (Join-Path $Source "run_christine_classroom.bat") $AppDir
+Copy-Item -Force (Join-Path $Source "classroom_network_setup.bat") $AppDir
 Copy-Item -Force (Join-Path $Source "uninstall.bat") $AppDir
 
 # 3. Create a private Python environment and install the libraries.
@@ -97,6 +99,9 @@ New-Shortcut (Join-Path $Desktop "Christine.lnk") (Join-Path $AppDir "run_christ
 New-Shortcut (Join-Path $StartMenu "Christine.lnk") (Join-Path $AppDir "run_christine.bat") "Christine voice assistant"
 New-Shortcut (Join-Path $StartMenu "Christine (type instead of talk).lnk") (Join-Path $AppDir "run_christine_text.bat") "Christine in text mode"
 New-Shortcut (Join-Path $StartMenu "Christine connection check.lnk") (Join-Path $AppDir "run_christine_check.bat") "Test the connection to Claude"
+New-Shortcut (Join-Path $Desktop "Christine Classroom.lnk") (Join-Path $AppDir "run_christine_classroom.bat") "Christine Classroom: teach a course unit"
+New-Shortcut (Join-Path $StartMenu "Christine Classroom.lnk") (Join-Path $AppDir "run_christine_classroom.bat") "Christine Classroom: teach a course unit"
+New-Shortcut (Join-Path $StartMenu "Classroom network setup (run once as admin).lnk") (Join-Path $AppDir "classroom_network_setup.bat") "Allow students' phones to connect"
 New-Shortcut (Join-Path $StartMenu "Christine - set API key.lnk") (Join-Path $AppDir "run_christine_setup.bat") "Enter or change the Claude API key"
 New-Shortcut (Join-Path $StartMenu "Uninstall Christine.lnk") (Join-Path $AppDir "uninstall.bat") "Remove Christine"
 

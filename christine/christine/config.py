@@ -58,6 +58,13 @@ stop = "ctrl+alt+s"
 [battery]
 warn_at = [20, 10, 5]
 
+[classroom]
+# Christine's lecturing voice. Nigerian English: en-NG-EzinneNeural (female),
+# en-NG-AbeoNeural (male). British: en-GB-SoniaNeural. American: en-US-AvaNeural.
+voice = "en-NG-EzinneNeural"
+# true = you approve each student question (on the dashboard) before Christine answers it.
+approve_questions = false
+
 [files]
 # Folders Christine indexes so she can find your documents by voice.
 # Empty means: Desktop, Documents, Downloads, Pictures, Music, Videos, OneDrive.
@@ -105,6 +112,8 @@ class Config:
     stop_hotkey: str = "ctrl+alt+s"
     battery_warn_at: list[int] = field(default_factory=lambda: [20, 10, 5])
     index_folders: list[str] = field(default_factory=list)
+    classroom_voice: str = "en-NG-EzinneNeural"
+    approve_questions: bool = False
     data_dir: Path = field(default_factory=app_dir)
 
     @property
@@ -156,6 +165,8 @@ def load_config(data_dir: Path | None = None) -> Config:
         stop_hotkey=k.get("stop", "ctrl+alt+s"),
         battery_warn_at=sorted((int(x) for x in raw.get("battery", {}).get("warn_at", [20, 10, 5])), reverse=True),
         index_folders=list(raw.get("files", {}).get("folders", [])),
+        classroom_voice=raw.get("classroom", {}).get("voice", "en-NG-EzinneNeural"),
+        approve_questions=bool(raw.get("classroom", {}).get("approve_questions", False)),
         data_dir=data_dir,
     )
     return cfg

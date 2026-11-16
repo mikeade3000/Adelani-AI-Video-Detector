@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Christine Classroom</title>
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  html, body { height: 100%; overflow: hidden; }
+  body { display: grid; grid-template-rows: auto 1fr auto; background: #0f1722; color: #f3f1ec; }
+  header { display: flex; align-items: center; gap: 18px; padding: 14px 28px; background: #142133; }
+  header h1 { font-size: 1.5rem; margin: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .progress { width: 220px; height: 8px; background: #263850; border-radius: 9px; overflow: hidden; }
+  .progress > div { height: 100%; background: #d9b44a; transition: width .6s; }
+  .status { font-size: .95rem; color: #b8c4d4; white-space: nowrap; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 22px; padding: 22px 28px; min-height: 0; }
+  .slide { background: #fbfaf6; color: #1b2430; border-radius: 14px; display: flex; flex-direction: column;
+           overflow: hidden; min-height: 0; box-shadow: 0 10px 40px rgba(0,0,0,.35); }
+  .slide img { flex: 1; min-height: 0; width: 100%; object-fit: contain; background: #fff; }
+  .slide .made { flex: 1; padding: 5vh 5vw; display: flex; flex-direction: column; justify-content: center; }
+  .slide .made h2 { font-size: clamp(1.8rem, 3.6vw, 3.4rem); color: #1f3a5f; border-bottom: 4px solid #b8862b;
+                    padding-bottom: .3em; margin-bottom: .8em; }
+  .slide .made ul { font-size: clamp(1.1rem, 2.1vw, 2rem); margin: 0; padding-left: 1.2em; }
+  .slide .made li { margin: .35em 0; }
+  .slide .ref { font-size: .85rem; color: #5d6673; padding: 6px 14px; border-top: 1px solid #e7e2d8; }
+  aside { display: grid; grid-template-rows: auto auto 1fr; gap: 12px; min-height: 0; overflow: hidden; }
+  .face { background: radial-gradient(circle at 50% 40%, #1f3557, #101b2b); border-radius: 18px; aspect-ratio: 400/470;
+          height: 38vh; justify-self: center; --avatar-glow: #4c86c6; }
+  .nameplate { text-align: center; font-family: Georgia, serif; font-size: 1.2rem; }
+  .nameplate small { display: block; color: #9fb0c6; font-family: "Segoe UI", sans-serif; font-size: .8rem; }
+  .join { background: #142133; border-radius: 14px; padding: 12px; display: grid; grid-template-columns: 104px 1fr;
+          gap: 12px; align-items: center; align-self: end; }
+  .join .qr svg { background: #fff; }
+  .join b { font-size: 1.05rem; }
+  .join .url { font-family: Consolas, monospace; color: #d9b44a; word-break: break-all; }
+  .asking { background: #2a3b55; border-left: 5px solid #d9b44a; padding: 10px 14px; border-radius: 8px; }
+  footer { padding: 16px 28px 22px; min-height: 120px; background: #0b121b; }
+  .caption { font-size: clamp(1.1rem, 2vw, 1.75rem); line-height: 1.45; max-width: 1500px; margin: 0 auto; }
+  .caption span.spoken { color: #ffffff; }
+  .caption span { color: #8193aa; transition: color .15s; }
+  .overlay { position: fixed; inset: 0; background: rgba(8,12,18,.94); display: flex; align-items: center;
+             justify-content: center; z-index: 10; text-align: center; }
+  .overlay .box { max-width: 900px; padding: 30px; }
+  .overlay h1 { font-size: 2.6rem; }
+  .welcome { display: grid; grid-template-columns: 300px 1fr; gap: 40px; align-items: center; text-align: left; }
+  .welcome .qr { width: 300px; }
+  .notice { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: #a3571a; color: #fff;
+            padding: 10px 18px; border-radius: 8px; z-index: 5; display: none; }
+  .keys { font-size: .8rem; color: #6f819a; text-align: center; margin-top: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Christine Classroom</h1>
+  <div class="status" id="status"></div>
+  <div class="progress"><div id="bar" style="width:0"></div></div>
+</header>
+<main>
+  <section class="slide" id="slide"></section>
+  <aside>
+    <div>
+      <div class="face" id="face"></div>
+      <div class="nameplate">Christine<small id="mood">AI Lecturer</small></div>
+    </div>
+    <div id="asking"></div>
+    <div class="join">
+      <div class="qr" id="joinQr"></div>
+      <div><b>Questions &amp; quiz</b><div class="muted" style="color:#9fb0c6">Scan, or open:</div>
+        <div class="url" id="joinUrl"></div>
+        <div id="counts" style="margin-top:6px;color:#b8c4d4"></div></div>
+    </div>
+  </aside>
+</main>
+<footer><div class="caption" id="caption"></div>
+  <div class="keys">Space pause · → next section · ← previous · R repeat · Q questions · E example · F full screen</div>
+</footer>
+<div class="notice" id="notice"></div>
+
+<div class="overlay" id="startOverlay">
+  <div class="box">
+    <h1>Christine Classroom</h1>
+    <p>Put this window on the projector, then click below to turn on sound and full screen.</p>
+    <button class="primary" id="startBtn" style="font-size:1.3rem;padding:.8em 2em">Start display</button>
+  </div>
+</div>
+<div class="overlay" id="waitOverlay" style="display:none">
+  <div class="box">
+    <div class="welcome">
+      <div class="qr" id="bigQr"></div>
+      <div>
+        <h1 id="waitTitle"></h1>
+        <p style="font-size:1.4rem">Join the class on your phone to ask questions and take the quiz:</p>
+        <p style="font-size:1.6rem;color:#d9b44a;font-family:Consolas,monospace" id="bigUrl"></p>
+        <p id="wifiHint" style="color:#b8c4d4"></p>
+        <p style="font-size:1.3rem" id="joined"></p>
+        <p class="muted" style="color:#8193aa">The lesson will begin when your lecturer is ready.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/avatar.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const avatar = ChristineAvatar($("face"));
+const audio = new Audio();
+let ctx = null, analyser = null, buf = null;
+let currentId = null, currentWords = [], doneSent = new Set(), lastVersion = -1, usingSynth = false;
+let joinUrl = "";
+const MOODS = { speaking: "Teaching", smile: "Teaching", thinking: "Thinking…", curious: "Listening", neutral: "AI Lecturer" };
+
+function setupAudio() {
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const src = ctx.createMediaElementSource(audio);
+  analyser = ctx.createAnalyser();
+  analyser.fftSize = 1024;
+  buf = new Float32Array(analyser.fftSize);
+  src.connect(analyser); analyser.connect(ctx.destination);
+  (function meter() {
+    if (!audio.paused) {
+      analyser.getFloatTimeDomainData(buf);
+      let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+      avatar.setLevel(Math.sqrt(sum / buf.length));
+      highlight(audio.currentTime * 1000);
+    } else if (!usingSynth) avatar.close();
+    requestAnimationFrame(meter);
+  })();
+}
+
+$("startBtn").onclick = async () => {
+  setupAudio();
+  try { await document.documentElement.requestFullscreen(); } catch (e) {}
+  $("startOverlay").style.display = "none";
+  poll();
+};
+
+function post(url, body) {
+  return fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
+}
+
+function finished(id) {
+  if (doneSent.has(id)) return;
+  doneSent.add(id);
+  post("/api/display/done", { id });
+}
+
+function showCaption(text, words) {
+  const c = $("caption");
+  c.textContent = "";
+  currentWords = [];
+  if (!words || !words.length) { c.textContent = text; return; }
+  // Lay out the words with their timings so they light up as they are spoken.
+  let rest = text;
+  for (const w of words) {
+    const at = rest.indexOf(w.w);
+    if (at < 0) continue;
+    if (at > 0) c.appendChild(document.createTextNode(rest.slice(0, at)));
+    const span = document.createElement("span");
+    span.textContent = w.w;
+    c.appendChild(span);
+    currentWords.push({ t: w.t, el: span });
+    rest = rest.slice(at + w.w.length);
+  }
+  if (rest) c.appendChild(document.createTextNode(rest));
+}
+
+function highlight(ms) {
+  for (const w of currentWords) w.el.classList.toggle("spoken", w.t <= ms);
+}
+
+function stopSpeech() {
+  audio.pause();
+  if (window.speechSynthesis) speechSynthesis.cancel();
+  usingSynth = false;
+  avatar.close();
+}
+
+function play(speech) {
+  stopSpeech();
+  currentId = speech.id;
+  showCaption(speech.text, speech.words);
+  if (speech.audio) {
+    audio.src = "/api/audio/" + speech.id;
+    audio.onended = () => finished(speech.id);
+    audio.onerror = () => synthSpeak(speech);
+    audio.play().catch(() => synthSpeak(speech));
+  } else synthSpeak(speech);
+}
+
+// Fallback when the online voice is unavailable: the computer's own voice.
+function synthSpeak(speech) {
+  if (!window.speechSynthesis) { setTimeout(() => finished(speech.id), 300 * speech.text.split(" ").length); return; }
+  usingSynth = true;
+  const u = new SpeechSynthesisUtterance(speech.text);
+  const voices = speechSynthesis.getVoices();
+  u.voice = voices.find(v => /en-(NG|GB)/i.test(v.lang) && /female|zira|hazel|susan|sonia|libby|ezinne/i.test(v.name))
+         || voices.find(v => /^en/i.test(v.lang)) || null;
+  u.rate = 0.95;
+  u.onboundary = () => avatar.pulse();
+  u.onend = () => { usingSynth = false; avatar.close(); finished(speech.id); };
+  speechSynthesis.speak(u);
+}
+
+function renderSlide(slide) {
+  const box = $("slide");
+  const key = JSON.stringify(slide);
+  if (box.dataset.key === key) return;
+  box.dataset.key = key;
+  box.textContent = "";
+  if (slide.image) {
+    const img = document.createElement("img"); img.src = slide.image; img.alt = slide.title; box.appendChild(img);
+  } else {
+    const made = document.createElement("div"); made.className = "made";
+    const h = document.createElement("h2"); h.textContent = slide.title; made.appendChild(h);
+    const ul = document.createElement("ul");
+    for (const p of slide.points || []) { const li = document.createElement("li"); li.textContent = p; ul.appendChild(li); }
+    made.appendChild(ul); box.appendChild(made);
+  }
+  if (slide.ref) { const r = document.createElement("div"); r.className = "ref"; r.textContent = "Source: " + slide.ref; box.appendChild(r); }
+}
+
+async function loadQr() {
+  const svg = await (await fetch("/api/display/join-qr")).text();
+  $("joinQr").innerHTML = svg; $("bigQr").innerHTML = svg;   // our own server-generated SVG
+  try {
+    const net = await (await fetch("/api/network")).json();
+    if (net.hotspot && net.hotspot.on) $("wifiHint").textContent = `Wi-Fi: ${net.hotspot.ssid}  ·  Password: ${net.hotspot.pass}`;
+  } catch (e) {}
+}
+
+async function poll() {
+  try {
+    const r = await fetch("/api/display/state");
+    const data = await r.json();
+    const live = data.live;
+    if (data.join_url && data.join_url !== joinUrl) { joinUrl = data.join_url; $("joinUrl").textContent = joinUrl; $("bigUrl").textContent = joinUrl; loadQr(); }
+    if (!live) {
+      $("waitOverlay").style.display = "flex"; $("waitTitle").textContent = "Waiting for a class to start";
+    } else {
+      $("waitOverlay").style.display = live.status === "ready" ? "flex" : "none";
+      $("waitTitle").textContent = live.title;
+      $("joined").textContent = `${live.students} student${live.students === 1 ? "" : "s"} joined`;
+      $("title").textContent = live.title;
+      $("bar").style.width = (100 * (live.section + (live.status === "finished" ? 1 : 0)) / Math.max(1, live.sections)) + "%";
+      const st = { teaching: `Section ${live.section + 1} of ${live.sections}: ${live.section_title}`, paused: "Paused",
+                   questions: "Questions", quiz_intro: "Quiz", quiz: "Quiz open on your phones", marking: "Marking…",
+                   finished: "Class finished", ready: "Starting soon", error: "Problem" };
+      $("status").textContent = st[live.status] || live.status;
+      $("counts").textContent = `${live.students} joined · ${live.pending_questions} question${live.pending_questions === 1 ? "" : "s"} waiting`;
+      renderSlide(live.slide);
+      avatar.setExpression(live.expression);
+      livePaused = live.paused;
+      $("mood").textContent = live.paused ? "Paused" : (MOODS[live.expression] || "AI Lecturer");
+      const ask = $("asking"); ask.textContent = "";
+      if (live.answering && live.answering.text) {
+        const d = document.createElement("div"); d.className = "asking";
+        d.textContent = `Question from ${live.answering.name || "a student"}: ${live.answering.text}`; ask.appendChild(d);
+      }
+      $("notice").style.display = live.notice ? "block" : "none"; $("notice").textContent = live.notice;
+
+      const sp = live.speech;
+      if (sp && sp.id !== currentId) play(sp);
+      else if (!sp && currentId) { currentId = null; stopSpeech(); if (live.caption) $("caption").textContent = live.caption; }
+      else if (!sp && live.caption && $("caption").textContent !== live.caption) $("caption").textContent = live.caption;
+      if (sp && live.paused) { audio.pause(); if (window.speechSynthesis) speechSynthesis.pause(); }
+      else if (sp && !live.paused && audio.paused && !usingSynth && sp.audio && audio.src && !audio.ended && audio.currentTime > 0) audio.play();
+      else if (sp && !live.paused && window.speechSynthesis && speechSynthesis.paused) speechSynthesis.resume();
+    }
+  } catch (e) { /* server briefly busy: try again */ }
+  setTimeout(poll, 350);
+}
+
+const KEYS = { " ": null, ArrowRight: "next", ArrowLeft: "previous", r: "repeat", q: "questions", e: "example" };
+let livePaused = false;
+document.addEventListener("keydown", async (ev) => {
+  if (ev.key === "f") { try { await document.documentElement.requestFullscreen(); } catch (e) {} return; }
+  if (!(ev.key in KEYS)) return;
+  ev.preventDefault();
+  let cmd = KEYS[ev.key];
+  if (ev.key === " ") cmd = livePaused ? "resume" : "pause";
+  post("/api/class/command", { cmd });
+});
+</script>
+</body>
+</html>
