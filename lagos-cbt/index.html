@@ -664,14 +664,12 @@ function renderCandidateHome(tab){
 function candidatePractice(u){
   if(firstSessionPending(u)){
     const fq=firstSetQuestions(u.cadre),mins=DB.config().firstSessionMins||270;
-    const subj={};fq.forEach(q=>{subj[q.category]=(subj[q.category]||0)+1;});
     return el("div",{class:"card"},
-      el("h2",{},"Your first session: the new question bank"),
-      el("p",{},`Your first session covers all ${fq.length} questions in the new question bank, in order, by subject. It does not use any of your allocated attempts.`),
+      el("h2",{},"You have new questions"),
+      el("p",{},"New questions have been added for you. Your next session contains all of them, and it does not use any of your allocated attempts."),
       el("div",{class:"grid cols2",style:"margin:1rem 0"},
         el("div",{class:"stat"},el("div",{class:"n"},fq.length),el("div",{class:"l"},"Questions")),
         el("div",{class:"stat"},el("div",{class:"n"},mins+"m"),el("div",{class:"l"},"Time limit"))),
-      el("div",{style:"margin-bottom:1rem"},...Object.entries(subj).map(([c,n])=>el("div",{class:"kv"},el("span",{},c),el("b",{},n)))),
       el("button",{class:"btn",onclick:()=>startExam(u)},"Begin first session"));
   }
   const pool=userPool(u.cadre);
