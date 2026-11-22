@@ -15,7 +15,7 @@ const ctx={
   }
 };
 vm.createContext(ctx);
-for(const f of process.env.CBT_SINGLE?["dist/Code.gs"]:["cbt-shared.js","cbt-bank-permsec.js","cbt-bank-law-enforcement.js","cbt-bank-prof-admin.js","cbt-bank-prof-health.js","cbt-bank-prof-works.js","cbt-bank-prof-science.js","cbt-bank-prof-finance.js","Code.gs"])
+for(const f of process.env.CBT_SINGLE?["dist/Code.gs"]:["cbt-shared.js","cbt-bank-permsec.js","cbt-bank-law-enforcement.js","cbt-bank-prof-admin.js","cbt-bank-prof-health.js","cbt-bank-prof-works.js","cbt-bank-prof-science.js","cbt-bank-prof-finance.js","cbt-bank-qb2026.js","Code.gs"])
   vm.runInContext(fs.readFileSync(path.join(ROOT,f),"utf8"),ctx,{filename:f});
 
 function memStore(){
@@ -84,7 +84,7 @@ check(H(s,{action:"updateUser",token:cand,id:candId,patch:{cadre:"ICT Cadre"}}).
 /* ---- candidate pool scoping ---- */
 let b=H(s,{action:"bootstrap",token:cand});
 check(b.questions.every(q=>q.scope==="COMMON"||q.scope==="Permanent Secretary Cadre"),"PS candidate sees COMMON + PS only");
-check(b.questions.length===41+257,"PS pool size");
+check(b.questions.length===ctx.SEED_QUESTIONS.length+ctx.SEED_QB2026.length+257,"PS pool size");
 
 /* ---- server-side grading ---- */
 const pick=b.questions.filter(q=>q.type==="mcq").slice(0,4);
@@ -178,21 +178,75 @@ check(ctx.seedComplete_(live.getConfig()),"all seed flags set after upgrade");
 
 /* ---- upgrade from the previous release (everything seeded except the tourism bank) ---- */
 const rel=memStore();
-const allBanks=ctx.getSeedBanks(),tour=allBanks.find(b=>b.scope==="Tourism Officer Cadre");
+const allBanks=ctx.getSeedBanks(),tour=allBanks.find(b=>b.scope==="Tourism Officer Cadre"),qbBank=allBanks.find(b=>b.key==="qb2026");
+const prevRel=allBanks.filter(b=>b!==tour&&b!==qbBank);
 check(!!tour&&tour.data.length>=20,"tourism bank registered with ≥20 questions");
 const relFlags={superSeeded:true,baseSeeded:true,seeded:true,ictSeeded:true,patchV2:true};
-allBanks.filter(b=>b!==tour).forEach(b=>relFlags["seeded_"+b.key]=true);
+prevRel.forEach(b=>relFlags["seeded_"+b.key]=true);
 rel.setConfig(relFlags);
-rel.appendMany("Questions",[...ctx.SEED_QUESTIONS,...allBanks.filter(b=>b!==tour).flatMap(b=>b.data)].map((q,i)=>({...q,id:"rel"+i})));
+rel.appendMany("Questions",[...ctx.SEED_QUESTIONS,...prevRel.flatMap(b=>b.data)].map((q,i)=>({...q,id:"rel"+i})));
 const relBefore=rel.readAll("Questions").length;
 check(!ctx.seedComplete_(rel.getConfig()),"server notices the tourism bank is missing");
 ctx.ensureSeed(rel);
-check(rel.readAll("Questions").length===relBefore+tour.data.length,"exactly the tourism questions are added");
-ctx.ensureSeed(rel);check(rel.readAll("Questions").length===relBefore+tour.data.length,"tourism upgrade is idempotent");
+check(rel.readAll("Questions").length===relBefore+tour.data.length+qbBank.data.length,"exactly the tourism and new-bank questions are added");
+ctx.ensureSeed(rel);check(rel.readAll("Questions").length===relBefore+tour.data.length+qbBank.data.length,"upgrade is idempotent");
 r=H(s,{action:"createUser",token:adm,rec:{username:"tour1",name:"T",cadre:"Tourism Officer Cadre",targetPost:"Senior Tourism Officer",cadreLocked:true,attemptsAllocated:1},password:"TourPass123"});
 check(r.ok,"tourism candidate created");
 b=H(s,{action:"bootstrap",token:H(s,{action:"login",username:"tour1",password:"TourPass123"}).token});
 check(b.questions.filter(q=>q.scope==="Tourism Officer Cadre").length===tour.data.length,"tourism candidate sees the tourism bank");
+
+/* ===== NEW QUESTION BANK + FIRST SESSION ===== */
+check(qbBank&&qbBank.data.length===267&&qbBank.scope==="COMMON","new bank: 267 COMMON questions");
+check(s.getConfig().firstSessionSet===ctx.QB_SET_ID&&s.getConfig().firstSessionMins===270,"fresh install turns the first session on (270 min)");
+
+/* upgrade from the CURRENT live state: every earlier bank (including tourism) already seeded */
+const cur=memStore();
+const curFlags={superSeeded:true,baseSeeded:true,seeded:true,ictSeeded:true,patchV2:true,examLength:120,durationMins:45};
+allBanks.filter(b=>b!==qbBank).forEach(b=>curFlags["seeded_"+b.key]=true);
+cur.setConfig(curFlags);
+cur.appendMany("Questions",[...ctx.SEED_QUESTIONS,...allBanks.filter(b=>b!==qbBank).flatMap(b=>b.data)].map((q,i)=>({...q,id:"cur"+i})));
+const curBefore=cur.readAll("Questions").length;
+check(!ctx.seedComplete_(cur.getConfig()),"live server notices the new bank");
+ctx.ensureSeed(cur);
+const curQ=cur.readAll("Questions");
+check(curQ.length===curBefore+267,"exactly 267 new questions added to the live state (got "+(curQ.length-curBefore)+")");
+check(curQ.filter(q=>q.set===ctx.QB_SET_ID).every(q=>q.scope==="COMMON"),"new questions are COMMON (visible to every user)");
+check(cur.getConfig().firstSessionSet===ctx.QB_SET_ID&&cur.getConfig().examLength===120&&cur.getConfig().durationMins===45,"first session switched on; existing settings kept");
+ctx.ensureSeed(cur);check(cur.readAll("Questions").length===curQ.length,"live upgrade is idempotent");
+cur.setConfig({firstSessionSet:""});ctx.ensureSeed(cur);
+check(cur.getConfig().firstSessionSet==="","an admin's decision to switch the first session off is kept");
+
+/* first-session attempts */
+const qbQs=s.readAll("Questions").filter(q=>q.set===ctx.QB_SET_ID);
+r=H(s,{action:"createUser",token:adm,rec:{username:"zero1",name:"Z",cadre:"Nursing Officer Cadre",targetPost:"Nursing Officer II",cadreLocked:true,attemptsAllocated:0},password:"ZeroPass123"});
+const zt=H(s,{action:"login",username:"zero1",password:"ZeroPass123"}).token,zid=r.id;
+b=H(s,{action:"bootstrap",token:zt});
+check(b.config.firstSessionSet===ctx.QB_SET_ID&&b.config.firstSessionMins===270,"candidate receives first-session settings");
+check(b.questions.filter(q=>q.set===ctx.QB_SET_ID).length===267,"candidate sees all 267 new questions");
+const fullPer=qbQs.map(q=>({qid:q.id,given:q.answer}));
+r=H(s,{action:"addAttempt",token:zt,rec:{userId:zid,set:ctx.QB_SET_ID,startedAt:Date.now()-3600e3,endedAt:Date.now(),per:fullPer}});
+check(r.ok&&r.score===267&&r.total===267,"full 267-question first session stored and graded (got "+(r.ok?r.score+"/"+r.total:r.error)+")");
+check(r.ok&&r.used===0,"first session does not use an allocated attempt");
+const storedLen=JSON.stringify(s.readAll("Attempts").find(a=>a.userId===zid)).length;
+check(storedLen<45000,"stored first-session attempt fits a Sheets cell ("+storedLen+" chars)");
+check(s.readAll("Attempts").find(a=>a.userId===zid).set===ctx.QB_SET_ID,"attempt is marked as the first session");
+r=H(s,{action:"addAttempt",token:zt,rec:{userId:zid,set:ctx.QB_SET_ID,per:fullPer}});
+check(!r.ok&&/already/.test(r.error),"first session can only be taken once");
+r=H(s,{action:"addAttempt",token:zt,rec:{userId:zid,per:fullPer.slice(0,5)}});
+check(!r.ok&&/No attempts/.test(r.error),"normal sessions still need an allocated attempt");
+/* user who already had normal attempts (cap used up) can still take the first session */
+r=H(s,{action:"addAttempt",token:cand,rec:{userId:candId,set:ctx.QB_SET_ID,per:fullPer}});
+check(r.ok===false&&r.error==="auth","(logged-out token is rejected)");
+const ct=H(s,{action:"login",username:"cand1",password:"CandPass11"}).token;
+r=H(s,{action:"addAttempt",token:ct,rec:{userId:candId,set:ctx.QB_SET_ID,per:fullPer.slice(0,10).map(p=>({...p,given:9}))}});
+check(r.ok&&r.score===0,"existing user with no attempts left can still take the first session");
+/* settings */
+check(H(s,{action:"setConfig",token:adm,patch:{firstSessionSet:""}}).config.firstSessionSet===ctx.QB_SET_ID,"admin cannot switch the first session off");
+check(H(s,{action:"setConfig",token:adm,patch:{firstSessionMins:5}}).ok===false,"first-session time limit validated");
+check(H(s,{action:"setConfig",token:adm,patch:{firstSessionMins:180}}).config.firstSessionMins===180,"admin can change the first-session time limit");
+check(H(s,{action:"setConfig",token:sup,patch:{firstSessionSet:"NOPE"}}).ok===false,"unknown set rejected");
+check(H(s,{action:"setConfig",token:sup,patch:{firstSessionSet:""}}).config.firstSessionSet==="","super admin can switch the first session off");
+check(H(s,{action:"setConfig",token:sup,patch:{firstSessionSet:ctx.QB_SET_ID}}).config.firstSessionSet===ctx.QB_SET_ID,"and back on");
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail?1:0);

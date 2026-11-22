@@ -23,7 +23,9 @@ var PEPPER_FALLBACK="cbt::change-this-secret::9f3a7";
 var SESSION_TTL_MS=1000*60*60*24*30;   // sessions expire after 30 days
 var MIN_PASSWORD=8;
 var MAX_LOGIN_FAILS=8,LOGIN_LOCK_SECS=15*60;
-var MAX_EXAM_LENGTH=150;               // keeps an attempt well under the 50,000-char cell limit
+var MAX_EXAM_LENGTH=150;               // max questions in a normal session (config limit)
+var MAX_ATTEMPT_QUESTIONS=400;         // max questions stored per attempt (covers the full first-session set)
+var DEFAULT_FIRST_SESSION_MINS=270;    // about 1 minute per question for the 267-question first session
 var DEFAULT_AI_MODEL="claude-opus-5-5";
 var SHEETS=["Accounts","Users","Questions","Attempts","Sessions","Config"];
 
@@ -47,7 +49,7 @@ function pwError_(p){return (typeof p==="string"&&p.length>=MIN_PASSWORD)?null:"
 /* ---- shared helpers ---- */
 function sanitize(rec,role,kind){var c={};for(var k in rec)c[k]=rec[k];delete c.passHash;delete c.salt;if(role)c.role=role;if(kind)c.kind=kind;return c;}
 function publicConfig(cfg,role){
-  if(role==="user")return {examLength:cfg.examLength,durationMins:cfg.durationMins};
+  if(role==="user")return {examLength:cfg.examLength,durationMins:cfg.durationMins,firstSessionSet:cfg.firstSessionSet||"",firstSessionMins:cfg.firstSessionMins};
   if(role==="admin"){var c={};for(var k in cfg)c[k]=cfg[k];delete c.aiKey;return c;}   // never expose the API key to admins
   return cfg;   // super
 }
@@ -114,6 +116,7 @@ function seedComplete_(cfg){
   if(!(cfg.superSeeded&&cfg.baseSeeded&&cfg.seeded&&cfg.patchV2))return false;
   var banks=getSeedBanks();
   for(var i=0;i<banks.length;i++)if(!bankDone_(cfg,banks[i]))return false;
+  if(typeof QB_SET_ID!=="undefined"&&cfg.firstSessionSet===undefined)return false;
   return true;
 }
 function withIds_(list){return list.map(function(q){var r={};for(var k in q)r[k]=q[k];r.id=uid("q");return r;});}
@@ -144,6 +147,9 @@ function ensureSeed(store){
     flags["seeded_"+b.key]=true;
   });
   if(toAdd.length)appendMany_(store,"Questions",withIds_(toAdd));
+  /* Turn on the 'first session' (the whole imported question set) once, the first time the set ships.
+     A super admin can switch it off later by clearing firstSessionSet; that choice is then kept. */
+  if(typeof QB_SET_ID!=="undefined"&&cfg.firstSessionSet===undefined){flags.firstSessionSet=QB_SET_ID;flags.firstSessionMins=DEFAULT_FIRST_SESSION_MINS;}
   if(Object.keys(flags).length)store.setConfig(flags);
   if(!cfg.patchV2){applyPatchesV2_(store);store.setConfig({patchV2:true});}
 }
@@ -334,12 +340,18 @@ function handleRequest(store,body){
       if(role==="user"&&arc.userId!==actor.id)return deny();
       var owner=findRec(store,"Users",arc.userId); if(!owner)return {ok:false,error:"User not found"};
       if(role==="admin"&&owner.createdBy!==actor.id)return deny();
-      var used=store.readAll("Attempts").filter(function(a){return a.userId===arc.userId;}).length;
-      if(used>=(owner.attemptsAllocated||0))return {ok:false,error:"No attempts remaining"};   // server-enforced cap
+      /* The first session (the whole imported set) is free once per user and does not use an allocated
+         attempt; every other attempt counts against attemptsAllocated. */
+      var fset=store.getConfig().firstSessionSet||"";
+      var mine=store.readAll("Attempts").filter(function(a){return a.userId===arc.userId;});
+      var isFirst=!!fset&&arc.set===fset;
+      if(isFirst&&mine.some(function(a){return a.set===fset;}))return {ok:false,error:"The first session has already been taken"};
+      var used=mine.filter(function(a){return !(fset&&a.set===fset);}).length;
+      if(!isFirst&&used>=(owner.attemptsAllocated||0))return {ok:false,error:"No attempts remaining"};   // server-enforced cap
       /* Re-grade on the server: the client's own score and per-question "correct" flags are ignored. */
       var qmap={},seenQ={},per=[];
       store.readAll("Questions").forEach(function(q){qmap[q.id]=q;});
-      (Array.isArray(arc.per)?arc.per:[]).slice(0,MAX_EXAM_LENGTH).forEach(function(p){
+      (Array.isArray(arc.per)?arc.per:[]).slice(0,MAX_ATTEMPT_QUESTIONS).forEach(function(p){
         if(!p||typeof p.qid!=="string"||seenQ[p.qid])return; seenQ[p.qid]=1;
         var q=qmap[p.qid], visible=q&&scopeVisibleTo(q.scope,owner.cadre);
         per.push({qid:p.qid,category:q?q.category:String(p.category||""),type:q?q.type:String(p.type||""),
@@ -349,9 +361,10 @@ function handleRequest(store,body){
       var rec={id:(typeof arc.id==="string"&&/^[\w-]{4,64}$/.test(arc.id))?arc.id:uid("att"),userId:arc.userId,cadre:owner.cadre||null,
         startedAt:Number(arc.startedAt)||Date.now(),endedAt:Number(arc.endedAt)||Date.now(),
         score:score,total:total,pct:total>0?Math.round(score/total*100):0,per:per,serverTs:Date.now()};
+      if(isFirst)rec.set=fset;
       if(JSON.stringify(rec).length>45000)return {ok:false,error:"This attempt is too large to store"};
       store.append("Attempts",rec);
-      return {ok:true,used:used+1,allowed:owner.attemptsAllocated||0,score:score,total:total,pct:rec.pct,per:per};
+      return {ok:true,used:used+(isFirst?0:1),allowed:owner.attemptsAllocated||0,score:score,total:total,pct:rec.pct,per:per};
     }
 
     case "dedupeQuestions": {
@@ -365,10 +378,12 @@ function handleRequest(store,body){
 
     case "setConfig": {
       if(role==="user")return deny();
-      var cpatch=body.patch||{}, cclean={}, cAllow=(role==="super")?["examLength","durationMins","aiProvider","aiModel","aiKey"]:["examLength","durationMins"];
+      var cpatch=body.patch||{}, cclean={}, cAllow=(role==="super")?["examLength","durationMins","firstSessionMins","firstSessionSet","aiProvider","aiModel","aiKey"]:["examLength","durationMins","firstSessionMins"];
       for(var ck in cpatch){if(cAllow.indexOf(ck)>=0)cclean[ck]=cpatch[ck];}
       if(cclean.examLength!==undefined){var el=Math.floor(Number(cclean.examLength));if(!(el>=1&&el<=MAX_EXAM_LENGTH))return {ok:false,error:"Questions per session must be 1–"+MAX_EXAM_LENGTH};cclean.examLength=el;}
       if(cclean.durationMins!==undefined){var dm=Math.floor(Number(cclean.durationMins));if(!(dm>=1&&dm<=600))return {ok:false,error:"Time limit must be 1–600 minutes"};cclean.durationMins=dm;}
+      if(cclean.firstSessionMins!==undefined){var fm=Math.floor(Number(cclean.firstSessionMins));if(!(fm>=10&&fm<=600))return {ok:false,error:"First-session time limit must be 10–600 minutes"};cclean.firstSessionMins=fm;}
+      if(cclean.firstSessionSet!==undefined){var fs=String(cclean.firstSessionSet||"");if(fs&&!(typeof QB_SET_ID!=="undefined"&&fs===QB_SET_ID))return {ok:false,error:"Unknown question set"};cclean.firstSessionSet=fs;}
       var next=store.setConfig(cclean);
       return {ok:true,config:publicConfig(next,role)};
     }

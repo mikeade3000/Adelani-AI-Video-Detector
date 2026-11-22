@@ -5,7 +5,7 @@
 const fs=require("fs"),path=require("path"),vm=require("vm");
 const ROOT=path.join(__dirname,"..");
 const ctx={};vm.createContext(ctx);
-for(const f of ["cbt-shared.js","cbt-bank-permsec.js","cbt-bank-law-enforcement.js","cbt-bank-prof-admin.js","cbt-bank-prof-health.js","cbt-bank-prof-works.js","cbt-bank-prof-science.js","cbt-bank-prof-finance.js"])
+for(const f of ["cbt-shared.js","cbt-bank-permsec.js","cbt-bank-law-enforcement.js","cbt-bank-prof-admin.js","cbt-bank-prof-health.js","cbt-bank-prof-works.js","cbt-bank-prof-science.js","cbt-bank-prof-finance.js","cbt-bank-qb2026.js"])
   vm.runInContext(fs.readFileSync(path.join(ROOT,f),"utf8"),ctx,{filename:f});
 
 /* keep in sync with CATEGORIES in index.html */

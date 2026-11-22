@@ -225,6 +225,7 @@ img{-webkit-user-drag:none;user-drag:none;pointer-events:none}
 <script src="cbt-bank-prof-works.js"></script>
 <script src="cbt-bank-prof-science.js"></script>
 <script src="cbt-bank-prof-finance.js"></script>
+<script src="cbt-bank-qb2026.js"></script>
 <script>
 /* ============================================================
    CBT Platform — application logic
@@ -247,7 +248,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyHAUzfCvldJ7Jn4XbV8-B7
 const BACKEND = !!API_URL;
 const MIN_PASSWORD = 8;
 
-const CATEGORIES=["Quantitative","Qualitative","Logic","English and Grammar","Lagos State Civil Service Rules","Lagos State Financial Regulations","Current Affairs","ICT","Public Policy & Governance","Leadership & Strategic Management","Road Traffic Law & Management","Vehicle Inspection & Roadworthiness","Law Enforcement Practice","Professional Knowledge"];
+const CATEGORIES=["Quantitative","Qualitative","Logic","English and Grammar","Lagos State Civil Service Rules","Lagos State Financial Regulations","Current Affairs","ICT","Public Policy & Governance","Leadership & Strategic Management","Road Traffic Law & Management","Vehicle Inspection & Roadworthiness","Law Enforcement Practice","Professional Knowledge","Lagos State Public Procurement Law","Schemes of Service","Circulars","Developmental Objectives"];
 const TYPES = [
   {id:"mcq",label:"Multiple choice"},
   {id:"truefalse",label:"True / False"},
@@ -260,7 +261,8 @@ const CAT_COLORS = {"Quantitative":"#0e4d6b","Qualitative":"#2a7d9b","Logic":"#c
   "Lagos State Financial Regulations":"#b2603a","Current Affairs":"#3a6ea5","ICT":"#5a3fa0",
   "Public Policy & Governance":"#2f6f5e","Leadership & Strategic Management":"#9a3f6b",
   "Road Traffic Law & Management":"#c0392b","Vehicle Inspection & Roadworthiness":"#6b5b2f",
-  "Law Enforcement Practice":"#34495e","Professional Knowledge":"#7a4b1e"};
+  "Law Enforcement Practice":"#34495e","Professional Knowledge":"#7a4b1e",
+  "Lagos State Public Procurement Law":"#1d6f8c","Schemes of Service":"#6d5a8f","Circulars":"#8c6d1d","Developmental Objectives":"#2e7d32"};
 const catColor=c=>CAT_COLORS[c]||"#0e4d6b";
 /* Every scope a question can have: COMMON, the shared groups, then each cadre. */
 const ALL_SCOPES=()=>["COMMON",...SCOPE_GROUPS,...CADRES.map(c=>c.name)];
@@ -428,6 +430,7 @@ const DB={
         flags["seeded_"+b.key]=true;
       });
       if(add.length)this.addQuestions(add);
+      if(typeof QB_SET_ID!=="undefined"&&c.firstSessionSet===undefined){flags.firstSessionSet=QB_SET_ID;flags.firstSessionMins=270;}
       if(Object.keys(flags).length)this.saveConfig(flags);
     }
     if(!this.config().patchV2){
@@ -548,13 +551,30 @@ function renderForcedPasswordChange(actor){
 function freshUser(){return DB.users().find(u=>u.id===SESSION.id);}
 function userPool(cadre){return DB.questions().filter(q=>scopeVisibleTo(q.scope,cadre));}
 function userAttempts(uid){return DB.attempts().filter(a=>a.userId===uid).sort((a,b)=>a.startedAt-b.startedAt);}
+/* ---- first session: the whole imported question set, once per user, not counted against allocated attempts ---- */
+function firstSet(){return DB.config().firstSessionSet||"";}
+function firstSetQuestions(cadre){const fs=firstSet();
+  return fs?userPool(cadre).filter(q=>q.set===fs).sort((a,b)=>(a.srcNo||0)-(b.srcNo||0)):[];}
+function firstSessionPending(u){const fs=firstSet();
+  return !!fs&&firstSetQuestions(u.cadre).length>0&&!userAttempts(u.id).some(a=>a.set===fs);}
+/* attempts that count against attemptsAllocated (the first session is free) */
+function countedAttempts(uid){const fs=firstSet();return userAttempts(uid).filter(a=>!(fs&&a.set===fs));}
 
 function renderCandidate(){
   const u=freshUser();
   if(!u){renderAuth();return;}
   if(!u.cadre||!u.cadreLocked)return renderCadreSelect();
+  const saved=loadSavedExam(u.id);
+  if(saved&&Date.now()>=saved.deadline){EXAM=saved;toast("Time ran out on your unfinished session — it has been submitted","err");return gradeAndReview();}
   renderCandidateHome("overview");
 }
+/* ---- auto-save of an exam in progress (per user, on this device) so a reload or power cut does not lose work ---- */
+const EXAM_KEY=uid=>"cbt_exam_"+uid;
+function saveExam(){if(!EXAM)return;try{localStorage.setItem(EXAM_KEY(EXAM.user.id),JSON.stringify(EXAM));}catch(e){}}
+function clearSavedExam(uid){try{localStorage.removeItem(EXAM_KEY(uid));}catch(e){}}
+function loadSavedExam(uid){try{const x=JSON.parse(localStorage.getItem(EXAM_KEY(uid)));
+  return x&&x.user&&x.user.id===uid&&Array.isArray(x.questions)&&x.questions.length?x:null;}catch(e){return null;}}
+function resumeExam(saved){EXAM=saved;renderExam();toast("Session resumed","ok");}
 
 function renderCadreSelect(){
   const view=$("#view");view.innerHTML="";
@@ -604,7 +624,7 @@ function renderCadreSelect(){
 }
 
 function candidateHeader(u){
-  const used=userAttempts(u.id).length, allo=u.attemptsAllocated||0;
+  const used=countedAttempts(u.id).length, allo=u.attemptsAllocated||0;
   const pct=allo>0?Math.min(100,Math.round(used/allo*100)):0;
   return el("div",{class:"card"},
     el("div",{class:"row",style:"align-items:flex-start"},
@@ -626,6 +646,11 @@ function renderCandidateHome(tab){
   const u=freshUser();if(!u)return renderAuth();
   const view=$("#view");view.innerHTML="";
   view.append(candidateHeader(u));
+  const saved=loadSavedExam(u.id);
+  if(saved)view.append(el("div",{class:"notice",style:"display:flex;gap:1rem;align-items:center;flex-wrap:wrap"},
+    el("div",{style:"flex:1;min-width:220px"},el("b",{},"You have a session in progress. "),
+      `${saved.questions.filter(x=>{const r=saved.responses[x.id];return r!=null&&r!==""&&!(typeof r==="object"&&!Array.isArray(r)&&!Object.keys(r).length);}).length} of ${saved.questions.length} answered, about ${Math.max(0,Math.ceil((saved.deadline-Date.now())/60000))} minute(s) left. The timer kept running while you were away.`),
+    el("button",{class:"btn",onclick:()=>resumeExam(saved)},"Resume session")));
   const tabs=el("div",{class:"tabs"},
     ...[["overview","My progress"],["practice","Practice"],["history","History"]].map(([id,lab])=>
       el("button",{class:"tab"+(tab===id?" active":""),onclick:()=>renderCandidateHome(id)},lab)));
@@ -637,10 +662,22 @@ function renderCandidateHome(tab){
 }
 
 function candidatePractice(u){
+  if(firstSessionPending(u)){
+    const fq=firstSetQuestions(u.cadre),mins=DB.config().firstSessionMins||270;
+    const subj={};fq.forEach(q=>{subj[q.category]=(subj[q.category]||0)+1;});
+    return el("div",{class:"card"},
+      el("h2",{},"Your first session: the new question bank"),
+      el("p",{},`Your first session covers all ${fq.length} questions in the new question bank, in order, by subject. It does not use any of your allocated attempts.`),
+      el("div",{class:"grid cols2",style:"margin:1rem 0"},
+        el("div",{class:"stat"},el("div",{class:"n"},fq.length),el("div",{class:"l"},"Questions")),
+        el("div",{class:"stat"},el("div",{class:"n"},mins+"m"),el("div",{class:"l"},"Time limit"))),
+      el("div",{style:"margin-bottom:1rem"},...Object.entries(subj).map(([c,n])=>el("div",{class:"kv"},el("span",{},c),el("b",{},n)))),
+      el("button",{class:"btn",onclick:()=>startExam(u)},"Begin first session"));
+  }
   const pool=userPool(u.cadre);
   const cfg=DB.config();
   const len=Math.min(cfg.examLength||20,pool.length);
-  const remaining=(u.attemptsAllocated||0)-userAttempts(u.id).length;
+  const remaining=(u.attemptsAllocated||0)-countedAttempts(u.id).length;
   const canStart=remaining>0&&len>0;
   const c=el("div",{class:"card"},
     el("h2",{},"Start a practice session"),
@@ -678,7 +715,9 @@ function startExam(u){
   const cfg=DB.config();
   const pool=userPool(u.cadre);
   const len=Math.min(cfg.examLength||20,pool.length);
-  const picked=pickSession(pool,len).map(q=>{
+  const first=firstSessionPending(u);
+  const mins=first?(cfg.firstSessionMins||270):(cfg.durationMins||30);
+  const picked=(first?firstSetQuestions(u.cadre):pickSession(pool,len)).map(q=>{
     const m={id:q.id,category:q.category,type:q.type,stem:q.stem,explanation:q.explanation,difficulty:q.difficulty};
     if(q.type==="mcq"){m.options=q.options;m.answer=q.answer;m.order=shuffle(q.options.map((_,i)=>i));}   // display order only; answers stay as original indices
     else if(q.type==="truefalse"){m.answer=q.answer;}
@@ -688,8 +727,8 @@ function startExam(u){
     else if(q.type==="matching"){m.pairs=q.pairs;m.rights=shuffle([...new Set(q.pairs.map(p=>p.r))]);}   // each answer listed once even if two prompts share it
     return m;
   });
-  EXAM={user:u,cadre:u.cadre,questions:picked,responses:{},touched:{},idx:0,
-    startedAt:Date.now(),durationMins:cfg.durationMins||30,deadline:Date.now()+(cfg.durationMins||30)*60000};
+  EXAM={user:u,cadre:u.cadre,questions:picked,responses:{},touched:{},idx:0,set:first?firstSet():null,
+    startedAt:Date.now(),durationMins:mins,deadline:Date.now()+mins*60000};
   picked.forEach(q=>{if(q.type==="ordering")EXAM.responses[q.id]=q.display.slice();
     if(q.type==="matching")EXAM.responses[q.id]={};});
   renderExam();
@@ -697,6 +736,7 @@ function startExam(u){
 function stopExam(){if(timerHandle){clearInterval(timerHandle);timerHandle=null;}EXAM=null;}
 
 function renderExam(){
+  saveExam();
   const view=$("#view");view.innerHTML="";
   const q=EXAM.questions[EXAM.idx];
   const total=EXAM.questions.length;
@@ -757,7 +797,7 @@ function renderQuestionInput(q){
   if(q.type==="shortanswer"){
     const inp=el("input",{type:"text",placeholder:"Type your answer",value:r||""});
     /* update the palette dot in place: a full re-render on blur would swallow the click on Next */
-    inp.oninput=()=>{EXAM.responses[q.id]=inp.value;
+    inp.oninput=()=>{EXAM.responses[q.id]=inp.value;saveExam();
       $$(".qdot")[EXAM.idx]?.classList.toggle("answered",isAnswered(q));};
     return el("div",{},inp,el("div",{class:"hint",style:"margin-top:.4rem;color:var(--muted)"},"Capitals, spacing and ₦ signs or commas in numbers don't matter; give the key word or figure."));
   }
@@ -786,7 +826,7 @@ function renderQuestionInput(q){
     return el("div",{},...q.pairs.map(p=>{
       const sel=el("select",{},el("option",{value:""},"— choose —"),
         ...q.rights.map(r2=>el("option",{value:r2},r2)));
-      sel.onchange=()=>{if(sel.value)EXAM.responses[q.id][p.l]=sel.value;else delete EXAM.responses[q.id][p.l];
+      sel.onchange=()=>{if(sel.value)EXAM.responses[q.id][p.l]=sel.value;else delete EXAM.responses[q.id][p.l];saveExam();
         $$(".qdot")[EXAM.idx]?.classList.toggle("answered",isAnswered(q));};
       if(EXAM.responses[q.id][p.l])sel.value=EXAM.responses[q.id][p.l];
       return el("div",{class:"match-row"},el("div",{class:"left"},p.l),sel);
@@ -814,6 +854,8 @@ function gradeAndReview(){
   const score=per.filter(p=>p.correct).length,total=per.length;
   const attempt={id:uid("att"),userId:EXAM.user.id,cadre:EXAM.cadre,startedAt:EXAM.startedAt,
     endedAt:Date.now(),score,total,pct:Math.round(score/total*100),per};
+  if(EXAM.set)attempt.set=EXAM.set;
+  clearSavedExam(EXAM.user.id);
   DB.addAttempt(attempt);
   EXAM=null;renderReview(attempt,true);
 }
@@ -880,7 +922,7 @@ function candidateHistory(u){
     el("div",{class:"table-wrap"},el("table",{},
       el("thead",{},el("tr",{},el("th",{},"Date"),el("th",{},"Score"),el("th",{},"Correct"),el("th",{},"Outcome"),el("th",{},""))),
       el("tbody",{},...atts.map(a=>el("tr",{},
-        el("td",{},new Date(a.startedAt).toLocaleString()),
+        el("td",{},new Date(a.startedAt).toLocaleString(),a.set?el("div",{},el("span",{class:"badge"},"First session — new question bank")):""),
         el("td",{},el("b",{},a.pct+"%")),
         el("td",{},a.score+"/"+a.total),
         el("td",{},el("span",{class:"badge "+(a.pct>=50?"ok":"bad")},a.pct>=50?"Pass":"Below 50%")),
@@ -1057,7 +1099,7 @@ function staffUsers(body,actor){
         return el("tr",{},
           el("td",{},u.name),el("td",{},u.username),
           el("td",{},u.cadre?el("span",{},u.cadre,u.cadreLocked?el("span",{class:"badge lock",style:"margin-left:.4rem"},"🔒"):""):el("span",{style:"color:var(--muted)"},"not set")),
-          el("td",{},`${atts.length}/${u.attemptsAllocated||0}`),
+          el("td",{},`${countedAttempts(u.id).length}/${u.attemptsAllocated||0}`,firstSet()&&atts.some(a=>a.set===firstSet())?el("span",{class:"badge ok",style:"margin-left:.4rem"},"1st ✓"):""),
           el("td",{},avg),
           el("td",{},el("button",{class:"btn sec sm",onclick:()=>manageUser(u.id)},"Manage")));
       })))):el("div",{class:"empty"},"No candidates yet.")));
@@ -1114,12 +1156,24 @@ function staffBank(body){
       el("div",{class:"field",style:"flex:1"},el("label",{},"Questions per session (1–150)"),
         el("input",{type:"number",id:"set_len",value:cfg.examLength||20,min:"1",max:"150"})),
       el("div",{class:"field",style:"flex:1"},el("label",{},"Time limit (minutes)"),
-        el("input",{type:"number",id:"set_dur",value:cfg.durationMins||30,min:"1",max:"600"}))),
-    el("button",{class:"btn",onclick:()=>{
-      const len=Math.floor(+$("#set_len").value),dur=Math.floor(+$("#set_dur").value);
-      if(!(len>=1&&len<=150))return toast("Questions per session must be 1–150","err");
-      if(!(dur>=1&&dur<=600))return toast("Time limit must be 1–600 minutes","err");
-      DB.saveConfig({examLength:len,durationMins:dur});toast("Session settings saved","ok");}},"Save session settings")));
+        el("input",{type:"number",id:"set_dur",value:cfg.durationMins||30,min:"1",max:"600"})),
+      el("div",{class:"field",style:"flex:1"},el("label",{},"First-session time limit (minutes, 10–600)"),
+        el("input",{type:"number",id:"set_fdur",value:cfg.firstSessionMins||270,min:"10",max:"600"}))),
+    el("p",{style:"color:var(--muted);font-size:.88rem;margin-top:-.3rem"},cfg.firstSessionSet
+      ?`First session is ON: each candidate's first session is the whole new question bank (${qs.filter(q=>q.set===cfg.firstSessionSet).length} questions), once, without using an allocated attempt.`
+      :"First session is OFF: candidates go straight to normal practice sessions."),
+    el("div",{class:"row"},
+      el("button",{class:"btn",onclick:()=>{
+        const len=Math.floor(+$("#set_len").value),dur=Math.floor(+$("#set_dur").value),fdur=Math.floor(+$("#set_fdur").value);
+        if(!(len>=1&&len<=150))return toast("Questions per session must be 1–150","err");
+        if(!(dur>=1&&dur<=600))return toast("Time limit must be 1–600 minutes","err");
+        if(!(fdur>=10&&fdur<=600))return toast("First-session time limit must be 10–600 minutes","err");
+        DB.saveConfig({examLength:len,durationMins:dur,firstSessionMins:fdur});toast("Session settings saved","ok");}},"Save session settings"),
+      ...(isSuper&&typeof QB_SET_ID!=="undefined"?[el("button",{class:"btn sec",onclick:()=>{
+        const on=!!cfg.firstSessionSet;
+        if(!confirm(on?"Turn OFF the first session for candidates who have not taken it yet?":"Turn the first session back ON?"))return;
+        DB.saveConfig({firstSessionSet:on?"":QB_SET_ID});toast(on?"First session turned off":"First session turned on","ok");renderStaff("bank");}},
+        cfg.firstSessionSet?"Turn first session off":"Turn first session on")]:[]))));
   body.append(el("div",{class:"card"},
     el("div",{class:"row",style:"align-items:center"},
       el("h2",{style:"flex:1;margin:0"},`Question bank — ${qs.length} item(s)`),

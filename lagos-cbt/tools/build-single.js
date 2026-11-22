@@ -6,7 +6,7 @@
 "use strict";
 const fs=require("fs"),path=require("path");
 const ROOT=path.join(__dirname,".."),DIST=path.join(ROOT,"dist");
-const SHARED=["cbt-shared.js","cbt-bank-permsec.js","cbt-bank-law-enforcement.js","cbt-bank-prof-admin.js","cbt-bank-prof-health.js","cbt-bank-prof-works.js","cbt-bank-prof-science.js","cbt-bank-prof-finance.js"];
+const SHARED=["cbt-shared.js","cbt-bank-permsec.js","cbt-bank-law-enforcement.js","cbt-bank-prof-admin.js","cbt-bank-prof-health.js","cbt-bank-prof-works.js","cbt-bank-prof-science.js","cbt-bank-prof-finance.js","cbt-bank-qb2026.js"];
 const read=f=>fs.readFileSync(path.join(ROOT,f),"utf8");
 fs.mkdirSync(DIST,{recursive:true});
 

@@ -34,11 +34,12 @@ The `dist/` files are generated. Edit the sources, then run `node tools/build-si
 
 Checks: `node tools/validate-banks.js` and `node tools/test-backend.js`.
 
-## Question banks (1,961 questions)
+## Question banks (2,228 questions)
 
 | Scope | Questions | Seen by |
 |---|---:|---|
 | COMMON (general papers) | 41 | everyone |
+| **COMMON — new question bank (set `QB-2026-11`)** | **267** | everyone; also forms each user's first session |
 | Professional Knowledge: one bank per cadre | 20 per cadre (68 cadres) | that cadre only |
 | **Tourism Officer Cadre** | **24** | tourism officers |
 | Information & Communication Technology (ICT) Cadre | 93 | ICT cadre |
@@ -51,6 +52,25 @@ Checks: `node tools/validate-banks.js` and `node tools/test-backend.js`.
 | **Fire & Rescue Service Cadre (LSFRS)** | **27** | fire service |
 
 Every one of the 76 cadres now has at least 20 questions of its own. Each practice session is drawn about half from the candidate's own cadre bank and half from the COMMON general papers, spread across subjects within each half.
+
+### First session: the new question bank
+
+The 267 questions imported from *Question Bank with Answers* (Procurement Law 80, Public Service Rules 62, Financial Regulations 74, Schemes of Service 9, Circulars 18, Developmental Objectives 24) are visible to every user. Each user's **first session** after this update is the whole set, in the document's order:
+
+- It applies to existing users and new users alike, once per user.
+- It does **not** use an allocated attempt, so users with no attempts left can still take it. Normal sessions afterwards count as before and also draw on these questions.
+- Its time limit is set separately, under **Question bank ▸ Practice session settings** (default 270 minutes, about 1 minute per question). A super admin can switch the first session off or on there.
+- Answers are auto-saved on the device. After a reload or power cut, the candidate can **Resume** with the timer still running; if time ran out meanwhile, the saved answers are submitted.
+
+Source fixes made during the import (see `tools/import-qb-docx.py`):
+- **Q4 and Q157:** stems rebuilt from the notes in square brackets, because the stems were cut off in the photos.
+- **Q134 and Q135:** "[photo blurred]" notes removed.
+- **Uncaptured options:** placeholder options dropped. Where the document's answer wasn't among the visible options (Q103 and Q193), that answer was added as an option.
+- **Q90:** duplicate option removed.
+- **Q149:** left out, because its statements I–III were never captured, so it has no answer.
+- **Six "Confirm" answers** (Q133, Q200, Q228, Q239, Q241, Q242): their explanations note that the answer should be checked against the circular.
+
+To import a revised Word file: `pandoc file.docx -t plain --wrap=none -o qb.txt`, then `python3 -I tools/import-qb-docx.py qb.txt cbt-bank-qb2026.js`, then `node tools/build-single.js`.
 
 Upgrading a live database is automatic: on the next request (or when you run `diagnostics`), the server adds any seed question whose scope and wording are not already present. It never deletes or duplicates questions.
 

@@ -81,6 +81,7 @@ function getSeedBanks(){
   if(typeof SEED_FIRE!=="undefined")b.push({key:"fire",scope:FIRE_CADRE,data:SEED_FIRE});
   if(typeof SEED_ENV_EXTRA!=="undefined")b.push({key:"env_extra_v1",scope:ENV_CADRE,data:SEED_ENV_EXTRA});
   if(typeof SEED_LNSC_EXTRA!=="undefined")b.push({key:"lnsc_extra_v1",scope:LNSC_CADRE,data:SEED_LNSC_EXTRA});
+  if(typeof SEED_QB2026!=="undefined")b.push({key:"qb2026",scope:"COMMON",data:SEED_QB2026});
   /* professional-knowledge banks: one bank (and one seed flag) per cadre */
   [typeof SEED_PROF_ADMIN!=="undefined"?SEED_PROF_ADMIN:null,
    typeof SEED_PROF_HEALTH!=="undefined"?SEED_PROF_HEALTH:null,
