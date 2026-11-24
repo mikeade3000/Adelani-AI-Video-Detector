@@ -3,15 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ESAMI AI Grading Poll</title>
-<meta name="description" content="Live audience poll for 'AI-Powered Grading of Handwritten Theory Examinations', ESAMI@50 Colloquium, 25–27 November 2026.">
+<title>AI Grading · ESAMI@50</title>
+<meta name="description" content="AI-Powered Grading of Handwritten Theory Examinations: presentation with live audience poll. ESAMI@50 Colloquium, Arusha, 25–27 November 2026.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap">
 <script src="vendor/qrcode-generator.js"></script>
 <script>window.qrcode || document.write('<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"><\/script>')</script>
 <style>
-/* Layout: presenter = QR rail on the left + one large question stage on the right; participant = single phone column. */
+/* Layout: presenter = a 1920×1080 slide stage scaled to the screen (slide images + live poll slides in the deck's own style);
+   participant (#vote) = a single phone column. */
 :root{
   --bg:#F3F5FB; --surface:#FFFFFF; --surface-2:#EAEEFA; --ink:#121838; --muted:#596084; --line:#D9DEEF;
   --navy:#13208F; --green:#12882E; --orange:#E7861A; --red:#C42B2B; --amber:#D9A21B;
@@ -19,6 +20,9 @@
   --bar:#13208F; --bar-ok:#12882E;
   --font:"Lato", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
   --radius:14px; --shadow:0 2px 10px rgba(18,24,56,.08);
+  /* deck: fixed light palette taken from the slides (single deliberate look) */
+  --d-navy:#0A1A8F; --d-ink:#1B1F3B; --d-muted:#5A607A; --d-green:#0A8A0A; --d-orange:#F7931E; --d-red:#C62828;
+  --d-card:#EEF0FA; --d-line:#D8DCEE; --d-letterbox:#0C0F26;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
@@ -34,105 +38,131 @@
 
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.5;
-  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
-  padding-block:calc(env(safe-area-inset-top,0px) + 16px) calc(env(safe-area-inset-bottom,0px) + 24px)}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.5}
 h1,h2,h3{line-height:1.2;text-wrap:balance;margin:0}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:3px solid var(--orange);outline-offset:2px}
-.wrap{max-width:1320px;margin:0 auto}
-.eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--green)}
+[hidden]{display:none!important}
 .muted{color:var(--muted)}
+.eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--green)}
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:.5rem 1rem;font-weight:700;font-size:.9rem}
 .btn:hover{border-color:var(--navy)}
 .btn.primary{background:var(--navy);border-color:var(--navy);color:var(--surface)}
 .btn.small{padding:.3rem .75rem;font-size:.82rem}
-.chip{display:inline-flex;align-items:center;gap:.4rem;padding:.2rem .65rem;border-radius:999px;background:var(--surface-2);font-size:.82rem;font-weight:700}
-.dot{width:.6rem;height:.6rem;border-radius:50%;background:var(--muted)}
-.dot.ok{background:var(--green)} .dot.warn{background:var(--amber)} .dot.bad{background:var(--red)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
-[hidden]{display:none!important}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 
-/* ---------- presenter ---------- */
-.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
-.top h1{font-size:clamp(1.5rem,2.6vw,2.3rem);font-weight:900;color:var(--navy)}
-.top .actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.stage{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:20px;align-items:start}
-@media (max-width:860px){.stage{grid-template-columns:minmax(0,1fr)}}
-.join{padding:20px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
-.join h2{font-size:1.1rem;color:var(--navy)}
-.qrbox{background:#FFFFFF;padding:12px;border-radius:12px;width:100%;max-width:290px;aspect-ratio:1;display:grid;place-items:center}
-.qrbox svg{width:100%;height:auto;display:block;shape-rendering:crispEdges}
-.joinlink{font-size:.8rem;word-break:break-all;color:var(--muted);max-width:100%}
-.count{display:flex;align-items:baseline;gap:.5rem;justify-content:center}
-.count b{font-size:3rem;font-weight:900;color:var(--green);font-variant-numeric:tabular-nums;line-height:1}
-.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
-.tab{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:.55rem .9rem;font-weight:700;font-size:.9rem;color:var(--muted)}
-.tab[aria-selected="true"]{background:var(--navy);border-color:var(--navy);color:var(--surface)}
-.panel{padding:24px clamp(16px,3vw,36px)}
-.qhead{display:flex;gap:16px;align-items:flex-start;margin-bottom:18px}
-.qbadge{flex:none;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:1.1rem;color:#FFFFFF}
-.qtitle{font-size:clamp(1.3rem,2.4vw,2rem);font-weight:900}
-.qkind{font-size:.85rem;font-weight:700}
-.bars{display:flex;flex-direction:column;gap:12px}
-.barrow{display:grid;grid-template-columns:minmax(0,1fr) 5.5rem;gap:4px 14px;align-items:center}
-.barlabel{font-weight:700;font-size:clamp(1rem,1.5vw,1.25rem);min-width:0}
-.barlabel .tick{color:var(--green);font-weight:900}
-.barnum{text-align:right;font-variant-numeric:tabular-nums;font-weight:900;font-size:1.15rem}
-.barnum small{font-weight:400;color:var(--muted);font-size:.8rem}
-.track{grid-column:1 / -1;height:22px;background:var(--surface-2);border-radius:6px;overflow:hidden}
-.fill{height:100%;width:0;background:var(--bar);border-radius:6px;transition:width .6s ease}
-.fill.ok{background:var(--bar-ok)}
-.fill.dim{opacity:.45}
-.explain{margin-top:20px;padding:16px 18px;border-radius:12px;background:var(--green-soft);border:1px solid var(--line)}
-.explain b{color:var(--green)}
-.panelfoot{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-top:20px}
-.cloud{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:center;align-items:center;min-height:220px;padding:12px;background:var(--surface-2);border-radius:12px}
-.cloud span{font-weight:900;line-height:1.1}
-.empty{padding:36px 12px;text-align:center;color:var(--muted)}
+/* ================= DECK (presenter) ================= */
+body.deckmode{background:var(--d-letterbox);overflow:hidden;height:100vh;height:100dvh}
+#deck{position:fixed;inset:0;overflow:hidden;background:var(--d-letterbox)}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:#FFFFFF;color:var(--d-ink);
+  font-family:"Lato","Calibri","Segoe UI",system-ui,Arial,sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.4);overflow:hidden}
+.slide{position:absolute;inset:0;background:#FFFFFF}
+.slide>img.full{width:100%;height:100%;display:block;object-fit:contain;max-width:none}
+.live .brand50{position:absolute;right:0;top:0;width:160px;height:120px;max-width:none}
+.live .footer{position:absolute;left:0;bottom:0;width:1920px;height:180px;max-width:none}
+.live .eye{position:absolute;left:86px;top:34px;font-size:19px;font-weight:700;color:var(--d-green);letter-spacing:.01em;text-transform:uppercase}
+.live .ttl{position:absolute;left:86px;top:80px;right:220px;font-size:46px;font-weight:700;color:var(--d-navy);line-height:1.12}
+.live .body{position:absolute;left:86px;right:86px;top:215px;bottom:200px}
+.dcard{background:var(--d-card);border-radius:22px;box-shadow:0 4px 12px rgba(20,30,90,.16)}
+/* join slide */
+.joingrid{display:grid;grid-template-columns:1fr 1fr 520px;grid-template-rows:1fr 1fr;gap:26px;height:100%}
+.jq{display:flex;gap:26px;align-items:center;padding:26px 30px}
+.jq .ic{flex:none;width:96px;height:96px;border-radius:50%;display:grid;place-items:center;color:#FFFFFF;font-weight:900;font-size:30px;box-shadow:0 4px 10px rgba(0,0,0,.2)}
+.jq .k{font-size:21px;font-weight:700}
+.jq .t{font-size:27px;font-weight:700;line-height:1.3;color:var(--d-ink)}
+.jqr{grid-column:3;grid-row:1 / span 2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:22px;background:#E5F3E5}
+.jqr .qrbig{width:400px;height:400px;background:#FFFFFF;padding:12px;border-radius:14px}
+.qrbig svg,.qrsmall svg,.qrbox svg{width:100%;height:100%;display:block;shape-rendering:crispEdges}
+.jqr .scan{font-size:28px;font-weight:900;color:var(--d-green)}
+.jqr .lnk{font-size:15px;color:var(--d-muted);word-break:break-all;text-align:center;max-width:460px}
+.cnt{font-size:24px;color:var(--d-muted)} .cnt b{font-size:56px;color:var(--d-green);font-weight:900;font-variant-numeric:tabular-nums}
+/* question slides */
+.qgrid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:40px;height:100%}
+.qmain{display:flex;flex-direction:column;min-width:0}
+.qside{display:flex;flex-direction:column;align-items:center;gap:12px;padding:22px;text-align:center}
+.qside .qrsmall{width:250px;height:250px;background:#FFFFFF;padding:10px;border-radius:12px}
+.qside .scan{font-size:22px;font-weight:900;color:var(--d-green)}
+.qside .cnt b{font-size:64px}
+.dbtn{border:2px solid var(--d-navy);background:#FFFFFF;color:var(--d-navy);border-radius:999px;padding:12px 26px;font-size:22px;font-weight:700}
+.dbtn.fill{background:var(--d-navy);color:#FFFFFF}
+.dbtn:hover{filter:brightness(1.08)}
+.dbars{display:flex;flex-direction:column;gap:22px;margin-top:6px}
+.dbar{display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:6px 18px;align-items:end}
+.dbar .lb{font-size:32px;font-weight:700;color:var(--d-ink)}
+.dbar .lb .tick{color:var(--d-green)}
+.dbar .nm{text-align:right;font-size:34px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--d-ink)}
+.dbar .nm small{font-size:20px;font-weight:400;color:var(--d-muted)}
+.dbar .tr{grid-column:1 / -1;height:36px;background:var(--d-card);border-radius:8px;overflow:hidden}
+.dbar .fl{height:100%;width:0;background:var(--d-navy);border-radius:8px;transition:width .7s ease}
+.dbar .fl.ok{background:var(--d-green)} .dbar .fl.dim{opacity:.35}
+.dexplain{margin-top:24px;padding:20px 26px;border-radius:16px;background:#E5F3E5;font-size:24px;line-height:1.4;color:var(--d-ink)}
+.dexplain b{color:var(--d-green)}
+.qmeta{margin-top:auto;padding-top:16px;font-size:20px;color:var(--d-muted)}
+.dcloud{display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:8px 30px;height:100%;padding:20px;background:var(--d-card);border-radius:22px;overflow:hidden}
+.dcloud span{font-weight:900;line-height:1.05}
+.dempty{font-size:28px;color:var(--d-muted);text-align:center}
+.q4grid{display:grid;grid-template-columns:minmax(0,1fr) 470px;gap:30px;height:100%}
+.thm{display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:4px 12px;align-items:center;margin-bottom:12px;font-size:21px}
+.thm .n{text-align:right;font-weight:900;font-variant-numeric:tabular-nums}
+.thm .tr{grid-column:1 / -1;height:12px;background:#FFFFFF;border-radius:6px;overflow:hidden}
+.thm .fl{height:100%;background:var(--d-navy);border-radius:6px}
+.panelh{font-size:24px;font-weight:900;color:var(--d-navy);margin-bottom:14px}
+/* analysis slides */
+.kp{display:grid;grid-template-columns:repeat(5,1fr);gap:22px;margin-bottom:26px}
+.kp .dcard{padding:20px 24px}
+.kp b{display:block;font-size:52px;font-weight:900;line-height:1.05;font-variant-numeric:tabular-nums}
+.kp b.txt{font-size:30px;line-height:1.15;padding-block:8px}
+.kp span{font-size:19px;color:var(--d-muted)}
+.angrid{display:grid;grid-template-columns:minmax(0,1fr) 560px;gap:30px}
+.narr2{font-size:22px;line-height:1.42;color:var(--d-ink)}
+.narr2 p{margin:0 0 10px}
+.an2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:26px;height:100%}
+.an2 .dcard{padding:22px 24px;min-width:0;overflow:hidden}
+.dt{width:100%;border-collapse:collapse;font-size:20px;font-variant-numeric:tabular-nums}
+.dt th,.dt td{padding:8px 6px;border-bottom:1px solid var(--d-line);text-align:left}
+.dt th{color:var(--d-muted);font-weight:700}
+.dt td.n{text-align:right}
+.dprompts{margin:0;padding-left:28px;font-size:21px;line-height:1.38}
+.dprompts li{margin-bottom:12px}
+.exportrow{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+.exportrow .dbtn{font-size:17px;padding:8px 16px}
 
-/* analysis */
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0 20px}
-.kpi{padding:14px 16px;border-radius:12px;background:var(--surface-2)}
-.kpi b{display:block;font-size:1.9rem;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.1}
-.kpi span{font-size:.85rem;color:var(--muted)}
-.narr{font-size:1.05rem;max-width:75ch}
-.narr p{margin:.4rem 0}
-.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px;margin-top:18px}
-.sub{padding:16px;border:1px solid var(--line);border-radius:12px;min-width:0}
-.sub h3{font-size:1rem;color:var(--navy);margin-bottom:10px}
-.tbl{overflow-x:auto}
-table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
-th,td{padding:.4rem .5rem;border-bottom:1px solid var(--line);text-align:left}
-th{color:var(--muted);font-weight:700}
-td.n{text-align:right}
-.prompts{margin:0;padding-left:1.2rem}
-.prompts li{margin:.35rem 0}
-.theme{display:grid;grid-template-columns:minmax(0,1fr) 3rem;gap:2px 10px;align-items:center;margin-bottom:8px}
-.theme .track{height:10px}
+/* deck controls (outside the stage, normal UI) */
+#controls{position:fixed;right:max(14px, env(safe-area-inset-right,0px));bottom:max(14px, env(safe-area-inset-bottom,0px));
+  display:flex;gap:6px;align-items:center;background:rgba(12,15,38,.82);color:#FFFFFF;border-radius:999px;padding:6px 8px;z-index:30;transition:opacity .3s}
+#controls.idle{opacity:0}
+#controls button{background:transparent;border:0;color:#FFFFFF;border-radius:999px;padding:6px 12px;font-weight:700;font-size:14px}
+#controls button:hover{background:rgba(255,255,255,.15)}
+#controls .ctr{font-variant-numeric:tabular-nums;font-size:14px;padding:0 6px;min-width:70px;text-align:center}
+#statusPill{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:0 6px}
+.dot{width:.6rem;height:.6rem;border-radius:50%;background:#9AA0B8;display:inline-block}
+.dot.ok{background:#3BC55B} .dot.warn{background:#F2C14E} .dot.bad{background:#FF6B6B}
+#progress{position:fixed;left:0;bottom:0;height:4px;background:var(--d-orange);z-index:29;transition:width .3s}
 
-/* settings drawer */
-.overlay{position:fixed;inset:0;background:rgba(5,8,30,.55);display:grid;place-items:center;z-index:50;
+/* settings dialog */
+.overlay{position:fixed;inset:0;background:rgba(5,8,30,.6);display:grid;place-items:center;z-index:50;
   padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
-.dialog{width:min(620px,100%);max-height:100%;overflow:auto;padding:22px}
+.dialog{width:min(640px,100%);max-height:100%;overflow:auto;padding:22px}
 .dialog h2{color:var(--navy);margin-bottom:6px}
 .field{display:flex;flex-direction:column;gap:4px;margin:14px 0}
 .field label{font-weight:700;font-size:.9rem}
 .field input{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:.6rem .75rem;width:100%}
 .field .hint{font-size:.8rem;color:var(--muted)}
-.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.notice{padding:10px 14px;border-radius:10px;background:var(--orange-soft);font-size:.9rem;margin-bottom:14px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 20px);background:var(--ink);color:var(--bg);padding:.6rem 1.1rem;border-radius:999px;font-weight:700;z-index:60}
+.keys{font-size:.85rem;color:var(--muted)} .keys kbd{border:1px solid var(--line);border-radius:4px;padding:0 .3rem;font-family:inherit}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 70px);background:#121838;color:#FFFFFF;padding:.6rem 1.1rem;border-radius:999px;font-weight:700;z-index:60}
 
-/* ---------- participant ---------- */
-.phone{max-width:560px;margin:0 auto}
+/* ================= PARTICIPANT ================= */
+.phone{max-width:560px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:calc(env(safe-area-inset-top,0px) + 16px) calc(env(safe-area-inset-bottom,0px) + 24px)}
 .phone header{margin-bottom:14px}
 .phone h1{font-size:1.45rem;font-weight:900;color:var(--navy);margin-top:4px}
+.notice{padding:10px 14px;border-radius:10px;background:var(--orange-soft);font-size:.9rem;margin-bottom:14px}
 .qcard{padding:18px;margin-bottom:14px}
 .qcard legend{font-weight:900;font-size:1.08rem;padding:0;margin-bottom:10px}
 .qcard fieldset{border:0;margin:0;padding:0;min-width:0}
-.qcard .qkind{display:block;margin-bottom:4px}
+.qcard .qkind{display:block;margin-bottom:4px;font-size:.85rem;font-weight:700}
 .opt{display:flex;gap:10px;align-items:flex-start;padding:.7rem .85rem;border:1.5px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer;background:var(--surface)}
 .opt input{margin-top:.25rem;accent-color:var(--navy);width:1.1rem;height:1.1rem;flex:none}
 .opt:has(input:checked){border-color:var(--navy);background:var(--navy-soft)}
@@ -147,42 +177,25 @@ td.n{text-align:right}
 .fbitem:first-of-type{border-top:0}
 .ok{color:var(--green);font-weight:900} .no{color:var(--red);font-weight:900}
 footer.small{margin-top:28px;font-size:.8rem;color:var(--muted);text-align:center}
-@media (prefers-reduced-motion: reduce){ .fill{transition:none} }
+@media (prefers-reduced-motion: reduce){ .dbar .fl,#controls,#progress{transition:none} }
 </style>
 </head>
 <body>
 
-<!-- =================== PRESENTER VIEW =================== -->
-<div id="presenter" class="wrap" hidden>
-  <div class="top">
-    <div>
-      <div class="eyebrow">ESAMI@50 Colloquium · Interactive session</div>
-      <h1>Your turn: four questions for the room</h1>
-      <div class="muted">AI-Powered Grading of Handwritten Theory Examinations · Dr. Michael Adelani Adewusi</div>
-    </div>
-    <div class="actions">
-      <span class="chip" id="status"><span class="dot" id="statusDot"></span><span id="statusText">Connecting…</span></span>
-      <span class="chip">Session <span id="sessionLabel"></span></span>
-      <button class="btn" id="openSettings" type="button">Settings</button>
-    </div>
-  </div>
-
-  <div class="stage">
-    <aside class="card join" aria-label="Join the poll">
-      <h2>Scan to vote</h2>
-      <div class="qrbox" id="qr" role="img" aria-label="QR code linking to the voting page"></div>
-      <div class="joinlink" id="joinLink"></div>
-      <button class="btn small" id="copyLink" type="button">Copy voting link</button>
-      <div class="count" aria-live="polite"><b id="nResp">0</b><span class="muted">responses</span></div>
-      <div class="muted" style="font-size:.85rem">Results update every few seconds.</div>
-    </aside>
-
-    <section class="card" style="min-width:0">
-      <div class="tabs" role="tablist" id="tabs" style="padding:16px 16px 0"></div>
-      <div class="panel" id="panel"></div>
-    </section>
-  </div>
+<!-- =================== PRESENTER DECK =================== -->
+<div id="deck" hidden>
+  <div id="stage" aria-live="polite"></div>
 </div>
+<div id="progress" hidden></div>
+<nav id="controls" hidden aria-label="Slide controls">
+  <span id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">…</span></span>
+  <button type="button" id="prevBtn" aria-label="Previous slide">‹ Prev</button>
+  <span class="ctr" id="counter">1 / 1</span>
+  <button type="button" id="nextBtn" aria-label="Next slide">Next ›</button>
+  <button type="button" id="pollBtn" title="Jump to the poll (P)">Poll</button>
+  <button type="button" id="fsBtn" title="Full screen (F)">Full screen</button>
+  <button type="button" id="openSettings" title="Settings (S)">Settings</button>
+</nav>
 
 <!-- =================== PARTICIPANT VIEW =================== -->
 <div id="voter" class="phone" hidden>
@@ -192,7 +205,6 @@ footer.small{margin-top:28px;font-size:.8rem;color:var(--muted);text-align:cente
     <div class="muted">Anonymous. Takes under a minute. You can change your answers until the session closes.</div>
   </header>
   <div id="notConfigured" class="notice" hidden>This voting link is missing its results server, so answers will only be saved on this device. Please scan the QR code on the presenter's screen again.</div>
-
   <form id="voteForm" novalidate>
     <div class="card qcard">
       <fieldset>
@@ -204,7 +216,6 @@ footer.small{margin-top:28px;font-size:.8rem;color:var(--muted);text-align:cente
     <div class="err" id="formErr" role="alert" hidden></div>
     <button class="btn primary submit" type="submit" id="submitBtn">Submit my answers</button>
   </form>
-
   <div id="thanks" hidden>
     <div class="card fb">
       <div class="eyebrow">Received</div>
@@ -219,8 +230,8 @@ footer.small{margin-top:28px;font-size:.8rem;color:var(--muted);text-align:cente
 <!-- settings dialog -->
 <div class="overlay" id="settings" hidden role="dialog" aria-modal="true" aria-labelledby="setTitle">
   <div class="card dialog">
-    <h2 id="setTitle">Poll settings</h2>
-    <p class="muted" style="margin:0">Paste the Google Apps Script web-app URL to collect votes from everyone's phones. Without it the page runs in <b>demo mode</b>, which only syncs between tabs in this browser.</p>
+    <h2 id="setTitle">Presentation &amp; poll settings</h2>
+    <p class="muted" style="margin:0">Paste the Google Apps Script web-app URL to collect votes from everyone's phones. Without it the poll runs in <b>demo mode</b>, which only syncs between tabs in this browser.</p>
     <div class="field">
       <label for="setApi">Results server URL (Apps Script web app)</label>
       <input id="setApi" type="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
@@ -233,7 +244,7 @@ footer.small{margin-top:28px;font-size:.8rem;color:var(--muted);text-align:cente
     </div>
     <div class="field">
       <label for="setBase">Public address of this page</label>
-      <input id="setBase" type="url" placeholder="https://yourname.github.io/…/esami-poll/" autocomplete="off">
+      <input id="setBase" type="url" placeholder="https://your-domain/esami-poll/" autocomplete="off">
       <span class="hint">Used to build the QR code. Leave blank to use the current address.</span>
     </div>
     <div class="field">
@@ -254,6 +265,7 @@ footer.small{margin-top:28px;font-size:.8rem;color:var(--muted);text-align:cente
       <button class="btn small" type="button" id="clearDemo">Clear demo responses</button>
     </div>
     <p class="muted" style="font-size:.85rem">Sample responses are invented for rehearsal and are never sent to the results server.</p>
+    <p class="keys">Keys: <kbd>→</kbd>/<kbd>Space</kbd>/<kbd>PgDn</kbd> next · <kbd>←</kbd>/<kbd>PgUp</kbd> back · <kbd>Home</kbd>/<kbd>End</kbd> · <kbd>P</kbd> poll · <kbd>R</kbd> reveal answer · <kbd>F</kbd> full screen · <kbd>S</kbd> settings. Presentation clickers work too.</p>
   </div>
 </div>
 <div class="toast" id="toast" hidden></div>
@@ -261,7 +273,7 @@ footer.small{margin-top:28px;font-size:.8rem;color:var(--muted);text-align:cente
 <script>
 "use strict";
 /* ============================================================
-   Content: questions from slide 20 of the ESAMI presentation
+   Content: questions from the "Your turn" slide
    ============================================================ */
 const ROLES = [
   {id:"lecturer", label:"Lecturer / examiner"},
@@ -271,25 +283,23 @@ const ROLES = [
   {id:"other",    label:"Other"}
 ];
 const QUESTIONS = [
-  { id:"q1", kind:"Quick check", color:"var(--navy)",
+  { id:"q1", kind:"Quick check", color:"#0A1A8F", icon:"⚖",
     text:"A tool always gives 2 marks more than the examiner. Its correlation with the examiner is…",
     options:[{id:"a",label:"1.00 (perfect)"},{id:"b",label:"About 0.80"},{id:"c",label:"About 0.50"},{id:"d",label:"Close to 0"}],
     correct:"a",
     explain:"Correlation is <b>1.00</b>: the marks move together perfectly, yet every mark is 2 too high. Correlation is not agreement, which is why the study judged the tool on QWK, mean bias, MAE and Bland–Altman limits." },
-  { id:"q2", kind:"Quick check", color:"var(--orange)",
+  { id:"q2", kind:"Quick check", color:"#F7931E", icon:"◎",
     text:"Of 160 answers, how many were within one mark of the examiners?",
     options:[{id:"a",label:"About 80 (50%)"},{id:"b",label:"About 110 (69%)"},{id:"c",label:"147 (92%)"},{id:"d",label:"All 160"}],
     correct:"c",
     explain:"<b>147 of 160 (91.9%)</b> were within one mark of the reference; 27 were exact. The 4 errors above 2 marks were all OCR failures on crossed-out or cursive writing." },
-  { id:"q3", kind:"Your view", color:"var(--green)",
+  { id:"q3", kind:"Your view", color:"#0A8A0A", icon:"✓",
     text:"Would you use an AI tool as a first reader for your theory scripts?",
     options:[{id:"a",label:"Yes, as a first reader with every mark reviewed"},{id:"b",label:"Yes, but only for low-stakes tests"},{id:"c",label:"Not yet, I need more evidence"},{id:"d",label:"No"}],
     correct:null },
-  { id:"q4", kind:"Word cloud", color:"#2E3192",
+  { id:"q4", kind:"Word cloud", color:"#2E3192", icon:"❝",
     text:"In one word: what worries you most about AI grading?", word:true }
 ];
-
-/* Worry themes used for the analysis of Q4 */
 const THEMES = [
   {name:"Accuracy & OCR errors", prompt:"Where should the tool hand a script straight back to a human: faint ink, crossed-out text, cursive?",
    words:["accuracy","accurate","inaccuracy","inaccurate","error","errors","mistake","mistakes","wrong","ocr","handwriting","misread","reliability","reliable","unreliable","consistency","inconsistency","inconsistent","precision","quality","validity","correctness"]},
@@ -310,8 +320,38 @@ const THEMES = [
 ];
 const STOP = new Set("the a an of and or to in on for is it its ai my me i we our be that this with by as at from".split(" "));
 
+/* Slide order: presentation up to the poll, the live poll, then the conclusion */
+const img = (n, alt) => ({type:"img", src:`slides/slide-${String(n).padStart(2,"0")}.jpg`, alt});
+const SLIDES = [
+  img(1,"Title: AI-Powered Grading of Handwritten Theory Examinations, Dr. Michael Adelani Adewusi"),
+  img(2,"Why this matters: the marking problem"),
+  img(3,"The gap: three gaps in the automated-scoring literature"),
+  img(4,"This study: four research questions, two contributions"),
+  img(5,"Lesson one: correlation is not agreement"),
+  img(6,"System design: five steps inside the browser"),
+  img(7,"Reading the handwriting: preprocessing and dual-engine OCR"),
+  img(8,"The scoring model: similarity plus keyword coverage"),
+  img(9,"Human-in-the-loop review"),
+  img(10,"Study design: 40 scripts, 160 answers, two examiners"),
+  img(11,"RQ1: preprocessing cut character errors from 24.6% to 9.8%"),
+  img(12,"RQ2: the tool comes close to a second human examiner"),
+  img(13,"How big are the errors? 92% within one mark"),
+  img(14,"RQ3: same pass/fail decision for 36 of 40 scripts"),
+  img(15,"A simple safeguard: re-mark everything near the pass mark"),
+  img(16,"RQ4: marking time halved"),
+  img(17,"Discussion: transparency over sophistication"),
+  img(18,"Limitations and the road ahead"),
+  {type:"join"},
+  {type:"q", q:0}, {type:"q", q:1}, {type:"q", q:2}, {type:"q", q:3},
+  {type:"analysis"}, {type:"analysis2"},
+  img(19,"Conclusion: a first reader, not an autonomous marker"),
+  img(21,"About the presenter"),
+  img(22,"Follow ESAMI")
+];
+const POLL_INDEX = SLIDES.findIndex(s => s.type === "join");
+
 /* ============================================================
-   Config & storage helpers
+   Config & storage
    ============================================================ */
 const qs = new URLSearchParams(location.search);
 const isVoter = location.hash === "#vote" || qs.get("v") === "1";
@@ -449,119 +489,6 @@ function prompts(a){
   if (!list.length) list.push("Which safeguard matters most to you: reviewing every mark, re-marking scripts near the pass mark, or flagging low-confidence answers?");
   return list;
 }
-
-/* ============================================================
-   Presenter view
-   ============================================================ */
-let rows = [], current = LS.get("esamiPoll.tab", "q1"), revealed = {};
-const TABS = [...QUESTIONS.map((q, i) => ({id:q.id, label:`Q${i + 1} · ${q.kind}`})), {id:"analysis", label:"Summary & analysis"}];
-
-function voteUrl(){
-  if (cfg.short) return cfg.short;
-  let base = cfg.base || (location.origin + location.pathname);
-  if (!/^https?:/.test(base)) base = location.href.split("#")[0].split("?")[0];
-  const p = new URLSearchParams(); p.set("s", cfg.session); if (cfg.api) p.set("api", cfg.api);
-  return base + "?" + p.toString() + "#vote";
-}
-function drawQR(){
-  const url = voteUrl(), box = $("qr");
-  box.textContent = ""; $("joinLink").textContent = url;
-  if (typeof qrcode === "undefined"){ box.textContent = "QR generator could not load. Share the link below."; return; }
-  try { const q = qrcode(0, "L"); q.addData(url); q.make(); box.innerHTML = q.createSvgTag({cellSize:8, margin:2, scalable:true}); }
-  catch(e){ box.textContent = "Link too long for a QR code. Add a short link in Settings."; }
-}
-function renderTabs(){
-  const t = $("tabs"); t.textContent = "";
-  TABS.forEach(tb => {
-    const b = document.createElement("button");
-    b.className = "tab"; b.type = "button"; b.setAttribute("role","tab"); b.textContent = tb.label;
-    b.setAttribute("aria-selected", tb.id === current ? "true" : "false");
-    b.onclick = () => { current = tb.id; LS.set("esamiPoll.tab", current); renderTabs(); renderPanel(); };
-    t.appendChild(b);
-  });
-}
-function barsHTML(q, a){
-  const d = a.q[q.id], tot = d.answered, max = Math.max(1, ...q.options.map(o => d[o.id]));
-  const show = revealed[q.id];
-  return `<div class="bars">` + q.options.map(o => {
-    const c = d[o.id], isOk = show && q.correct === o.id, dim = show && q.correct && q.correct !== o.id;
-    return `<div class="barrow"><div class="barlabel">${isOk ? '<span class="tick">✓ </span>' : ""}${esc(o.label)}</div>
-      <div class="barnum">${pct(c, tot)}% <small>(${c})</small></div>
-      <div class="track"><div class="fill ${isOk ? "ok" : ""} ${dim ? "dim" : ""}" style="width:${(100 * c / max).toFixed(1)}%"></div></div></div>`;
-  }).join("") + `</div>`;
-}
-function cloudHTML(a){
-  if (!a.topWords.length) return `<div class="cloud"><div class="empty">Words will appear here as people answer.</div></div>`;
-  const words = a.topWords.slice(0, 60), max = words[0][1], min = words[words.length - 1][1];
-  const colors = ["var(--navy)","var(--green)","var(--orange)","var(--red)","var(--muted)"];
-  const order = words.map((w, i) => [w, i]).sort((x, y) => ((x[1] * 7919) % 13) - ((y[1] * 7919) % 13));
-  return `<div class="cloud" aria-label="Word cloud">` + order.map(([[w, c], i]) => {
-    const size = 1 + 2.6 * (max === min ? 1 : (c - min) / (max - min));
-    return `<span style="font-size:${size.toFixed(2)}rem;color:${colors[i % colors.length]}" title="${esc(w)}: ${c}">${esc(w)}</span>`;
-  }).join("") + `</div>`;
-}
-function renderPanel(){
-  const a = analyse(rows), p = $("panel");
-  $("nResp").textContent = a.n;
-  if (current === "analysis"){ p.innerHTML = analysisHTML(a); wireAnalysis(); return; }
-  const qi = QUESTIONS.findIndex(q => q.id === current), q = QUESTIONS[qi];
-  const answered = q.word ? a.wordCount : a.q[q.id].answered;
-  let body = q.word ? cloudHTML(a) : barsHTML(q, a);
-  if (q.word && a.topThemes.length){
-    body += `<div class="grid2"><div class="sub"><h3>Themes</h3>${themesHTML(a)}</div><div class="sub"><h3>Top words</h3>${topWordsTable(a, 8)}</div></div>`;
-  }
-  if (q.correct && revealed[q.id]) body += `<div class="explain">${q.explain}</div>`;
-  p.innerHTML = `<div class="qhead"><div class="qbadge" style="background:${q.color}">Q${qi + 1}</div>
-      <div><div class="qkind" style="color:${q.color}">${esc(q.kind)}</div><h2 class="qtitle">${esc(q.text)}</h2></div></div>
-    ${body}
-    <div class="panelfoot"><span class="muted">${answered} answer${answered === 1 ? "" : "s"}</span>
-      <div class="row">
-        ${q.correct ? `<button class="btn" type="button" id="reveal">${revealed[q.id] ? "Hide answer" : "Reveal answer"}</button>` : ""}
-        ${qi > 0 ? `<button class="btn" type="button" id="prevQ">Previous</button>` : ""}
-        <button class="btn primary" type="button" id="nextQ">${qi < QUESTIONS.length - 1 ? "Next question" : "Show summary"}</button>
-      </div></div>`;
-  const go = (id) => { current = id; LS.set("esamiPoll.tab", id); renderTabs(); renderPanel(); };
-  if ($("reveal")) $("reveal").onclick = () => { revealed[q.id] = !revealed[q.id]; renderPanel(); };
-  if ($("prevQ")) $("prevQ").onclick = () => go(QUESTIONS[qi - 1].id);
-  $("nextQ").onclick = () => go(qi < QUESTIONS.length - 1 ? QUESTIONS[qi + 1].id : "analysis");
-}
-function themesHTML(a){
-  const tot = a.wordCount || 1;
-  return a.topThemes.map(([t, c]) => `<div class="theme"><span>${esc(t)}</span><span class="barnum" style="font-size:.95rem">${c}</span>
-    <div class="track"><div class="fill" style="width:${(100 * c / tot).toFixed(1)}%"></div></div></div>`).join("") || `<div class="muted">No words yet.</div>`;
-}
-function topWordsTable(a, k){
-  return `<div class="tbl"><table><thead><tr><th>Word</th><th>Theme</th><th class="n">n</th></tr></thead><tbody>` +
-    a.topWords.slice(0, k).map(([w, c]) => `<tr><td>${esc(w)}</td><td class="muted">${esc(themeOf(w))}</td><td class="n">${c}</td></tr>`).join("") + `</tbody></table></div>`;
-}
-function analysisHTML(a){
-  const roleRows = [...ROLES, {id:"", label:"Not stated"}].filter(r => a.q3ByRole[r.id]).map(r => {
-    const d = a.q3ByRole[r.id], t = d.a + d.b + d.c + d.d;
-    return `<tr><td>${esc(r.label)}</td><td class="n">${t}</td><td class="n">${pct(d.a + d.b, t)}%</td><td class="n">${pct(d.c, t)}%</td><td class="n">${pct(d.d, t)}%</td></tr>`;
-  }).join("");
-  return `<div class="eyebrow">Live analysis · session ${esc(cfg.session)}</div>
-    <h2 class="qtitle" style="margin-top:4px">What the room told us</h2>
-    <div class="kpis">
-      <div class="kpi"><b>${a.n}</b><span>responses</span></div>
-      <div class="kpi"><b style="color:var(--navy)">${a.q.q1.answered ? a.q1Correct + "%" : "–"}</b><span>Q1 correct (r = 1.00)</span></div>
-      <div class="kpi"><b style="color:var(--orange)">${a.q.q2.answered ? a.q2Correct + "%" : "–"}</b><span>Q2 correct (147 of 160)</span></div>
-      <div class="kpi"><b style="color:var(--green)">${a.q.q3.answered ? a.adopt + "%" : "–"}</b><span>would use it as a first reader</span></div>
-      <div class="kpi"><b style="font-size:1.35rem;padding-block:.2rem">${a.topThemes.length ? esc(a.topThemes[0][0]) : "–"}</b><span>leading worry theme</span></div>
-    </div>
-    <div class="narr">${narrative(a).map(s => `<p>${s}</p>`).join("")}</div>
-    <div class="grid2">
-      <div class="sub"><h3>Adoption by role (Q3)</h3>${roleRows ? `<div class="tbl"><table><thead><tr><th>Role</th><th class="n">n</th><th class="n">Yes</th><th class="n">Not yet</th><th class="n">No</th></tr></thead><tbody>${roleRows}</tbody></table></div>` : `<div class="muted">No answers yet.</div>`}</div>
-      <div class="sub"><h3>Worry themes (Q4)</h3>${themesHTML(a)}</div>
-      <div class="sub"><h3>Top words</h3>${a.topWords.length ? topWordsTable(a, 10) : `<div class="muted">No words yet.</div>`}</div>
-      <div class="sub"><h3>Suggested discussion questions</h3><ol class="prompts">${prompts(a).map(s => `<li>${esc(s)}</li>`).join("")}</ol></div>
-    </div>
-    <div class="panelfoot"><span class="muted">Figures recalculate live as responses arrive.</span>
-      <div class="row">
-        <button class="btn" type="button" id="copySummary">Copy summary text</button>
-        <button class="btn" type="button" id="dlCsv">Download CSV</button>
-        <button class="btn" type="button" id="dlJson">Download JSON</button>
-      </div></div>`;
-}
 function summaryText(a){
   const strip = (s) => s.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"").replace(/&#39;/g, "'");
   const lines = [`ESAMI@50 Colloquium – AI Grading audience poll (session ${cfg.session}, ${new Date().toLocaleString()})`, ""];
@@ -573,6 +500,9 @@ function summaryText(a){
   });
   lines.push("Q4. Worry themes: " + a.topThemes.map(([t, c]) => `${t} ${c}`).join("; "));
   lines.push("Q4. Words: " + a.topWords.map(([w, c]) => `${w} (${c})`).join(", "));
+  lines.push("", "Adoption by role (yes / not yet / no):");
+  [...ROLES, {id:"", label:"Not stated"}].filter(r => a.q3ByRole[r.id]).forEach(r => { const d = a.q3ByRole[r.id], t = d.a + d.b + d.c + d.d;
+    lines.push(`   ${r.label} (n=${t}): ${pct(d.a + d.b, t)}% / ${pct(d.c, t)}% / ${pct(d.d, t)}%`); });
   lines.push("", "Discussion questions:"); prompts(a).forEach((p, i) => lines.push(`${i + 1}. ${p}`));
   return lines.join("\n");
 }
@@ -581,55 +511,218 @@ function download(name, text, type){
   const el = document.createElement("a"); el.href = u; el.download = name; document.body.appendChild(el); el.click(); el.remove();
   setTimeout(() => URL.revokeObjectURL(u), 1000);
 }
-function wireAnalysis(){
-  const a = analyse(rows);
-  $("copySummary").onclick = async () => {
-    const txt = summaryText(a);
-    try { await navigator.clipboard.writeText(txt); toast("Summary copied"); }
-    catch(e){ download(`esami-poll-summary-${cfg.session}.txt`, txt, "text/plain"); }
-  };
-  $("dlCsv").onclick = () => {
-    const head = ["timestamp","session","role","q1","q1_correct","q2","q2_correct","q3","q4_raw","q4_word","q4_theme"];
-    const cell = (v) => { v = String(v == null ? "" : v); if (/^[=+\-@]/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
-    const lines = [head.join(",")].concat(rows.map(r => { const w = normWord(r.q4);
-      return [r.t, cfg.session, r.role, r.q1, r.q1 ? +(r.q1 === "a") : "", r.q2, r.q2 ? +(r.q2 === "c") : "", r.q3, r.q4, w, w ? themeOf(w) : ""].map(cell).join(","); }));
-    download(`esami-poll-${cfg.session}.csv`, lines.join("\n"), "text/csv");
-  };
-  $("dlJson").onclick = () => download(`esami-poll-${cfg.session}.json`, JSON.stringify({session:cfg.session, exported:new Date().toISOString(), questions:QUESTIONS.map(q => ({id:q.id, text:q.text, options:q.options, correct:q.correct})), responses:rows, analysis:a}, null, 2), "application/json");
+function exportCsv(rows){
+  const head = ["timestamp","session","role","q1","q1_correct","q2","q2_correct","q3","q4_raw","q4_word","q4_theme"];
+  const cell = (v) => { v = String(v == null ? "" : v); if (/^[=+\-@]/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
+  const lines = [head.join(",")].concat(rows.map(r => { const w = normWord(r.q4);
+    return [r.t, cfg.session, r.role, r.q1, r.q1 ? +(r.q1 === "a") : "", r.q2, r.q2 ? +(r.q2 === "c") : "", r.q3, r.q4, w, w ? themeOf(w) : ""].map(cell).join(","); }));
+  download(`esami-poll-${cfg.session}.csv`, lines.join("\n"), "text/csv");
 }
 
-/* live refresh */
+/* ============================================================
+   Presenter deck
+   ============================================================ */
+let rows = [], idx = 0, revealed = {};
+{ const saved = parseInt(LS.get("esamiPoll.slide", "0"), 10); if (saved >= 0 && saved < SLIDES.length) idx = saved; }
+
+function voteUrl(){
+  if (cfg.short) return cfg.short;
+  let base = cfg.base || (location.origin + location.pathname);
+  if (!/^https?:/.test(base)) base = location.href.split("#")[0].split("?")[0];
+  const p = new URLSearchParams(); p.set("s", cfg.session); if (cfg.api) p.set("api", cfg.api);
+  return base + "?" + p.toString() + "#vote";
+}
+let qrCache = {url:"", svg:""};
+function qrSvg(){
+  const url = voteUrl();
+  if (qrCache.url === url) return qrCache.svg;
+  let svg = "";
+  if (typeof qrcode !== "undefined"){
+    try { const q = qrcode(0, "L"); q.addData(url); q.make(); svg = q.createSvgTag({cellSize:8, margin:2, scalable:true}); } catch(e){}
+  }
+  if (!svg) svg = `<div class="dempty" style="font-size:18px;padding:20px">QR code unavailable. Share the link below.</div>`;
+  qrCache = {url, svg}; return svg;
+}
+const chrome = (eye, title) => `<img class="brand50" src="slides/brand-50.jpg" alt="ESAMI@50"><img class="footer" src="slides/brand-footer.jpg" alt="ESAMI · QMS certification ISO 9001:2015">
+  <div class="eye">${esc(eye)}</div><h2 class="ttl">${title}</h2>`;
+const sideJoin = (a) => `<div class="dcard qside"><div class="qrsmall">${qrSvg()}</div><div class="scan">Scan to vote</div>
+  <div class="cnt"><b>${a.n}</b> responses</div></div>`;
+
+function slideHTML(s, a){
+  if (s.type === "img") return `<img class="full" src="${s.src}" alt="${esc(s.alt)}">`;
+  if (s.type === "join"){
+    const cards = QUESTIONS.map((q, i) => `<div class="dcard jq"><div class="ic" style="background:${q.color}">Q${i + 1}</div>
+      <div><div class="k" style="color:${q.color}">Q${i + 1} · ${esc(q.kind)}</div><div class="t">${esc(q.text)}</div></div></div>`);
+    return `<div class="live">${chrome("Interactive session", "Your turn: four questions for the room")}
+      <div class="body"><div class="joingrid">
+        ${cards[0]}${cards[1]}
+        <div class="dcard jqr"><div class="qrbig">${qrSvg()}</div><div class="scan">Scan with your phone camera to vote</div>
+          <div class="lnk">${esc(voteUrl())}</div><div class="cnt"><b>${a.n}</b> responses so far</div></div>
+        ${cards[2]}${cards[3]}
+      </div></div></div>`;
+  }
+  if (s.type === "q"){
+    const q = QUESTIONS[s.q], n = s.q + 1;
+    if (q.word){
+      let cloud;
+      if (!a.topWords.length) cloud = `<div class="dcloud"><div class="dempty">Words will appear here as people answer.</div></div>`;
+      else {
+        const words = a.topWords.slice(0, 45), max = words[0][1], min = words[words.length - 1][1];
+        const colors = ["#0A1A8F","#0A8A0A","#F7931E","#C62828","#2E3192","#5A607A"];
+        const order = words.map((w, i) => [w, i]).sort((x, y) => ((x[1] * 7919) % 13) - ((y[1] * 7919) % 13));
+        cloud = `<div class="dcloud">` + order.map(([[w, c], i]) => {
+          const size = 30 + 70 * (max === min ? .6 : (c - min) / (max - min));
+          return `<span style="font-size:${size.toFixed(0)}px;color:${colors[i % colors.length]}">${esc(w)}</span>`; }).join("") + `</div>`;
+      }
+      const tot = a.wordCount || 1;
+      const themes = a.topThemes.slice(0, 6).map(([t, c]) => `<div class="thm"><span>${esc(t)}</span><span class="n">${c}</span>
+        <div class="tr"><div class="fl" style="width:${(100 * c / tot).toFixed(1)}%"></div></div></div>`).join("") || `<div class="dempty" style="font-size:20px">Themes appear as words arrive.</div>`;
+      return `<div class="live">${chrome(`Q${n} · ${q.kind}`, esc(q.text))}
+        <div class="body"><div class="q4grid">${cloud}
+          <div class="dcard" style="padding:22px 26px;display:flex;flex-direction:column">
+            <div class="panelh">What the words are about</div>${themes}
+            <div class="qmeta" style="display:flex;align-items:center;gap:16px"><div class="qrsmall" style="width:110px;height:110px;background:#FFFFFF;padding:6px;border-radius:8px;flex:none">${qrSvg()}</div>
+            <div><b style="font-size:34px;color:var(--d-green)">${a.n}</b> responses<br>${a.wordCount} words</div></div>
+          </div></div></div></div>`;
+    }
+    const d = a.q[q.id], tot = d.answered, max = Math.max(1, ...q.options.map(o => d[o.id])), show = revealed[q.id];
+    const bars = q.options.map(o => { const c = d[o.id], ok = show && q.correct === o.id, dim = show && q.correct && q.correct !== o.id;
+      return `<div class="dbar"><div class="lb">${ok ? '<span class="tick">✓ </span>' : ""}${esc(o.label)}</div>
+        <div class="nm">${pct(c, tot)}% <small>(${c})</small></div>
+        <div class="tr"><div class="fl ${ok ? "ok" : ""} ${dim ? "dim" : ""}" style="width:${(100 * c / max).toFixed(1)}%"></div></div></div>`; }).join("");
+    return `<div class="live">${chrome(`Q${n} · ${q.kind}`, esc(q.text))}
+      <div class="body"><div class="qgrid"><div class="qmain">
+        <div class="dbars">${bars}</div>
+        ${q.correct && show ? `<div class="dexplain">${q.explain}</div>` : ""}
+        <div class="qmeta">${tot} answer${tot === 1 ? "" : "s"}${q.correct ? " · press R to reveal the answer" : ""}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:18px">${sideJoin(a)}
+        ${q.correct ? `<button class="dbtn ${show ? "" : "fill"}" type="button" data-act="reveal" data-q="${q.id}">${show ? "Hide answer" : "Reveal answer"}</button>` : ""}
+      </div></div></div></div>`;
+  }
+  if (s.type === "analysis"){
+    const tot = a.wordCount || 1;
+    const themes = a.topThemes.slice(0, 6).map(([t, c]) => `<div class="thm"><span>${esc(t)}</span><span class="n">${c}</span>
+      <div class="tr"><div class="fl" style="width:${(100 * c / tot).toFixed(1)}%"></div></div></div>`).join("") || `<div class="dempty" style="font-size:20px">No words yet.</div>`;
+    return `<div class="live">${chrome("Live results · summary", "What the room told us")}
+      <div class="body">
+        <div class="kp">
+          <div class="dcard"><b>${a.n}</b><span>responses</span></div>
+          <div class="dcard"><b style="color:var(--d-navy)">${a.q.q1.answered ? a.q1Correct + "%" : "–"}</b><span>Q1 correct (r = 1.00)</span></div>
+          <div class="dcard"><b style="color:var(--d-orange)">${a.q.q2.answered ? a.q2Correct + "%" : "–"}</b><span>Q2 correct (147 of 160)</span></div>
+          <div class="dcard"><b style="color:var(--d-green)">${a.q.q3.answered ? a.adopt + "%" : "–"}</b><span>would use it as a first reader</span></div>
+          <div class="dcard"><b class="txt">${a.topThemes.length ? esc(a.topThemes[0][0]) : "–"}</b><span>leading worry</span></div>
+        </div>
+        <div class="angrid"><div class="narr2">${narrative(a).map(x => `<p>${x}</p>`).join("")}</div>
+          <div class="dcard" style="padding:20px 24px"><div class="panelh">Worry themes (Q4)</div>${themes}</div></div>
+      </div></div>`;
+  }
+  if (s.type === "analysis2"){
+    const roleRows = [...ROLES, {id:"", label:"Not stated"}].filter(r => a.q3ByRole[r.id]).map(r => {
+      const d = a.q3ByRole[r.id], t = d.a + d.b + d.c + d.d;
+      return `<tr><td>${esc(r.label)}</td><td class="n">${t}</td><td class="n">${pct(d.a + d.b, t)}%</td><td class="n">${pct(d.c, t)}%</td><td class="n">${pct(d.d, t)}%</td></tr>`; }).join("");
+    const words = a.topWords.slice(0, 8).map(([w, c]) => `<tr><td>${esc(w)}</td><td style="color:var(--d-muted)">${esc(themeOf(w))}</td><td class="n">${c}</td></tr>`).join("");
+    return `<div class="live">${chrome("Live results · for discussion", "Going deeper: who is ready, what worries them")}
+      <div class="body"><div class="an2">
+        <div class="dcard"><div class="panelh">Adoption by role (Q3)</div>
+          ${roleRows ? `<table class="dt"><thead><tr><th>Role</th><th class="n">n</th><th class="n">Yes</th><th class="n">Not yet</th><th class="n">No</th></tr></thead><tbody>${roleRows}</tbody></table>` : `<div class="dempty" style="font-size:20px">No answers yet.</div>`}
+          <div class="exportrow">
+            <button class="dbtn" type="button" data-act="copy">Copy summary</button>
+            <button class="dbtn" type="button" data-act="csv">CSV</button>
+            <button class="dbtn" type="button" data-act="json">JSON</button>
+          </div></div>
+        <div class="dcard"><div class="panelh">Top words (Q4)</div>
+          ${words ? `<table class="dt"><thead><tr><th>Word</th><th>Theme</th><th class="n">n</th></tr></thead><tbody>${words}</tbody></table>` : `<div class="dempty" style="font-size:20px">No words yet.</div>`}</div>
+        <div class="dcard" style="background:#E5F3E5"><div class="panelh" style="color:var(--d-green)">Questions for discussion</div>
+          <ol class="dprompts">${prompts(a).slice(0, 4).map(p => `<li>${esc(p)}</li>`).join("")}</ol></div>
+      </div></div></div>`;
+  }
+  return "";
+}
+function isLive(s){ return s.type !== "img"; }
+function render(){
+  const s = SLIDES[idx], a = analyse(rows);
+  $("stage").innerHTML = `<div class="slide">${slideHTML(s, a)}</div>`;
+  $("counter").textContent = `${idx + 1} / ${SLIDES.length}`;
+  $("progress").style.width = (100 * (idx + 1) / SLIDES.length) + "%";
+  $("prevBtn").disabled = idx === 0; $("nextBtn").disabled = idx === SLIDES.length - 1;
+  // preload neighbours
+  [idx + 1, idx + 2, idx - 1].forEach(i => { const t = SLIDES[i]; if (t && t.type === "img"){ const im = new Image(); im.src = t.src; } });
+}
+function go(i){ idx = Math.max(0, Math.min(SLIDES.length - 1, i)); LS.set("esamiPoll.slide", String(idx)); render(); }
+function fit(){
+  const W = window.innerWidth, H = window.innerHeight, sc = Math.min(W / 1920, H / 1080);
+  const st = $("stage"); st.style.transform = `translate(${(W - 1920 * sc) / 2}px, ${(H - 1080 * sc) / 2}px) scale(${sc})`;
+}
+function reveal(){ const s = SLIDES[idx]; if (s.type === "q" && QUESTIONS[s.q].correct){ const id = QUESTIONS[s.q].id; revealed[id] = !revealed[id]; render(); } }
+
 let lastSig = "";
 async function refresh(){
   try {
     const data = await Backend.list();
+    setStatus(Backend.isDemo() ? "warn" : "ok", Backend.isDemo() ? "Demo" : "Live");
     const sig = JSON.stringify(data);
-    setStatus(Backend.isDemo() ? "warn" : "ok", Backend.isDemo() ? "Demo mode (this browser only)" : "Live");
-    if (sig !== lastSig){ lastSig = sig; rows = data; renderPanel(); }
-  } catch(e){ setStatus("bad", "Can't reach results server"); }
+    if (sig !== lastSig){ lastSig = sig; rows = data; if (isLive(SLIDES[idx])) render(); }
+  } catch(e){ setStatus("bad", "Offline"); }
 }
 function setStatus(kind, text){ $("statusDot").className = "dot " + kind; $("statusText").textContent = text; }
 
 function startPresenter(){
-  $("presenter").hidden = false;
-  $("sessionLabel").textContent = cfg.session;
-  if (!TABS.some(t => t.id === current)) current = "q1";
-  renderTabs(); renderPanel(); drawQR(); refresh();
+  document.body.classList.add("deckmode");
+  $("deck").hidden = false; $("controls").hidden = false; $("progress").hidden = false;
+  fit(); render(); refresh();
+  window.addEventListener("resize", fit);
   setInterval(() => { if (!document.hidden) refresh(); }, 4000);
   if (bc) bc.onmessage = refresh;
   window.addEventListener("storage", (e) => { if (e.key === demoKey()) refresh(); });
-  $("copyLink").onclick = async () => { try { await navigator.clipboard.writeText(voteUrl()); toast("Voting link copied"); } catch(e){ toast("Select the link text to copy it"); } };
+
+  $("prevBtn").onclick = () => go(idx - 1);
+  $("nextBtn").onclick = () => go(idx + 1);
+  $("pollBtn").onclick = () => go(POLL_INDEX);
+  const fs = () => { const el = document.documentElement;
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else if (el.requestFullscreen) el.requestFullscreen().catch(() => toast("Full screen is not available here")); };
+  $("fsBtn").onclick = fs;
+
+  $("stage").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-act]"); if (!b) return;
+    const a = analyse(rows), act = b.dataset.act;
+    if (act === "reveal") reveal();
+    if (act === "copy"){ const txt = summaryText(a); try { await navigator.clipboard.writeText(txt); toast("Summary copied"); } catch(err){ download(`esami-poll-summary-${cfg.session}.txt`, txt, "text/plain"); } }
+    if (act === "csv") exportCsv(rows);
+    if (act === "json") download(`esami-poll-${cfg.session}.json`, JSON.stringify({session:cfg.session, exported:new Date().toISOString(), questions:QUESTIONS.map(q => ({id:q.id, text:q.text, options:q.options, correct:q.correct})), responses:rows, analysis:a}, null, 2), "application/json");
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (!$("settings").hidden){ if (e.key === "Escape") $("settings").hidden = true; return; }
+    if (e.target.closest && e.target.closest("input,textarea")) return;
+    const k = e.key;
+    if (["ArrowRight","ArrowDown","PageDown"," ","Enter"].includes(k)){ e.preventDefault(); go(idx + 1); }
+    else if (["ArrowLeft","ArrowUp","PageUp","Backspace"].includes(k)){ e.preventDefault(); go(idx - 1); }
+    else if (k === "Home") go(0);
+    else if (k === "End") go(SLIDES.length - 1);
+    else if (k === "p" || k === "P") go(POLL_INDEX);
+    else if (k === "r" || k === "R") reveal();
+    else if (k === "f" || k === "F") fs();
+    else if (k === "s" || k === "S") openSettings();
+  });
+  // swipe on touch screens
+  let tx = null;
+  $("deck").addEventListener("touchstart", (e) => { tx = e.touches[0].clientX; }, {passive:true});
+  $("deck").addEventListener("touchend", (e) => { if (tx == null) return; const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) go(idx + (dx < 0 ? 1 : -1)); tx = null; });
+  // auto-hide controls
+  let idleT; const wake = () => { $("controls").classList.remove("idle"); clearTimeout(idleT); idleT = setTimeout(() => $("controls").classList.add("idle"), 3000); };
+  ["mousemove","touchstart","keydown"].forEach(ev => document.addEventListener(ev, wake, {passive:true})); wake();
+
   // settings
-  const open = () => { $("setApi").value = cfg.api; $("setSession").value = cfg.session; $("setBase").value = cfg.base; $("setShort").value = cfg.short; $("testResult").textContent = ""; $("settings").hidden = false; $("setApi").focus(); };
-  $("openSettings").onclick = open;
+  function openSettings(){ $("setApi").value = cfg.api; $("setSession").value = cfg.session; $("setBase").value = cfg.base; $("setShort").value = cfg.short; $("testResult").textContent = ""; $("settings").hidden = false; $("setApi").focus(); }
+  $("openSettings").onclick = openSettings;
   $("closeSettings").onclick = () => $("settings").hidden = true;
-  $("settings").addEventListener("keydown", (e) => { if (e.key === "Escape") $("settings").hidden = true; });
   $("saveSettings").onclick = () => {
     cfg.api = $("setApi").value.trim(); cfg.session = ($("setSession").value.trim() || "esami50-ai-grading").replace(/[^\w\-]/g, "-");
     cfg.base = $("setBase").value.trim(); cfg.short = $("setShort").value.trim();
     LS.set("esamiPoll.api", cfg.api); LS.set("esamiPoll.session", cfg.session); LS.set("esamiPoll.base", cfg.base); LS.set("esamiPoll.short", cfg.short);
-    $("sessionLabel").textContent = cfg.session; lastSig = ""; rows = []; drawQR(); renderPanel(); refresh();
-    $("settings").hidden = true; toast("Settings saved");
+    lastSig = ""; rows = []; render(); refresh(); $("settings").hidden = true; toast("Settings saved");
   };
   $("testApi").onclick = async () => {
     const url = $("setApi").value.trim(); if (!url){ $("testResult").textContent = "Enter a URL first."; return; }
@@ -669,17 +762,16 @@ function startVoter(){
   QUESTIONS.forEach((q, i) => {
     const card = document.createElement("div"); card.className = "card qcard";
     if (q.word){
-      card.innerHTML = `<span class="qkind" style="color:${q.color}">Q${i + 1} · ${esc(q.kind)}</span>
+      card.innerHTML = `<span class="qkind" style="color:var(--navy)">Q${i + 1} · ${esc(q.kind)}</span>
         <label for="q4" style="font-weight:900;font-size:1.08rem;display:block;margin-bottom:10px">${esc(q.text)}</label>
         <input class="wordin" id="q4" name="q4" type="text" maxlength="30" autocomplete="off" autocapitalize="none" placeholder="One word, e.g. bias">`;
     } else {
-      card.innerHTML = `<fieldset><span class="qkind" style="color:${q.color}">Q${i + 1} · ${esc(q.kind)}</span>
+      card.innerHTML = `<fieldset><span class="qkind" style="color:${["var(--navy)","var(--orange)","var(--green)"][i]}">Q${i + 1} · ${esc(q.kind)}</span>
         <legend>${esc(q.text)}</legend>` + q.options.map(o =>
         `<label class="opt"><input type="radio" name="${q.id}" value="${o.id}" id="${q.id}-${o.id}"><span>${esc(o.label)}</span></label>`).join("") + `</fieldset>`;
     }
     qc.appendChild(card);
   });
-  // restore previous answers on this device
   try { const prev = JSON.parse(LS.get("esamiPoll.mine." + cfg.session, "null"));
     if (prev){ ["role","q1","q2","q3"].forEach(k => { const el = document.querySelector(`input[name="${k}"][value="${prev[k]}"]`); if (el) el.checked = true; }); $("q4").value = prev.q4 || ""; }
   } catch(e){}

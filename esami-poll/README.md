@@ -5,10 +5,24 @@ An interactive version of slide 20, "Your turn: four questions for the room", fr
 
 | View | URL | Who |
 |---|---|---|
-| Presenter (QR code, live results, analysis) | `…/esami-poll/` | Projected on screen |
+| Presentation with live poll | `…/esami-poll/` | Projected on screen |
 | Participant voting form | `…/esami-poll/?s=<session>&api=<server>#vote` | Opened by the QR code |
 
 The QR code builds the participant link for you, so participants never type anything.
+
+## Running order (28 slides)
+
+| Slides | Content |
+|---|---|
+| 1–18 | The presentation, from the title to *Limitations and the road ahead* |
+| 19 | **Your turn:** the four questions with a large QR code |
+| 20–23 | **Q1–Q4 live results**, with *Reveal answer* on Q1 and Q2 and a word cloud on Q4 |
+| 24–25 | **Live summary and analysis** for discussion |
+| 26 | Conclusion: a first reader, not an autonomous marker |
+| 27–28 | About the presenter · Follow ESAMI |
+
+**Keys:** → / Space / PgDn next, ← / PgUp back, **P** jump to the poll, **R** reveal answer, **F** full screen, **S** settings.
+Presentation clickers work, and so does swiping on a tablet. The page remembers the last slide shown.
 
 ## What it does
 
@@ -33,7 +47,7 @@ The QR code builds the participant link for you, so participants never type anyt
 All responses go into the sheet's `Responses` tab, which you own.
 
 ### 2. Host the page
-Any static host works. With GitHub Pages:
+Upload the whole `esami-poll` folder (`index.html`, `slides/`, `vendor/`) to any static HTTPS host. With GitHub Pages:
 1. Merge this folder into the branch you publish (e.g. `main`).
 2. Go to repo **Settings → Pages**, choose *Deploy from a branch*, then pick `main` and `/ (root)`.
 3. The presenter page will be at `https://<user>.github.io/Adelani-AI-Video-Detector/esami-poll/`.
