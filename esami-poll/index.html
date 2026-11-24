@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ESAMI AI Grading Poll</title>
+<meta name="description" content="Live audience poll for 'AI-Powered Grading of Handwritten Theory Examinations', ESAMI@50 Colloquium, 25–27 November 2026.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap">
+<script src="vendor/qrcode-generator.js"></script>
+<script>window.qrcode || document.write('<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"><\/script>')</script>
+<style>
+/* Layout: presenter = QR rail on the left + one large question stage on the right; participant = single phone column. */
+:root{
+  --bg:#F3F5FB; --surface:#FFFFFF; --surface-2:#EAEEFA; --ink:#121838; --muted:#596084; --line:#D9DEEF;
+  --navy:#13208F; --green:#12882E; --orange:#E7861A; --red:#C42B2B; --amber:#D9A21B;
+  --navy-soft:#E3E7FB; --green-soft:#E2F3E6; --orange-soft:#FDF0DF; --red-soft:#FBE5E5;
+  --bar:#13208F; --bar-ok:#12882E;
+  --font:"Lato", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  --radius:14px; --shadow:0 2px 10px rgba(18,24,56,.08);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0B0F2B; --surface:#151A42; --surface-2:#1D2354; --ink:#EEF0FA; --muted:#A6ACCD; --line:#2B3270;
+  --navy:#9AA8FF; --green:#4FC36D; --orange:#FFAE4D; --red:#FF7A7A; --amber:#F2C14E;
+  --navy-soft:#1F2760; --green-soft:#16361F; --orange-soft:#3A2A12; --red-soft:#3D1A1F;
+  --bar:#7F8FFF; --bar-ok:#4FC36D; --shadow:0 2px 10px rgba(0,0,0,.35); color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --bg:#0B0F2B; --surface:#151A42; --surface-2:#1D2354; --ink:#EEF0FA; --muted:#A6ACCD; --line:#2B3270;
+  --navy:#9AA8FF; --green:#4FC36D; --orange:#FFAE4D; --red:#FF7A7A; --amber:#F2C14E;
+  --navy-soft:#1F2760; --green-soft:#16361F; --orange-soft:#3A2A12; --red-soft:#3D1A1F;
+  --bar:#7F8FFF; --bar-ok:#4FC36D; --shadow:0 2px 10px rgba(0,0,0,.35); color-scheme:dark; }
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:calc(env(safe-area-inset-top,0px) + 16px) calc(env(safe-area-inset-bottom,0px) + 24px)}
+h1,h2,h3{line-height:1.2;text-wrap:balance;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.wrap{max-width:1320px;margin:0 auto}
+.eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--green)}
+.muted{color:var(--muted)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:.5rem 1rem;font-weight:700;font-size:.9rem}
+.btn:hover{border-color:var(--navy)}
+.btn.primary{background:var(--navy);border-color:var(--navy);color:var(--surface)}
+.btn.small{padding:.3rem .75rem;font-size:.82rem}
+.chip{display:inline-flex;align-items:center;gap:.4rem;padding:.2rem .65rem;border-radius:999px;background:var(--surface-2);font-size:.82rem;font-weight:700}
+.dot{width:.6rem;height:.6rem;border-radius:50%;background:var(--muted)}
+.dot.ok{background:var(--green)} .dot.warn{background:var(--amber)} .dot.bad{background:var(--red)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+[hidden]{display:none!important}
+
+/* ---------- presenter ---------- */
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+.top h1{font-size:clamp(1.5rem,2.6vw,2.3rem);font-weight:900;color:var(--navy)}
+.top .actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.stage{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.stage{grid-template-columns:minmax(0,1fr)}}
+.join{padding:20px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+.join h2{font-size:1.1rem;color:var(--navy)}
+.qrbox{background:#FFFFFF;padding:12px;border-radius:12px;width:100%;max-width:290px;aspect-ratio:1;display:grid;place-items:center}
+.qrbox svg{width:100%;height:auto;display:block;shape-rendering:crispEdges}
+.joinlink{font-size:.8rem;word-break:break-all;color:var(--muted);max-width:100%}
+.count{display:flex;align-items:baseline;gap:.5rem;justify-content:center}
+.count b{font-size:3rem;font-weight:900;color:var(--green);font-variant-numeric:tabular-nums;line-height:1}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.tab{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:.55rem .9rem;font-weight:700;font-size:.9rem;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--navy);border-color:var(--navy);color:var(--surface)}
+.panel{padding:24px clamp(16px,3vw,36px)}
+.qhead{display:flex;gap:16px;align-items:flex-start;margin-bottom:18px}
+.qbadge{flex:none;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:1.1rem;color:#FFFFFF}
+.qtitle{font-size:clamp(1.3rem,2.4vw,2rem);font-weight:900}
+.qkind{font-size:.85rem;font-weight:700}
+.bars{display:flex;flex-direction:column;gap:12px}
+.barrow{display:grid;grid-template-columns:minmax(0,1fr) 5.5rem;gap:4px 14px;align-items:center}
+.barlabel{font-weight:700;font-size:clamp(1rem,1.5vw,1.25rem);min-width:0}
+.barlabel .tick{color:var(--green);font-weight:900}
+.barnum{text-align:right;font-variant-numeric:tabular-nums;font-weight:900;font-size:1.15rem}
+.barnum small{font-weight:400;color:var(--muted);font-size:.8rem}
+.track{grid-column:1 / -1;height:22px;background:var(--surface-2);border-radius:6px;overflow:hidden}
+.fill{height:100%;width:0;background:var(--bar);border-radius:6px;transition:width .6s ease}
+.fill.ok{background:var(--bar-ok)}
+.fill.dim{opacity:.45}
+.explain{margin-top:20px;padding:16px 18px;border-radius:12px;background:var(--green-soft);border:1px solid var(--line)}
+.explain b{color:var(--green)}
+.panelfoot{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-top:20px}
+.cloud{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:center;align-items:center;min-height:220px;padding:12px;background:var(--surface-2);border-radius:12px}
+.cloud span{font-weight:900;line-height:1.1}
+.empty{padding:36px 12px;text-align:center;color:var(--muted)}
+
+/* analysis */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0 20px}
+.kpi{padding:14px 16px;border-radius:12px;background:var(--surface-2)}
+.kpi b{display:block;font-size:1.9rem;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi span{font-size:.85rem;color:var(--muted)}
+.narr{font-size:1.05rem;max-width:75ch}
+.narr p{margin:.4rem 0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px;margin-top:18px}
+.sub{padding:16px;border:1px solid var(--line);border-radius:12px;min-width:0}
+.sub h3{font-size:1rem;color:var(--navy);margin-bottom:10px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
+th,td{padding:.4rem .5rem;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--muted);font-weight:700}
+td.n{text-align:right}
+.prompts{margin:0;padding-left:1.2rem}
+.prompts li{margin:.35rem 0}
+.theme{display:grid;grid-template-columns:minmax(0,1fr) 3rem;gap:2px 10px;align-items:center;margin-bottom:8px}
+.theme .track{height:10px}
+
+/* settings drawer */
+.overlay{position:fixed;inset:0;background:rgba(5,8,30,.55);display:grid;place-items:center;z-index:50;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.dialog{width:min(620px,100%);max-height:100%;overflow:auto;padding:22px}
+.dialog h2{color:var(--navy);margin-bottom:6px}
+.field{display:flex;flex-direction:column;gap:4px;margin:14px 0}
+.field label{font-weight:700;font-size:.9rem}
+.field input{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:.6rem .75rem;width:100%}
+.field .hint{font-size:.8rem;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.notice{padding:10px 14px;border-radius:10px;background:var(--orange-soft);font-size:.9rem;margin-bottom:14px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 20px);background:var(--ink);color:var(--bg);padding:.6rem 1.1rem;border-radius:999px;font-weight:700;z-index:60}
+
+/* ---------- participant ---------- */
+.phone{max-width:560px;margin:0 auto}
+.phone header{margin-bottom:14px}
+.phone h1{font-size:1.45rem;font-weight:900;color:var(--navy);margin-top:4px}
+.qcard{padding:18px;margin-bottom:14px}
+.qcard legend{font-weight:900;font-size:1.08rem;padding:0;margin-bottom:10px}
+.qcard fieldset{border:0;margin:0;padding:0;min-width:0}
+.qcard .qkind{display:block;margin-bottom:4px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:.7rem .85rem;border:1.5px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer;background:var(--surface)}
+.opt input{margin-top:.25rem;accent-color:var(--navy);width:1.1rem;height:1.1rem;flex:none}
+.opt:has(input:checked){border-color:var(--navy);background:var(--navy-soft)}
+.roles{display:flex;flex-wrap:wrap;gap:8px}
+.roles .opt{margin:0;padding:.45rem .75rem;border-radius:999px;align-items:center}
+.roles .opt input{margin:0}
+.wordin{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:.75rem .9rem;background:var(--surface);font-size:1.05rem}
+.submit{width:100%;padding:.9rem;font-size:1.1rem;border-radius:14px}
+.err{color:var(--red);font-weight:700;margin:8px 0}
+.fb{padding:18px;margin-bottom:14px}
+.fbitem{padding:12px 0;border-top:1px solid var(--line)}
+.fbitem:first-of-type{border-top:0}
+.ok{color:var(--green);font-weight:900} .no{color:var(--red);font-weight:900}
+footer.small{margin-top:28px;font-size:.8rem;color:var(--muted);text-align:center}
+@media (prefers-reduced-motion: reduce){ .fill{transition:none} }
+</style>
+</head>
+<body>
+
+<!-- =================== PRESENTER VIEW =================== -->
+<div id="presenter" class="wrap" hidden>
+  <div class="top">
+    <div>
+      <div class="eyebrow">ESAMI@50 Colloquium · Interactive session</div>
+      <h1>Your turn: four questions for the room</h1>
+      <div class="muted">AI-Powered Grading of Handwritten Theory Examinations · Dr. Michael Adelani Adewusi</div>
+    </div>
+    <div class="actions">
+      <span class="chip" id="status"><span class="dot" id="statusDot"></span><span id="statusText">Connecting…</span></span>
+      <span class="chip">Session <span id="sessionLabel"></span></span>
+      <button class="btn" id="openSettings" type="button">Settings</button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <aside class="card join" aria-label="Join the poll">
+      <h2>Scan to vote</h2>
+      <div class="qrbox" id="qr" role="img" aria-label="QR code linking to the voting page"></div>
+      <div class="joinlink" id="joinLink"></div>
+      <button class="btn small" id="copyLink" type="button">Copy voting link</button>
+      <div class="count" aria-live="polite"><b id="nResp">0</b><span class="muted">responses</span></div>
+      <div class="muted" style="font-size:.85rem">Results update every few seconds.</div>
+    </aside>
+
+    <section class="card" style="min-width:0">
+      <div class="tabs" role="tablist" id="tabs" style="padding:16px 16px 0"></div>
+      <div class="panel" id="panel"></div>
+    </section>
+  </div>
+</div>
+
+<!-- =================== PARTICIPANT VIEW =================== -->
+<div id="voter" class="phone" hidden>
+  <header>
+    <div class="eyebrow">ESAMI@50 · AI grading session</div>
+    <h1>Four quick questions</h1>
+    <div class="muted">Anonymous. Takes under a minute. You can change your answers until the session closes.</div>
+  </header>
+  <div id="notConfigured" class="notice" hidden>This voting link is missing its results server, so answers will only be saved on this device. Please scan the QR code on the presenter's screen again.</div>
+
+  <form id="voteForm" novalidate>
+    <div class="card qcard">
+      <fieldset>
+        <legend>Which best describes you? <span class="muted" style="font-weight:400">(optional)</span></legend>
+        <div class="roles" id="roleOpts"></div>
+      </fieldset>
+    </div>
+    <div id="qCards"></div>
+    <div class="err" id="formErr" role="alert" hidden></div>
+    <button class="btn primary submit" type="submit" id="submitBtn">Submit my answers</button>
+  </form>
+
+  <div id="thanks" hidden>
+    <div class="card fb">
+      <div class="eyebrow">Received</div>
+      <h2 style="color:var(--navy);margin:4px 0 8px">Thank you. Your answers are on the screen.</h2>
+      <div id="fbList"></div>
+    </div>
+    <button class="btn" type="button" id="editAgain">Change my answers</button>
+  </div>
+  <footer class="small">Kampala International University · ESAMI Headquarters, Arusha · 25–27 November 2026</footer>
+</div>
+
+<!-- settings dialog -->
+<div class="overlay" id="settings" hidden role="dialog" aria-modal="true" aria-labelledby="setTitle">
+  <div class="card dialog">
+    <h2 id="setTitle">Poll settings</h2>
+    <p class="muted" style="margin:0">Paste the Google Apps Script web-app URL to collect votes from everyone's phones. Without it the page runs in <b>demo mode</b>, which only syncs between tabs in this browser.</p>
+    <div class="field">
+      <label for="setApi">Results server URL (Apps Script web app)</label>
+      <input id="setApi" type="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
+      <span class="hint">See README.md for the 5-minute setup.</span>
+    </div>
+    <div class="field">
+      <label for="setSession">Session code</label>
+      <input id="setSession" type="text" maxlength="40" autocomplete="off">
+      <span class="hint">Change it to start a fresh poll (e.g. <code>day2-pm</code>). Earlier sessions stay in the sheet.</span>
+    </div>
+    <div class="field">
+      <label for="setBase">Public address of this page</label>
+      <input id="setBase" type="url" placeholder="https://yourname.github.io/…/esami-poll/" autocomplete="off">
+      <span class="hint">Used to build the QR code. Leave blank to use the current address.</span>
+    </div>
+    <div class="field">
+      <label for="setShort">Short link (optional)</label>
+      <input id="setShort" type="url" placeholder="https://bit.ly/…" autocomplete="off">
+      <span class="hint">If set, the QR code points here instead (a shorter link scans more easily from the back of the room).</span>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <button class="btn primary" type="button" id="saveSettings">Save</button>
+      <button class="btn" type="button" id="testApi">Test connection</button>
+      <button class="btn" type="button" id="closeSettings">Close</button>
+    </div>
+    <div id="testResult" class="muted" style="margin-top:8px"></div>
+    <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+    <h3 style="font-size:1rem;margin-bottom:6px">Rehearsal tools (demo mode only)</h3>
+    <div class="row">
+      <button class="btn small" type="button" id="loadSample">Add 40 sample responses</button>
+      <button class="btn small" type="button" id="clearDemo">Clear demo responses</button>
+    </div>
+    <p class="muted" style="font-size:.85rem">Sample responses are invented for rehearsal and are never sent to the results server.</p>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+"use strict";
+/* ============================================================
+   Content: questions from slide 20 of the ESAMI presentation
+   ============================================================ */
+const ROLES = [
+  {id:"lecturer", label:"Lecturer / examiner"},
+  {id:"leader",   label:"Academic leader"},
+  {id:"admin",    label:"Administrator / QA"},
+  {id:"student",  label:"Student / researcher"},
+  {id:"other",    label:"Other"}
+];
+const QUESTIONS = [
+  { id:"q1", kind:"Quick check", color:"var(--navy)",
+    text:"A tool always gives 2 marks more than the examiner. Its correlation with the examiner is…",
+    options:[{id:"a",label:"1.00 (perfect)"},{id:"b",label:"About 0.80"},{id:"c",label:"About 0.50"},{id:"d",label:"Close to 0"}],
+    correct:"a",
+    explain:"Correlation is <b>1.00</b>: the marks move together perfectly, yet every mark is 2 too high. Correlation is not agreement, which is why the study judged the tool on QWK, mean bias, MAE and Bland–Altman limits." },
+  { id:"q2", kind:"Quick check", color:"var(--orange)",
+    text:"Of 160 answers, how many were within one mark of the examiners?",
+    options:[{id:"a",label:"About 80 (50%)"},{id:"b",label:"About 110 (69%)"},{id:"c",label:"147 (92%)"},{id:"d",label:"All 160"}],
+    correct:"c",
+    explain:"<b>147 of 160 (91.9%)</b> were within one mark of the reference; 27 were exact. The 4 errors above 2 marks were all OCR failures on crossed-out or cursive writing." },
+  { id:"q3", kind:"Your view", color:"var(--green)",
+    text:"Would you use an AI tool as a first reader for your theory scripts?",
+    options:[{id:"a",label:"Yes, as a first reader with every mark reviewed"},{id:"b",label:"Yes, but only for low-stakes tests"},{id:"c",label:"Not yet, I need more evidence"},{id:"d",label:"No"}],
+    correct:null },
+  { id:"q4", kind:"Word cloud", color:"#2E3192",
+    text:"In one word: what worries you most about AI grading?", word:true }
+];
+
+/* Worry themes used for the analysis of Q4 */
+const THEMES = [
+  {name:"Accuracy & OCR errors", prompt:"Where should the tool hand a script straight back to a human: faint ink, crossed-out text, cursive?",
+   words:["accuracy","accurate","inaccuracy","inaccurate","error","errors","mistake","mistakes","wrong","ocr","handwriting","misread","reliability","reliable","unreliable","consistency","inconsistency","inconsistent","precision","quality","validity","correctness"]},
+  {name:"Bias & fairness", prompt:"How would we check that the tool marks fairly across student groups, languages and handwriting styles?",
+   words:["bias","biased","biases","fair","fairness","unfair","unfairness","equity","inequity","discrimination","justice","prejudice"]},
+  {name:"Trust & transparency", prompt:"What evidence would an external examiner or QA office need before accepting tool-assisted marks?",
+   words:["trust","distrust","mistrust","transparency","transparent","explainability","explainable","explanation","blackbox","opaque","accountability","accountable","responsibility","credibility","legitimacy","appeal","appeals"]},
+  {name:"Privacy & data security", prompt:"Who may see student scripts, and when is cloud OCR acceptable under our data-protection rules?",
+   words:["privacy","private","data","security","secure","confidentiality","confidential","leak","leakage","leaks","breach","hacking","gdpr","protection","consent","surveillance"]},
+  {name:"Gaming & integrity", prompt:"How do we stop students gaming a keyword-based scorer, and what changes in how we set questions?",
+   words:["cheating","cheat","gaming","manipulation","keywords","keyword","stuffing","plagiarism","integrity","exploit","loopholes","loophole"]},
+  {name:"Human role & over-reliance", prompt:"How do we keep examiners actively reviewing rather than rubber-stamping suggested marks?",
+   words:["jobs","job","replacement","replace","replacing","redundancy","unemployment","laziness","lazy","deskilling","dependence","dependency","overreliance","reliance","complacency","automation","autonomy","control","judgement","judgment","humans","human"]},
+  {name:"Meaning & context", prompt:"Which question types reward original or unexpected answers that word overlap would miss?",
+   words:["context","meaning","creativity","creative","nuance","nuances","understanding","paraphrase","paraphrasing","originality","original","interpretation","reasoning","semantics","depth","critical","thinking"]},
+  {name:"Cost & infrastructure", prompt:"What is the minimum kit (scanner, phone, laptop, connectivity) an institution needs to run this?",
+   words:["cost","costs","expensive","money","internet","connectivity","bandwidth","power","electricity","infrastructure","devices","hardware","scanner","scanning","training","skills","capacity","funding"]}
+];
+const STOP = new Set("the a an of and or to in on for is it its ai my me i we our be that this with by as at from".split(" "));
+
+/* ============================================================
+   Config & storage helpers
+   ============================================================ */
+const qs = new URLSearchParams(location.search);
+const isVoter = location.hash === "#vote" || qs.get("v") === "1";
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v == null ? d : v; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, v); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+const cfg = {
+  api:     (qs.get("api") || LS.get("esamiPoll.api", "")).trim(),
+  session: (qs.get("s")   || LS.get("esamiPoll.session", "esami50-ai-grading")).trim(),
+  base:    LS.get("esamiPoll.base", "").trim(),
+  short:   LS.get("esamiPoll.short", "").trim()
+};
+let clientId = LS.get("esamiPoll.client", "");
+if (!clientId){ clientId = "c" + Math.random().toString(36).slice(2) + Date.now().toString(36); LS.set("esamiPoll.client", clientId); }
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const pct = (n, d) => d ? Math.round(100 * n / d) : 0;
+function toast(msg){ const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 2200); }
+
+/* ============================================================
+   Backend: Google Apps Script (live) or browser-only demo mode
+   ============================================================ */
+const demoKey = () => "esamiPoll.demo." + cfg.session;
+let bc = null; try { bc = new BroadcastChannel("esamiPoll"); } catch(e) {}
+const Backend = {
+  isDemo(){ return !cfg.api; },
+  async submit(rec){
+    const body = Object.assign({session:cfg.session, clientId}, rec);
+    if (this.isDemo()){
+      const all = JSON.parse(LS.get(demoKey(), "{}"));
+      all[clientId] = Object.assign({t:new Date().toISOString(), id:clientId}, rec);
+      LS.set(demoKey(), JSON.stringify(all)); if (bc) bc.postMessage("update");
+      return {ok:true};
+    }
+    const r = await fetch(cfg.api, {method:"POST", body:JSON.stringify(body)}); // text/plain: no CORS preflight
+    const j = await r.json(); if (!j.ok) throw new Error(j.error || "Server refused the response");
+    return j;
+  },
+  async list(){
+    if (this.isDemo()) return Object.values(JSON.parse(LS.get(demoKey(), "{}")));
+    const r = await fetch(cfg.api + (cfg.api.includes("?") ? "&" : "?") + "action=results&session=" + encodeURIComponent(cfg.session) + "&_=" + Date.now());
+    const j = await r.json(); if (!j.ok) throw new Error(j.error || "Server error");
+    return j.responses || [];
+  }
+};
+
+/* ============================================================
+   Analysis engine
+   ============================================================ */
+function normWord(w){
+  w = String(w || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z\- ]/g, " ").trim();
+  const parts = w.split(/[\s\-]+/).filter(x => x && !STOP.has(x));
+  if (!parts.length) return "";
+  w = parts.join(" ");
+  if (w === "black box") w = "blackbox";
+  if (w === "over reliance") w = "overreliance";
+  return w;
+}
+function themeOf(word){
+  if (!word) return null;
+  const toks = [word, ...word.split(" ")];
+  for (const th of THEMES){
+    if (toks.some(t => th.words.includes(t) || th.words.includes(t.replace(/s$/, "")))) return th.name;
+  }
+  return "Other";
+}
+function analyse(rows){
+  const n = rows.length;
+  const a = {n, byRole:{}, q:{}, words:{}, themes:{}, themeByQ3:{}, q3ByRole:{}};
+  ROLES.forEach(r => a.byRole[r.id] = 0); a.byRole[""] = 0;
+  QUESTIONS.forEach(q => { if (!q.word){ a.q[q.id] = {answered:0}; q.options.forEach(o => a.q[q.id][o.id] = 0); } });
+  for (const r of rows){
+    a.byRole[r.role || ""] = (a.byRole[r.role || ""] || 0) + 1;
+    QUESTIONS.forEach(q => { if (!q.word && r[q.id] && a.q[q.id][r[q.id]] != null){ a.q[q.id][r[q.id]]++; a.q[q.id].answered++; } });
+    const w = normWord(r.q4);
+    if (w){
+      a.words[w] = (a.words[w] || 0) + 1;
+      const th = themeOf(w); a.themes[th] = (a.themes[th] || 0) + 1;
+      const k = r.q3 || "none"; a.themeByQ3[k] = a.themeByQ3[k] || {}; a.themeByQ3[k][th] = (a.themeByQ3[k][th] || 0) + 1;
+    }
+    if (r.q3){ const role = r.role || ""; a.q3ByRole[role] = a.q3ByRole[role] || {a:0,b:0,c:0,d:0}; a.q3ByRole[role][r.q3]++; }
+  }
+  const q1 = a.q.q1, q2 = a.q.q2, q3 = a.q.q3;
+  a.q1Correct = pct(q1.a, q1.answered);
+  a.q2Correct = pct(q2.c, q2.answered);
+  a.q2Under = pct(q2.a + q2.b, q2.answered);
+  a.adopt = pct(q3.a + q3.b, q3.answered);
+  a.adoptFull = pct(q3.a, q3.answered);
+  a.notYet = pct(q3.c, q3.answered);
+  a.no = pct(q3.d, q3.answered);
+  a.wordCount = Object.values(a.words).reduce((s, x) => s + x, 0);
+  a.topWords = Object.entries(a.words).sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0]));
+  a.topThemes = Object.entries(a.themes).sort((x, y) => y[1] - x[1]);
+  const hes = {}; ["c","d"].forEach(k => Object.entries(a.themeByQ3[k] || {}).forEach(([t, c]) => hes[t] = (hes[t] || 0) + c));
+  a.hesitantThemes = Object.entries(hes).sort((x, y) => y[1] - x[1]);
+  return a;
+}
+function narrative(a){
+  if (!a.n) return ["No responses yet. Once participants scan the QR code, a summary will appear here."];
+  const roleBits = ROLES.filter(r => a.byRole[r.id]).map(r => `${a.byRole[r.id]} ${r.label}`);
+  const out = [];
+  out.push(`<b>${a.n}</b> participant${a.n === 1 ? "" : "s"} responded${roleBits.length ? ` (${esc(roleBits.join(", "))})` : ""}.`);
+  if (a.q.q1.answered){
+    const wrongTop = ["b","c","d"].map(k => [k, a.q.q1[k]]).sort((x, y) => y[1] - x[1])[0];
+    const lbl = QUESTIONS[0].options.find(o => o.id === wrongTop[0]).label;
+    out.push(`<b>Correlation vs agreement (Q1):</b> ${a.q1Correct}% recognised that a tool that is always 2 marks high still has a correlation of 1.00. ` +
+      (a.q1Correct >= 70 ? "Most of the room already separates correlation from agreement."
+        : `The commonest answer among the rest was “${esc(lbl)}”, so many participants equate a high correlation with close marks. This supports reporting MAE, bias and Bland–Altman limits, not correlation alone.`));
+  }
+  if (a.q.q2.answered){
+    out.push(`<b>Expected accuracy (Q2):</b> ${a.q2Correct}% chose the actual result (147 of 160 within one mark). ` +
+      (a.q2Under >= 50 ? `${a.q2Under}% expected the tool to do worse, so the study's agreement figures are better than the room's expectations.`
+        : a.q.q2.d ? `${pct(a.q.q2.d, a.q.q2.answered)}% expected perfect agreement, which no examiner pair achieves either.` : ""));
+  }
+  if (a.q.q3.answered){
+    out.push(`<b>Readiness to adopt (Q3):</b> ${a.adopt}% would use the tool as a first reader (${a.adoptFull}% with every mark reviewed, ${a.adopt - a.adoptFull}% only for low-stakes tests); ${a.notYet}% want more evidence and ${a.no}% would not use it.`);
+  }
+  if (a.wordCount){
+    const [w, c] = a.topWords[0];
+    const [t, tc] = a.topThemes[0];
+    let s = `<b>Main concern (Q4):</b> the most frequent word was “${esc(w)}” (${c}); grouped into themes, <b>${esc(t)}</b> leads with ${pct(tc, a.wordCount)}% of ${a.wordCount} words.`;
+    if (a.hesitantThemes.length) s += ` Among those not ready to adopt, the leading concern is <b>${esc(a.hesitantThemes[0][0])}</b>.`;
+    out.push(s);
+  }
+  return out;
+}
+function prompts(a){
+  const list = [];
+  a.topThemes.filter(([t]) => t !== "Other").slice(0, 3).forEach(([t]) => { const th = THEMES.find(x => x.name === t); if (th) list.push(th.prompt); });
+  if (a.q.q1.answered && a.q1Correct < 70) list.push("If correlation can be perfect while every mark is wrong, which agreement statistics should our institution require before adopting any marking tool?");
+  if (a.q.q3.answered && a.notYet >= 25) list.push("What evidence would move you from “not yet” to “yes”: a larger multi-site study, a pilot in your own department, or something else?");
+  if (!list.length) list.push("Which safeguard matters most to you: reviewing every mark, re-marking scripts near the pass mark, or flagging low-confidence answers?");
+  return list;
+}
+
+/* ============================================================
+   Presenter view
+   ============================================================ */
+let rows = [], current = LS.get("esamiPoll.tab", "q1"), revealed = {};
+const TABS = [...QUESTIONS.map((q, i) => ({id:q.id, label:`Q${i + 1} · ${q.kind}`})), {id:"analysis", label:"Summary & analysis"}];
+
+function voteUrl(){
+  if (cfg.short) return cfg.short;
+  let base = cfg.base || (location.origin + location.pathname);
+  if (!/^https?:/.test(base)) base = location.href.split("#")[0].split("?")[0];
+  const p = new URLSearchParams(); p.set("s", cfg.session); if (cfg.api) p.set("api", cfg.api);
+  return base + "?" + p.toString() + "#vote";
+}
+function drawQR(){
+  const url = voteUrl(), box = $("qr");
+  box.textContent = ""; $("joinLink").textContent = url;
+  if (typeof qrcode === "undefined"){ box.textContent = "QR generator could not load. Share the link below."; return; }
+  try { const q = qrcode(0, "L"); q.addData(url); q.make(); box.innerHTML = q.createSvgTag({cellSize:8, margin:2, scalable:true}); }
+  catch(e){ box.textContent = "Link too long for a QR code. Add a short link in Settings."; }
+}
+function renderTabs(){
+  const t = $("tabs"); t.textContent = "";
+  TABS.forEach(tb => {
+    const b = document.createElement("button");
+    b.className = "tab"; b.type = "button"; b.setAttribute("role","tab"); b.textContent = tb.label;
+    b.setAttribute("aria-selected", tb.id === current ? "true" : "false");
+    b.onclick = () => { current = tb.id; LS.set("esamiPoll.tab", current); renderTabs(); renderPanel(); };
+    t.appendChild(b);
+  });
+}
+function barsHTML(q, a){
+  const d = a.q[q.id], tot = d.answered, max = Math.max(1, ...q.options.map(o => d[o.id]));
+  const show = revealed[q.id];
+  return `<div class="bars">` + q.options.map(o => {
+    const c = d[o.id], isOk = show && q.correct === o.id, dim = show && q.correct && q.correct !== o.id;
+    return `<div class="barrow"><div class="barlabel">${isOk ? '<span class="tick">✓ </span>' : ""}${esc(o.label)}</div>
+      <div class="barnum">${pct(c, tot)}% <small>(${c})</small></div>
+      <div class="track"><div class="fill ${isOk ? "ok" : ""} ${dim ? "dim" : ""}" style="width:${(100 * c / max).toFixed(1)}%"></div></div></div>`;
+  }).join("") + `</div>`;
+}
+function cloudHTML(a){
+  if (!a.topWords.length) return `<div class="cloud"><div class="empty">Words will appear here as people answer.</div></div>`;
+  const words = a.topWords.slice(0, 60), max = words[0][1], min = words[words.length - 1][1];
+  const colors = ["var(--navy)","var(--green)","var(--orange)","var(--red)","var(--muted)"];
+  const order = words.map((w, i) => [w, i]).sort((x, y) => ((x[1] * 7919) % 13) - ((y[1] * 7919) % 13));
+  return `<div class="cloud" aria-label="Word cloud">` + order.map(([[w, c], i]) => {
+    const size = 1 + 2.6 * (max === min ? 1 : (c - min) / (max - min));
+    return `<span style="font-size:${size.toFixed(2)}rem;color:${colors[i % colors.length]}" title="${esc(w)}: ${c}">${esc(w)}</span>`;
+  }).join("") + `</div>`;
+}
+function renderPanel(){
+  const a = analyse(rows), p = $("panel");
+  $("nResp").textContent = a.n;
+  if (current === "analysis"){ p.innerHTML = analysisHTML(a); wireAnalysis(); return; }
+  const qi = QUESTIONS.findIndex(q => q.id === current), q = QUESTIONS[qi];
+  const answered = q.word ? a.wordCount : a.q[q.id].answered;
+  let body = q.word ? cloudHTML(a) : barsHTML(q, a);
+  if (q.word && a.topThemes.length){
+    body += `<div class="grid2"><div class="sub"><h3>Themes</h3>${themesHTML(a)}</div><div class="sub"><h3>Top words</h3>${topWordsTable(a, 8)}</div></div>`;
+  }
+  if (q.correct && revealed[q.id]) body += `<div class="explain">${q.explain}</div>`;
+  p.innerHTML = `<div class="qhead"><div class="qbadge" style="background:${q.color}">Q${qi + 1}</div>
+      <div><div class="qkind" style="color:${q.color}">${esc(q.kind)}</div><h2 class="qtitle">${esc(q.text)}</h2></div></div>
+    ${body}
+    <div class="panelfoot"><span class="muted">${answered} answer${answered === 1 ? "" : "s"}</span>
+      <div class="row">
+        ${q.correct ? `<button class="btn" type="button" id="reveal">${revealed[q.id] ? "Hide answer" : "Reveal answer"}</button>` : ""}
+        ${qi > 0 ? `<button class="btn" type="button" id="prevQ">Previous</button>` : ""}
+        <button class="btn primary" type="button" id="nextQ">${qi < QUESTIONS.length - 1 ? "Next question" : "Show summary"}</button>
+      </div></div>`;
+  const go = (id) => { current = id; LS.set("esamiPoll.tab", id); renderTabs(); renderPanel(); };
+  if ($("reveal")) $("reveal").onclick = () => { revealed[q.id] = !revealed[q.id]; renderPanel(); };
+  if ($("prevQ")) $("prevQ").onclick = () => go(QUESTIONS[qi - 1].id);
+  $("nextQ").onclick = () => go(qi < QUESTIONS.length - 1 ? QUESTIONS[qi + 1].id : "analysis");
+}
+function themesHTML(a){
+  const tot = a.wordCount || 1;
+  return a.topThemes.map(([t, c]) => `<div class="theme"><span>${esc(t)}</span><span class="barnum" style="font-size:.95rem">${c}</span>
+    <div class="track"><div class="fill" style="width:${(100 * c / tot).toFixed(1)}%"></div></div></div>`).join("") || `<div class="muted">No words yet.</div>`;
+}
+function topWordsTable(a, k){
+  return `<div class="tbl"><table><thead><tr><th>Word</th><th>Theme</th><th class="n">n</th></tr></thead><tbody>` +
+    a.topWords.slice(0, k).map(([w, c]) => `<tr><td>${esc(w)}</td><td class="muted">${esc(themeOf(w))}</td><td class="n">${c}</td></tr>`).join("") + `</tbody></table></div>`;
+}
+function analysisHTML(a){
+  const roleRows = [...ROLES, {id:"", label:"Not stated"}].filter(r => a.q3ByRole[r.id]).map(r => {
+    const d = a.q3ByRole[r.id], t = d.a + d.b + d.c + d.d;
+    return `<tr><td>${esc(r.label)}</td><td class="n">${t}</td><td class="n">${pct(d.a + d.b, t)}%</td><td class="n">${pct(d.c, t)}%</td><td class="n">${pct(d.d, t)}%</td></tr>`;
+  }).join("");
+  return `<div class="eyebrow">Live analysis · session ${esc(cfg.session)}</div>
+    <h2 class="qtitle" style="margin-top:4px">What the room told us</h2>
+    <div class="kpis">
+      <div class="kpi"><b>${a.n}</b><span>responses</span></div>
+      <div class="kpi"><b style="color:var(--navy)">${a.q.q1.answered ? a.q1Correct + "%" : "–"}</b><span>Q1 correct (r = 1.00)</span></div>
+      <div class="kpi"><b style="color:var(--orange)">${a.q.q2.answered ? a.q2Correct + "%" : "–"}</b><span>Q2 correct (147 of 160)</span></div>
+      <div class="kpi"><b style="color:var(--green)">${a.q.q3.answered ? a.adopt + "%" : "–"}</b><span>would use it as a first reader</span></div>
+      <div class="kpi"><b style="font-size:1.35rem;padding-block:.2rem">${a.topThemes.length ? esc(a.topThemes[0][0]) : "–"}</b><span>leading worry theme</span></div>
+    </div>
+    <div class="narr">${narrative(a).map(s => `<p>${s}</p>`).join("")}</div>
+    <div class="grid2">
+      <div class="sub"><h3>Adoption by role (Q3)</h3>${roleRows ? `<div class="tbl"><table><thead><tr><th>Role</th><th class="n">n</th><th class="n">Yes</th><th class="n">Not yet</th><th class="n">No</th></tr></thead><tbody>${roleRows}</tbody></table></div>` : `<div class="muted">No answers yet.</div>`}</div>
+      <div class="sub"><h3>Worry themes (Q4)</h3>${themesHTML(a)}</div>
+      <div class="sub"><h3>Top words</h3>${a.topWords.length ? topWordsTable(a, 10) : `<div class="muted">No words yet.</div>`}</div>
+      <div class="sub"><h3>Suggested discussion questions</h3><ol class="prompts">${prompts(a).map(s => `<li>${esc(s)}</li>`).join("")}</ol></div>
+    </div>
+    <div class="panelfoot"><span class="muted">Figures recalculate live as responses arrive.</span>
+      <div class="row">
+        <button class="btn" type="button" id="copySummary">Copy summary text</button>
+        <button class="btn" type="button" id="dlCsv">Download CSV</button>
+        <button class="btn" type="button" id="dlJson">Download JSON</button>
+      </div></div>`;
+}
+function summaryText(a){
+  const strip = (s) => s.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"").replace(/&#39;/g, "'");
+  const lines = [`ESAMI@50 Colloquium – AI Grading audience poll (session ${cfg.session}, ${new Date().toLocaleString()})`, ""];
+  narrative(a).forEach(s => lines.push("• " + strip(s)));
+  lines.push("", "Question distributions:");
+  QUESTIONS.filter(q => !q.word).forEach((q, i) => {
+    lines.push(`Q${i + 1}. ${q.text}`);
+    q.options.forEach(o => lines.push(`   ${o.label}${q.correct === o.id ? " [correct]" : ""}: ${a.q[q.id][o.id]} (${pct(a.q[q.id][o.id], a.q[q.id].answered)}%)`));
+  });
+  lines.push("Q4. Worry themes: " + a.topThemes.map(([t, c]) => `${t} ${c}`).join("; "));
+  lines.push("Q4. Words: " + a.topWords.map(([w, c]) => `${w} (${c})`).join(", "));
+  lines.push("", "Discussion questions:"); prompts(a).forEach((p, i) => lines.push(`${i + 1}. ${p}`));
+  return lines.join("\n");
+}
+function download(name, text, type){
+  const blob = new Blob([text], {type}); const u = URL.createObjectURL(blob);
+  const el = document.createElement("a"); el.href = u; el.download = name; document.body.appendChild(el); el.click(); el.remove();
+  setTimeout(() => URL.revokeObjectURL(u), 1000);
+}
+function wireAnalysis(){
+  const a = analyse(rows);
+  $("copySummary").onclick = async () => {
+    const txt = summaryText(a);
+    try { await navigator.clipboard.writeText(txt); toast("Summary copied"); }
+    catch(e){ download(`esami-poll-summary-${cfg.session}.txt`, txt, "text/plain"); }
+  };
+  $("dlCsv").onclick = () => {
+    const head = ["timestamp","session","role","q1","q1_correct","q2","q2_correct","q3","q4_raw","q4_word","q4_theme"];
+    const cell = (v) => { v = String(v == null ? "" : v); if (/^[=+\-@]/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
+    const lines = [head.join(",")].concat(rows.map(r => { const w = normWord(r.q4);
+      return [r.t, cfg.session, r.role, r.q1, r.q1 ? +(r.q1 === "a") : "", r.q2, r.q2 ? +(r.q2 === "c") : "", r.q3, r.q4, w, w ? themeOf(w) : ""].map(cell).join(","); }));
+    download(`esami-poll-${cfg.session}.csv`, lines.join("\n"), "text/csv");
+  };
+  $("dlJson").onclick = () => download(`esami-poll-${cfg.session}.json`, JSON.stringify({session:cfg.session, exported:new Date().toISOString(), questions:QUESTIONS.map(q => ({id:q.id, text:q.text, options:q.options, correct:q.correct})), responses:rows, analysis:a}, null, 2), "application/json");
+}
+
+/* live refresh */
+let lastSig = "";
+async function refresh(){
+  try {
+    const data = await Backend.list();
+    const sig = JSON.stringify(data);
+    setStatus(Backend.isDemo() ? "warn" : "ok", Backend.isDemo() ? "Demo mode (this browser only)" : "Live");
+    if (sig !== lastSig){ lastSig = sig; rows = data; renderPanel(); }
+  } catch(e){ setStatus("bad", "Can't reach results server"); }
+}
+function setStatus(kind, text){ $("statusDot").className = "dot " + kind; $("statusText").textContent = text; }
+
+function startPresenter(){
+  $("presenter").hidden = false;
+  $("sessionLabel").textContent = cfg.session;
+  if (!TABS.some(t => t.id === current)) current = "q1";
+  renderTabs(); renderPanel(); drawQR(); refresh();
+  setInterval(() => { if (!document.hidden) refresh(); }, 4000);
+  if (bc) bc.onmessage = refresh;
+  window.addEventListener("storage", (e) => { if (e.key === demoKey()) refresh(); });
+  $("copyLink").onclick = async () => { try { await navigator.clipboard.writeText(voteUrl()); toast("Voting link copied"); } catch(e){ toast("Select the link text to copy it"); } };
+  // settings
+  const open = () => { $("setApi").value = cfg.api; $("setSession").value = cfg.session; $("setBase").value = cfg.base; $("setShort").value = cfg.short; $("testResult").textContent = ""; $("settings").hidden = false; $("setApi").focus(); };
+  $("openSettings").onclick = open;
+  $("closeSettings").onclick = () => $("settings").hidden = true;
+  $("settings").addEventListener("keydown", (e) => { if (e.key === "Escape") $("settings").hidden = true; });
+  $("saveSettings").onclick = () => {
+    cfg.api = $("setApi").value.trim(); cfg.session = ($("setSession").value.trim() || "esami50-ai-grading").replace(/[^\w\-]/g, "-");
+    cfg.base = $("setBase").value.trim(); cfg.short = $("setShort").value.trim();
+    LS.set("esamiPoll.api", cfg.api); LS.set("esamiPoll.session", cfg.session); LS.set("esamiPoll.base", cfg.base); LS.set("esamiPoll.short", cfg.short);
+    $("sessionLabel").textContent = cfg.session; lastSig = ""; rows = []; drawQR(); renderPanel(); refresh();
+    $("settings").hidden = true; toast("Settings saved");
+  };
+  $("testApi").onclick = async () => {
+    const url = $("setApi").value.trim(); if (!url){ $("testResult").textContent = "Enter a URL first."; return; }
+    $("testResult").textContent = "Testing…";
+    try { const r = await fetch(url + (url.includes("?") ? "&" : "?") + "action=ping"); const j = await r.json();
+      $("testResult").textContent = j.ok ? "Connected. The results server is answering." : "The server answered with an error: " + (j.error || "unknown");
+    } catch(e){ $("testResult").textContent = "Could not connect. Check the URL ends in /exec and the deployment allows access to Anyone."; }
+  };
+  $("loadSample").onclick = () => {
+    if (!Backend.isDemo()){ toast("Sample data is only available in demo mode"); return; }
+    const all = JSON.parse(LS.get(demoKey(), "{}"));
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const words = ["bias","accuracy","privacy","trust","cheating","bias","errors","fairness","handwriting","jobs","context","transparency","accuracy","internet","reliability","laziness"];
+    for (let i = 0; i < 40; i++){
+      all["sample" + i + Math.random().toString(36).slice(2, 6)] = { t:new Date().toISOString(), id:"sample" + i, sample:true,
+        role:pick(["lecturer","lecturer","lecturer","leader","admin","student","other"]),
+        q1:pick(["a","a","b","b","b","c","d"]), q2:pick(["a","b","b","c","c","c","d"]), q3:pick(["a","a","b","c","c","d"]), q4:pick(words) };
+    }
+    LS.set(demoKey(), JSON.stringify(all)); if (bc) bc.postMessage("update"); refresh(); toast("40 sample responses added");
+  };
+  $("clearDemo").onclick = () => { LS.del(demoKey()); if (bc) bc.postMessage("update"); lastSig = ""; refresh(); toast("Demo responses cleared"); };
+}
+
+/* ============================================================
+   Participant view
+   ============================================================ */
+function startVoter(){
+  $("voter").hidden = false;
+  if (!cfg.api) $("notConfigured").hidden = false;
+  const roleBox = $("roleOpts");
+  ROLES.forEach(r => {
+    const l = document.createElement("label"); l.className = "opt";
+    l.innerHTML = `<input type="radio" name="role" value="${r.id}" id="role-${r.id}"><span>${esc(r.label)}</span>`;
+    roleBox.appendChild(l);
+  });
+  const qc = $("qCards");
+  QUESTIONS.forEach((q, i) => {
+    const card = document.createElement("div"); card.className = "card qcard";
+    if (q.word){
+      card.innerHTML = `<span class="qkind" style="color:${q.color}">Q${i + 1} · ${esc(q.kind)}</span>
+        <label for="q4" style="font-weight:900;font-size:1.08rem;display:block;margin-bottom:10px">${esc(q.text)}</label>
+        <input class="wordin" id="q4" name="q4" type="text" maxlength="30" autocomplete="off" autocapitalize="none" placeholder="One word, e.g. bias">`;
+    } else {
+      card.innerHTML = `<fieldset><span class="qkind" style="color:${q.color}">Q${i + 1} · ${esc(q.kind)}</span>
+        <legend>${esc(q.text)}</legend>` + q.options.map(o =>
+        `<label class="opt"><input type="radio" name="${q.id}" value="${o.id}" id="${q.id}-${o.id}"><span>${esc(o.label)}</span></label>`).join("") + `</fieldset>`;
+    }
+    qc.appendChild(card);
+  });
+  // restore previous answers on this device
+  try { const prev = JSON.parse(LS.get("esamiPoll.mine." + cfg.session, "null"));
+    if (prev){ ["role","q1","q2","q3"].forEach(k => { const el = document.querySelector(`input[name="${k}"][value="${prev[k]}"]`); if (el) el.checked = true; }); $("q4").value = prev.q4 || ""; }
+  } catch(e){}
+
+  $("voteForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const val = (n) => (document.querySelector(`input[name="${n}"]:checked`) || {}).value || "";
+    const rec = {role:val("role"), q1:val("q1"), q2:val("q2"), q3:val("q3"), q4:$("q4").value.trim().split(/\s+/).slice(0, 2).join(" ").slice(0, 30)};
+    const err = $("formErr");
+    if (!rec.q1 && !rec.q2 && !rec.q3 && !rec.q4){ err.textContent = "Answer at least one question before submitting."; err.hidden = false; return; }
+    err.hidden = true; const btn = $("submitBtn"); btn.disabled = true; btn.textContent = "Sending…";
+    try {
+      await Backend.submit(rec);
+      LS.set("esamiPoll.mine." + cfg.session, JSON.stringify(rec));
+      showFeedback(rec);
+    } catch(ex){
+      err.textContent = "Your answers did not reach the screen. Check your connection and tap Submit again."; err.hidden = false;
+    } finally { btn.disabled = false; btn.textContent = "Submit my answers"; }
+  });
+  $("editAgain").onclick = () => { $("thanks").hidden = true; $("voteForm").hidden = false; window.scrollTo(0, 0); };
+}
+function showFeedback(rec){
+  const list = $("fbList"); list.innerHTML = "";
+  QUESTIONS.forEach((q, i) => {
+    const d = document.createElement("div"); d.className = "fbitem";
+    if (q.correct){
+      if (!rec[q.id]){ d.innerHTML = `<b>Q${i + 1}</b> <span class="muted">not answered</span><div class="muted" style="margin-top:4px">${q.explain}</div>`; }
+      else { const ok = rec[q.id] === q.correct;
+        d.innerHTML = `<b>Q${i + 1}</b> <span class="${ok ? "ok" : "no"}">${ok ? "Correct" : "Not quite"}</span><div style="margin-top:4px">${q.explain}</div>`; }
+    } else if (q.word){
+      d.innerHTML = `<b>Q${i + 1}</b> Your word: <b>${esc(rec.q4 || "not answered")}</b>. Watch it join the word cloud.`;
+    } else {
+      const o = q.options.find(x => x.id === rec[q.id]);
+      d.innerHTML = `<b>Q${i + 1}</b> Your view: <b>${esc(o ? o.label : "not answered")}</b>`;
+    }
+    list.appendChild(d);
+  });
+  $("voteForm").hidden = true; $("thanks").hidden = false; window.scrollTo(0, 0);
+}
+
+/* boot */
+if (isVoter) startVoter(); else startPresenter();
+window.addEventListener("hashchange", () => location.reload());
+</script>
+</body>
+</html>
