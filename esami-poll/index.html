@@ -360,10 +360,18 @@ const LS = {
   set(k, v){ try{ localStorage.setItem(k, v); }catch(e){} },
   del(k){ try{ localStorage.removeItem(k); }catch(e){} }
 };
+/* ===== EDIT HERE: built-in settings, so nothing needs to be typed into Settings =====
+   SERVER_URL : your Google Apps Script web-app URL (ends in /exec)
+   PAGE_URL   : the public address of this page, used for the QR code (optional)
+   Anything saved later in the Settings box overrides these on that browser. */
+const SERVER_URL = "";
+const PAGE_URL   = "";
+const SESSION    = "esami50-ai-grading";
+/* ================================================================================== */
 const cfg = {
-  api:     (qs.get("api") || LS.get("esamiPoll.api", "")).trim(),
-  session: (qs.get("s")   || LS.get("esamiPoll.session", "esami50-ai-grading")).trim(),
-  base:    LS.get("esamiPoll.base", "").trim(),
+  api:     (qs.get("api") || LS.get("esamiPoll.api", "") || SERVER_URL).trim(),
+  session: (qs.get("s")   || LS.get("esamiPoll.session", "") || SESSION).trim(),
+  base:    (LS.get("esamiPoll.base", "") || PAGE_URL).trim(),
   short:   LS.get("esamiPoll.short", "").trim()
 };
 let clientId = LS.get("esamiPoll.client", "");
