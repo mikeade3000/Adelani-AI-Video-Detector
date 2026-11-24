@@ -1,5 +1,7 @@
 /**
  * ESAMI Live Poll — Google Apps Script backend
+ * One script serves both talks (AI Grading and Africa in the Algorithm);
+ * each talk uses its own session code, so results never mix.
  * ------------------------------------------------------------
  * Stores participant responses in the Google Sheet this script
  * is attached to, and returns them to the presenter page.
@@ -18,9 +20,8 @@
  */
 
 var SHEET_NAME = 'Responses';
-var HEADERS = ['timestamp', 'session', 'clientId', 'role', 'q1', 'q2', 'q3', 'q4'];
+var HEADERS = ['timestamp', 'session', 'clientId', 'role', 'q1', 'q2', 'q3', 'q4', 'country'];
 var ALLOWED = {
-  role: ['lecturer', 'leader', 'admin', 'student', 'other', ''],
   q1: ['a', 'b', 'c', 'd', ''],
   q2: ['a', 'b', 'c', 'd', ''],
   q3: ['a', 'b', 'c', 'd', '']
@@ -33,6 +34,8 @@ function sheet_() {
     sh = ss.insertSheet(SHEET_NAME);
     sh.appendRow(HEADERS);
     sh.setFrozenRows(1);
+  } else if (sh.getRange(1, HEADERS.length).getValue() !== HEADERS[HEADERS.length - 1]) {
+    sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]); // upgrade an older sheet
   }
   return sh;
 }
@@ -62,9 +65,12 @@ function doPost(e) {
     for (var k in ALLOWED) {
       if (ALLOWED[k].indexOf(rec[k]) < 0) return json_({ ok: false, error: 'invalid ' + k });
     }
+    if (!/^[a-z]{0,20}$/.test(rec.role)) return json_({ ok: false, error: 'invalid role' });
     rec.q4 = clean_(d.q4, 40);
+    rec.country = clean_(d.country, 4);
+    if (!/^[a-z]{0,4}$/.test(rec.country)) return json_({ ok: false, error: 'invalid country' });
 
-    var row = [new Date(), session, clientId, rec.role, rec.q1, rec.q2, rec.q3, rec.q4];
+    var row = [new Date(), session, clientId, rec.role, rec.q1, rec.q2, rec.q3, rec.q4, rec.country];
     var sh = sheet_();
     var values = sh.getDataRange().getValues();
     for (var i = values.length - 1; i >= 1; i--) {
@@ -90,11 +96,13 @@ function doGet(e) {
   var out = [];
   for (var i = 1; i < values.length; i++) {
     var r = values[i];
+    if (!r[1]) continue;
     if (session && r[1] !== session) continue;
     out.push({
       t: r[0] instanceof Date ? r[0].toISOString() : String(r[0]),
       session: r[1], id: r[2], role: r[3], q1: r[4], q2: r[5], q3: r[6],
-      q4: String(r[7]).replace(/^'/, '')
+      q4: String(r[7]).replace(/^'/, ''),
+      country: r[8] || ''
     });
   }
   return json_({ ok: true, responses: out });

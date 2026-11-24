@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Africa in the Algorithm</title>
+<meta name="description" content="Africa in the Algorithm: AI Governance, Research Ecosystems, and the Cost of Arriving Late. Presentation with live audience poll. ESAMI@50 Colloquium, Arusha, 25–27 November 2026.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap">
+<script src="vendor/qrcode-generator.js"></script>
+<script>window.qrcode || document.write('<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"><\/script>')</script>
+<style>
+/* Layout: presenter = a 1920×1080 slide stage scaled to the screen (slide images + live poll slides in the deck's own style);
+   participant (#vote) = a single phone column. */
+:root{
+  --bg:#F3F5FB; --surface:#FFFFFF; --surface-2:#EAEEFA; --ink:#121838; --muted:#596084; --line:#D9DEEF;
+  --navy:#13208F; --green:#12882E; --orange:#E7861A; --red:#C42B2B; --amber:#D9A21B;
+  --navy-soft:#E3E7FB; --green-soft:#E2F3E6; --orange-soft:#FDF0DF; --red-soft:#FBE5E5;
+  --bar:#13208F; --bar-ok:#12882E;
+  --font:"Lato", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  --radius:14px; --shadow:0 2px 10px rgba(18,24,56,.08);
+  /* deck: fixed light palette taken from the slides (single deliberate look) */
+  --d-navy:#0A1A8F; --d-ink:#1B1F3B; --d-muted:#5A607A; --d-green:#0A8A0A; --d-orange:#F7931E; --d-red:#C62828;
+  --d-card:#EEF0FA; --d-line:#D8DCEE; --d-letterbox:#0C0F26;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0B0F2B; --surface:#151A42; --surface-2:#1D2354; --ink:#EEF0FA; --muted:#A6ACCD; --line:#2B3270;
+  --navy:#9AA8FF; --green:#4FC36D; --orange:#FFAE4D; --red:#FF7A7A; --amber:#F2C14E;
+  --navy-soft:#1F2760; --green-soft:#16361F; --orange-soft:#3A2A12; --red-soft:#3D1A1F;
+  --bar:#7F8FFF; --bar-ok:#4FC36D; --shadow:0 2px 10px rgba(0,0,0,.35); color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --bg:#0B0F2B; --surface:#151A42; --surface-2:#1D2354; --ink:#EEF0FA; --muted:#A6ACCD; --line:#2B3270;
+  --navy:#9AA8FF; --green:#4FC36D; --orange:#FFAE4D; --red:#FF7A7A; --amber:#F2C14E;
+  --navy-soft:#1F2760; --green-soft:#16361F; --orange-soft:#3A2A12; --red-soft:#3D1A1F;
+  --bar:#7F8FFF; --bar-ok:#4FC36D; --shadow:0 2px 10px rgba(0,0,0,.35); color-scheme:dark; }
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.5}
+h1,h2,h3{line-height:1.2;text-wrap:balance;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+[hidden]{display:none!important}
+.muted{color:var(--muted)}
+.eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--green)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:.5rem 1rem;font-weight:700;font-size:.9rem}
+.btn:hover{border-color:var(--navy)}
+.btn.primary{background:var(--navy);border-color:var(--navy);color:var(--surface)}
+.btn.small{padding:.3rem .75rem;font-size:.82rem}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+/* ================= DECK (presenter) ================= */
+body.deckmode{background:var(--d-letterbox);overflow:hidden;height:100vh;height:100dvh}
+#deck{position:fixed;inset:0;overflow:hidden;background:var(--d-letterbox)}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:#FFFFFF;color:var(--d-ink);
+  font-family:"Lato","Calibri","Segoe UI",system-ui,Arial,sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.4);overflow:hidden}
+.slide{position:absolute;inset:0;background:#FFFFFF}
+.slide>img.full{width:100%;height:100%;display:block;object-fit:contain;max-width:none}
+.live .brand50{position:absolute;right:0;top:0;width:160px;height:120px;max-width:none}
+.live .footer{position:absolute;left:0;bottom:0;width:1920px;height:180px;max-width:none}
+.live .eye{position:absolute;left:86px;top:34px;font-size:19px;font-weight:700;color:var(--d-green);letter-spacing:.01em;text-transform:uppercase}
+.live .ttl{position:absolute;left:86px;top:80px;right:220px;font-size:46px;font-weight:700;color:var(--d-navy);line-height:1.12}
+.live .body{position:absolute;left:86px;right:86px;top:215px;bottom:200px}
+.dcard{background:var(--d-card);border-radius:22px;box-shadow:0 4px 12px rgba(20,30,90,.16)}
+/* join slide */
+.joingrid{display:grid;grid-template-columns:1fr 1fr 520px;grid-template-rows:1fr 1fr;gap:26px;height:100%}
+.jq{display:flex;gap:26px;align-items:center;padding:26px 30px}
+.jq .ic{flex:none;width:96px;height:96px;border-radius:50%;display:grid;place-items:center;color:#FFFFFF;font-weight:900;font-size:30px;box-shadow:0 4px 10px rgba(0,0,0,.2)}
+.jq .k{font-size:21px;font-weight:700}
+.jq .t{font-size:27px;font-weight:700;line-height:1.3;color:var(--d-ink)}
+.jqr{grid-column:3;grid-row:1 / span 2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:22px;background:#E5F3E5}
+.jqr .qrbig{width:400px;height:400px;background:#FFFFFF;padding:12px;border-radius:14px}
+.qrbig svg,.qrsmall svg,.qrbox svg{width:100%;height:100%;display:block;shape-rendering:crispEdges}
+.jqr .scan{font-size:28px;font-weight:900;color:var(--d-green)}
+.jqr .lnk{font-size:15px;color:var(--d-muted);word-break:break-all;text-align:center;max-width:460px}
+.cnt{font-size:24px;color:var(--d-muted)} .cnt b{font-size:56px;color:var(--d-green);font-weight:900;font-variant-numeric:tabular-nums}
+/* question slides */
+.qgrid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:40px;height:100%}
+.qmain{display:flex;flex-direction:column;min-width:0}
+.qside{display:flex;flex-direction:column;align-items:center;gap:12px;padding:22px;text-align:center}
+.qside .qrsmall{width:250px;height:250px;background:#FFFFFF;padding:10px;border-radius:12px}
+.qside .scan{font-size:22px;font-weight:900;color:var(--d-green)}
+.qside .cnt b{font-size:64px}
+.dbtn{border:2px solid var(--d-navy);background:#FFFFFF;color:var(--d-navy);border-radius:999px;padding:12px 26px;font-size:22px;font-weight:700}
+.dbtn.fill{background:var(--d-navy);color:#FFFFFF}
+.dbtn:hover{filter:brightness(1.08)}
+.dbars{display:flex;flex-direction:column;gap:22px;margin-top:6px}
+.dbar{display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:6px 18px;align-items:end}
+.dbar .lb{font-size:32px;font-weight:700;color:var(--d-ink)}
+.dbar .lb .tick{color:var(--d-green)}
+.dbar .nm{text-align:right;font-size:34px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--d-ink)}
+.dbar .nm small{font-size:20px;font-weight:400;color:var(--d-muted)}
+.dbar .tr{grid-column:1 / -1;height:36px;background:var(--d-card);border-radius:8px;overflow:hidden}
+.dbar .fl{height:100%;width:0;background:var(--d-navy);border-radius:8px;transition:width .7s ease}
+.dbar .fl.ok{background:var(--d-green)} .dbar .fl.dim{opacity:.35}
+.dexplain{margin-top:24px;padding:20px 26px;border-radius:16px;background:#E5F3E5;font-size:24px;line-height:1.4;color:var(--d-ink)}
+.dexplain b{color:var(--d-green)}
+.qmeta{margin-top:auto;padding-top:16px;font-size:20px;color:var(--d-muted)}
+.dcloud{display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:8px 30px;height:100%;padding:20px;background:var(--d-card);border-radius:22px;overflow:hidden}
+.dcloud span{font-weight:900;line-height:1.05}
+.dempty{font-size:28px;color:var(--d-muted);text-align:center}
+.q4grid{display:grid;grid-template-columns:minmax(0,1fr) 470px;gap:30px;height:100%}
+.thm{display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:4px 12px;align-items:center;margin-bottom:12px;font-size:21px}
+.thm .n{text-align:right;font-weight:900;font-variant-numeric:tabular-nums}
+.thm .tr{grid-column:1 / -1;height:12px;background:#FFFFFF;border-radius:6px;overflow:hidden}
+.thm .fl{height:100%;background:var(--d-navy);border-radius:6px}
+.panelh{font-size:24px;font-weight:900;color:var(--d-navy);margin-bottom:14px}
+/* analysis slides */
+.kp{display:grid;grid-template-columns:repeat(5,1fr);gap:22px;margin-bottom:26px}
+.kp .dcard{padding:20px 24px}
+.kp b{display:block;font-size:52px;font-weight:900;line-height:1.05;font-variant-numeric:tabular-nums}
+.kp b.txt{font-size:30px;line-height:1.15;padding-block:8px}
+.kp span{font-size:19px;color:var(--d-muted)}
+.angrid{display:grid;grid-template-columns:minmax(0,1fr) 560px;gap:30px}
+.narr2{font-size:22px;line-height:1.42;color:var(--d-ink)}
+.narr2 p{margin:0 0 10px}
+.an2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:26px;height:100%}
+.an2 .dcard{padding:22px 24px;min-width:0;overflow:hidden}
+.dt{width:100%;border-collapse:collapse;font-size:20px;font-variant-numeric:tabular-nums}
+.dt th,.dt td{padding:8px 6px;border-bottom:1px solid var(--d-line);text-align:left}
+.dt th{color:var(--d-muted);font-weight:700}
+.dt td.n{text-align:right}
+.dprompts{margin:0;padding-left:28px;font-size:21px;line-height:1.38}
+.dprompts li{margin-bottom:12px}
+.exportrow{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+.exportrow .dbtn{font-size:17px;padding:8px 16px}
+
+/* deck controls (outside the stage, normal UI) */
+#controls{position:fixed;right:max(14px, env(safe-area-inset-right,0px));bottom:max(14px, env(safe-area-inset-bottom,0px));
+  display:flex;gap:6px;align-items:center;background:rgba(12,15,38,.82);color:#FFFFFF;border-radius:999px;padding:6px 8px;z-index:30;transition:opacity .3s}
+#controls.idle{opacity:0}
+#controls button{background:transparent;border:0;color:#FFFFFF;border-radius:999px;padding:6px 12px;font-weight:700;font-size:14px}
+#controls button:hover{background:rgba(255,255,255,.15)}
+#controls .ctr{font-variant-numeric:tabular-nums;font-size:14px;padding:0 6px;min-width:70px;text-align:center}
+#statusPill{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:0 6px}
+.dot{width:.6rem;height:.6rem;border-radius:50%;background:#9AA0B8;display:inline-block}
+.dot.ok{background:#3BC55B} .dot.warn{background:#F2C14E} .dot.bad{background:#FF6B6B}
+#progress{position:fixed;left:0;bottom:0;height:4px;background:var(--d-orange);z-index:29;transition:width .3s}
+
+/* settings dialog */
+.overlay{position:fixed;inset:0;background:rgba(5,8,30,.6);display:grid;place-items:center;z-index:50;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.dialog{width:min(640px,100%);max-height:100%;overflow:auto;padding:22px}
+.dialog h2{color:var(--navy);margin-bottom:6px}
+.field{display:flex;flex-direction:column;gap:4px;margin:14px 0}
+.field label{font-weight:700;font-size:.9rem}
+.field input{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:.6rem .75rem;width:100%}
+.field .hint{font-size:.8rem;color:var(--muted)}
+.keys{font-size:.85rem;color:var(--muted)} .keys kbd{border:1px solid var(--line);border-radius:4px;padding:0 .3rem;font-family:inherit}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 70px);background:#121838;color:#FFFFFF;padding:.6rem 1.1rem;border-radius:999px;font-weight:700;z-index:60}
+
+/* ================= PARTICIPANT ================= */
+.phone{max-width:560px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:calc(env(safe-area-inset-top,0px) + 16px) calc(env(safe-area-inset-bottom,0px) + 24px)}
+.phone header{margin-bottom:14px}
+.phone h1{font-size:1.45rem;font-weight:900;color:var(--navy);margin-top:4px}
+.notice{padding:10px 14px;border-radius:10px;background:var(--orange-soft);font-size:.9rem;margin-bottom:14px}
+.qcard{padding:18px;margin-bottom:14px}
+.qcard legend{font-weight:900;font-size:1.08rem;padding:0;margin-bottom:10px}
+.qcard fieldset{border:0;margin:0;padding:0;min-width:0}
+.qcard .qkind{display:block;margin-bottom:4px;font-size:.85rem;font-weight:700}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:.7rem .85rem;border:1.5px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer;background:var(--surface)}
+.opt input{margin-top:.25rem;accent-color:var(--navy);width:1.1rem;height:1.1rem;flex:none}
+.opt:has(input:checked){border-color:var(--navy);background:var(--navy-soft)}
+.roles{display:flex;flex-wrap:wrap;gap:8px}
+.roles .opt{margin:0;padding:.45rem .75rem;border-radius:999px;align-items:center}
+.roles .opt input{margin:0}
+.wordin{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:.75rem .9rem;background:var(--surface);font-size:1.05rem}
+.submit{width:100%;padding:.9rem;font-size:1.1rem;border-radius:14px}
+.err{color:var(--red);font-weight:700;margin:8px 0}
+.fb{padding:18px;margin-bottom:14px}
+.fbitem{padding:12px 0;border-top:1px solid var(--line)}
+.fbitem:first-of-type{border-top:0}
+.ok{color:var(--green);font-weight:900} .no{color:var(--red);font-weight:900}
+footer.small{margin-top:28px;font-size:.8rem;color:var(--muted);text-align:center}
+@media (prefers-reduced-motion: reduce){ .dbar .fl,#controls,#progress{transition:none} }
+</style>
+</head>
+<body>
+
+<!-- =================== PRESENTER DECK =================== -->
+<div id="deck" hidden>
+  <div id="stage" aria-live="polite"></div>
+</div>
+<div id="progress" hidden></div>
+<nav id="controls" hidden aria-label="Slide controls">
+  <span id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">…</span></span>
+  <button type="button" id="prevBtn" aria-label="Previous slide">‹ Prev</button>
+  <span class="ctr" id="counter">1 / 1</span>
+  <button type="button" id="nextBtn" aria-label="Next slide">Next ›</button>
+  <button type="button" id="pollBtn" title="Jump to the poll (P)">Poll</button>
+  <button type="button" id="fsBtn" title="Full screen (F)">Full screen</button>
+  <button type="button" id="openSettings" title="Settings (S)">Settings</button>
+</nav>
+
+<!-- =================== PARTICIPANT VIEW =================== -->
+<div id="voter" class="phone" hidden>
+  <header>
+    <div class="eyebrow">ESAMI@50 · Africa in the Algorithm</div>
+    <h1>Four quick questions</h1>
+    <div class="muted">Anonymous. Takes under a minute. You can change your answers until the session closes.</div>
+  </header>
+  <div id="notConfigured" class="notice" hidden>This voting link is missing its results server, so answers will only be saved on this device. Please scan the QR code on the presenter's screen again.</div>
+  <form id="voteForm" novalidate>
+    <div class="card qcard">
+      <fieldset>
+        <legend>Which best describes you? <span class="muted" style="font-weight:400">(optional)</span></legend>
+        <div class="roles" id="roleOpts"></div>
+      </fieldset>
+      <label for="country" style="display:block;font-weight:900;font-size:1.08rem;margin:16px 0 8px">Where are you based? <span class="muted" style="font-weight:400">(optional)</span></label>
+      <select id="country" class="wordin"><option value="">Choose a country</option></select>
+    </div>
+    <div id="qCards"></div>
+    <div class="err" id="formErr" role="alert" hidden></div>
+    <button class="btn primary submit" type="submit" id="submitBtn">Submit my answers</button>
+  </form>
+  <div id="thanks" hidden>
+    <div class="card fb">
+      <div class="eyebrow">Received</div>
+      <h2 style="color:var(--navy);margin:4px 0 8px">Thank you. Your answers are on the screen.</h2>
+      <div id="fbList"></div>
+    </div>
+    <button class="btn" type="button" id="editAgain">Change my answers</button>
+  </div>
+  <footer class="small">Kampala International University · ESAMI Headquarters, Arusha · 25–27 November 2026</footer>
+</div>
+
+<!-- settings dialog -->
+<div class="overlay" id="settings" hidden role="dialog" aria-modal="true" aria-labelledby="setTitle">
+  <div class="card dialog">
+    <h2 id="setTitle">Presentation &amp; poll settings</h2>
+    <p class="muted" style="margin:0">Paste the Google Apps Script web-app URL to collect votes from everyone's phones. Without it the poll runs in <b>demo mode</b>, which only syncs between tabs in this browser.</p>
+    <div class="field">
+      <label for="setApi">Results server URL (Apps Script web app)</label>
+      <input id="setApi" type="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
+      <span class="hint">See README.md for the 5-minute setup.</span>
+    </div>
+    <div class="field">
+      <label for="setSession">Session code</label>
+      <input id="setSession" type="text" maxlength="40" autocomplete="off">
+      <span class="hint">Change it to start a fresh poll (e.g. <code>day2-pm</code>). Earlier sessions stay in the sheet.</span>
+    </div>
+    <div class="field">
+      <label for="setBase">Public address of this page</label>
+      <input id="setBase" type="url" placeholder="https://your-domain/africa-algorithm/" autocomplete="off">
+      <span class="hint">Used to build the QR code. Leave blank to use the current address.</span>
+    </div>
+    <div class="field">
+      <label for="setShort">Short link (optional)</label>
+      <input id="setShort" type="url" placeholder="https://bit.ly/…" autocomplete="off">
+      <span class="hint">If set, the QR code points here instead (a shorter link scans more easily from the back of the room).</span>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <button class="btn primary" type="button" id="saveSettings">Save</button>
+      <button class="btn" type="button" id="testApi">Test connection</button>
+      <button class="btn" type="button" id="closeSettings">Close</button>
+    </div>
+    <div id="testResult" class="muted" style="margin-top:8px"></div>
+    <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+    <h3 style="font-size:1rem;margin-bottom:6px">Rehearsal tools (demo mode only)</h3>
+    <div class="row">
+      <button class="btn small" type="button" id="loadSample">Add 40 sample responses</button>
+      <button class="btn small" type="button" id="clearDemo">Clear demo responses</button>
+    </div>
+    <p class="muted" style="font-size:.85rem">Sample responses are invented for rehearsal and are never sent to the results server.</p>
+    <p class="keys">Keys: <kbd>→</kbd>/<kbd>Space</kbd>/<kbd>PgDn</kbd> next · <kbd>←</kbd>/<kbd>PgUp</kbd> back · <kbd>Home</kbd>/<kbd>End</kbd> · <kbd>P</kbd> poll · <kbd>R</kbd> reveal answer · <kbd>F</kbd> full screen · <kbd>S</kbd> settings. Presentation clickers work too.</p>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+"use strict";
+/* ============================================================
+   Content: questions from the "Your turn" slide
+   ============================================================ */
+const ROLES = [
+  {id:"policy",   label:"Policymaker / regulator"},
+  {id:"academic", label:"Academic / researcher"},
+  {id:"industry", label:"Industry / fintech"},
+  {id:"funder",   label:"Development partner / funder"},
+  {id:"other",    label:"Other"}
+];
+/* Countries: the eight settings scored in the Readiness Index, plus two catch-alls */
+const COUNTRIES = [
+  {id:"rw", label:"Rwanda",       score:3.5, band:"High"},
+  {id:"za", label:"South Africa", score:3.5, band:"High"},
+  {id:"ng", label:"Nigeria",      score:3.0, band:"Medium-High"},
+  {id:"eg", label:"Egypt",        score:3.0, band:"Medium-High"},
+  {id:"ke", label:"Kenya",        score:2.5, band:"Medium-High"},
+  {id:"sn", label:"Senegal",      score:2.5, band:"Medium-High"},
+  {id:"ug", label:"Uganda",       score:1.5, band:"Low-Medium"},
+  {id:"tz", label:"Tanzania",     score:1.0, band:"Low-Medium"},
+  {id:"af", label:"Another African country"},
+  {id:"xx", label:"Outside Africa"}
+];
+const QUESTIONS = [
+  { id:"q1", kind:"Quick check", color:"#0A1A8F",
+    text:"Where does mobile-money credit scoring sit in the EU AI Act’s risk tiers?",
+    options:[{id:"a",label:"Unacceptable (banned)"},{id:"b",label:"High risk"},{id:"c",label:"Limited risk (transparency only)"},{id:"d",label:"Minimal risk"}],
+    correct:"b",
+    explain:"<b>High risk.</b> Credit scoring of individuals is an Annex III use, so mobile-money lending such as M-Pesa and M-KOPA carries the full high-risk obligations: explanation, human review, bias audits and a named accountable party. It is Africa’s flagship innovation and its sharpest regulatory exposure." },
+  { id:"q2", kind:"Quick check", color:"#F7931E",
+    text:"From what date must standalone high-risk AI systems comply, as amended?",
+    options:[{id:"a",label:"2 August 2025"},{id:"b",label:"2 August 2026"},{id:"c",label:"2 December 2027"},{id:"d",label:"2 August 2028"}],
+    correct:"c",
+    explain:"<b>2 December 2027</b> for standalone (Annex III) high-risk systems, after the Digital Omnibus amendment (Regulation (EU) 2026/1744). High-risk AI embedded in regulated products (Annex I) follows on 2 August 2028. The deferral is runway, not relief." },
+  { id:"q3", kind:"Your view", color:"#0A8A0A",
+    text:"Which structural gap is most urgent in your country or institution?",
+    options:[{id:"a",label:"No region-specific risk taxonomies"},{id:"b",label:"No explainability for informal economies"},{id:"c",label:"No disclosure norms for trust-based markets"},{id:"d",label:"No body with the mandate and capacity to audit"}],
+    short:{a:"Risk taxonomies", b:"Explainability", c:"Disclosure norms", d:"Oversight capacity"},
+    correct:null },
+  { id:"q4", kind:"Word cloud", color:"#2E3192",
+    text:"In one word: what must AI in Africa answer for?", word:true }
+];
+const THEMES = [
+  {name:"Fairness & inclusion", prompt:"Who is never offered the loan or the service? How would we measure exclusion, not just the decisions that were made?",
+   words:["fairness","fair","unfair","bias","biased","inclusion","inclusive","exclusion","exclude","equity","equality","inequality","discrimination","women","gender","poor","poverty","access","marginalised","marginalized","vulnerable","minorities"]},
+  {name:"Accountability & redress", prompt:"When an algorithm says “high risk”, who in our country is answerable, and where does a citizen go to appeal?",
+   words:["accountability","accountable","redress","responsibility","responsible","liability","remedy","remedies","appeal","appeals","justice","harm","harms","damage","oversight","audit","audits","compliance","regulation","governance","enforcement"]},
+  {name:"Transparency & explainability", prompt:"What would a useful explanation look like for a trader whose income is seasonal, shared and held in mobile money?",
+   words:["transparency","transparent","explainability","explainable","explanation","explanations","disclosure","openness","clarity","reasons","reasoning","understandability"]},
+  {name:"Data, privacy & consent", prompt:"Whose data trains these systems, and what does meaningful consent look like in a mobile-money economy?",
+   words:["privacy","data","consent","protection","security","surveillance","confidentiality","ownership","datasets","dataprotection"]},
+  {name:"Sovereignty & context", prompt:"How can African institutions set the rules instead of adapting late to rules written elsewhere?",
+   words:["sovereignty","sovereign","independence","autonomy","colonialism","neocolonialism","dependence","dependency","local","context","contextual","culture","cultural","language","languages","values","ubuntu","identity","africa","african","relevance","representation"]},
+  {name:"Development & livelihoods", prompt:"How do we protect the credit, jobs and services AI opens up while closing the harms?",
+   words:["jobs","job","livelihoods","livelihood","development","growth","prosperity","credit","finance","health","education","agriculture","employment","opportunity","opportunities","innovation","economy","impact","wealth"]},
+  {name:"Rights, safety & dignity", prompt:"Which uses should simply be prohibited in our jurisdictions, as the EU has done with emotion inference at work?",
+   words:["rights","humanrights","safety","dignity","humanity","human","humans","life","lives","freedom","wellbeing","welfare","people","citizens"]},
+  {name:"Trust & integrity", prompt:"How do we keep human-like bots and deepfakes from eroding the trust that digital adoption depends on?",
+   words:["trust","truth","integrity","misinformation","disinformation","deepfakes","deepfake","ethics","ethical","honesty","credibility","manipulation","fraud"]}
+];
+const STOP = new Set("the a an of and or to in on for is it its ai my me i we our be that this with by as at from".split(" "));
+
+/* Slide order: presentation up to the poll, the live poll, then the conclusion */
+const img = (n, alt) => ({type:"img", src:`slides/slide-${String(n).padStart(2,"0")}.jpg`, alt});
+const SLIDES = [
+  img(1,"Title: Africa in the Algorithm: AI Governance, Research Ecosystems, and the Cost of Arriving Late. Dr. Michael Adelani Adewusi"),
+  img(2,"Why this matters: you are already inside the perimeter of the EU AI Act"),
+  img(3,"The gap: infrastructure first, rules later; four research questions"),
+  img(4,"The lens: the EU AI Act sorts AI into four risk tiers"),
+  img(5,"The clock: enforcement dates after the Digital Omnibus"),
+  img(6,"Method: a qualitative comparative regulatory analysis"),
+  img(7,"The evidence base in eight numbers"),
+  img(8,"Finding 1: Africa's flagship innovation sits in the high-risk tier"),
+  img(9,"Meet the market trader: rights on paper vs rights today"),
+  img(10,"Beyond credit: five more deployments coded against the Act"),
+  img(11,"Finding 2: three structural gaps that feed one another"),
+  img(12,"Finding 3: a readiness index across four dimensions"),
+  img(13,"Intent and capacity do not move together"),
+  img(14,"Contribution: an Africa-contextual AI risk taxonomy"),
+  img(15,"Each risk class implies its own empirical test"),
+  img(16,"Closing the gap: a research-and-funding agenda"),
+  img(17,"Worked example: explainability for informal-income credit"),
+  img(18,"Limitations, stated plainly"),
+  {type:"join"},
+  {type:"q", q:0}, {type:"q", q:1}, {type:"q", q:2}, {type:"q", q:3},
+  {type:"analysis"}, {type:"analysis2"},
+  img(19,"Conclusion: Africa did not write the algorithm. It can still decide what the algorithm must answer for."),
+  img(21,"About the presenter"),
+  img(22,"Follow ESAMI")
+];
+
+const POLL_INDEX = SLIDES.findIndex(s => s.type === "join");
+
+/* ============================================================
+   Config & storage
+   ============================================================ */
+const qs = new URLSearchParams(location.search);
+const isVoter = location.hash === "#vote" || qs.get("v") === "1";
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v == null ? d : v; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, v); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+/* ===== EDIT HERE: built-in settings, so nothing needs to be typed into Settings =====
+   SERVER_URL : your Google Apps Script web-app URL (ends in /exec)
+   PAGE_URL   : the public address of this page, used for the QR code (optional)
+   Anything saved later in the Settings box overrides these on that browser. */
+const SERVER_URL = "";
+const PAGE_URL   = "";
+const SESSION    = "esami50-africa-algorithm";
+/* ================================================================================== */
+const cfg = {
+  api:     (qs.get("api") || LS.get("afAlgo.api", "") || SERVER_URL).trim(),
+  session: (qs.get("s")   || LS.get("afAlgo.session", "") || SESSION).trim(),
+  base:    (LS.get("afAlgo.base", "") || PAGE_URL).trim(),
+  short:   LS.get("afAlgo.short", "").trim()
+};
+let clientId = LS.get("afAlgo.client", "");
+if (!clientId){ clientId = "c" + Math.random().toString(36).slice(2) + Date.now().toString(36); LS.set("afAlgo.client", clientId); }
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const pct = (n, d) => d ? Math.round(100 * n / d) : 0;
+function toast(msg){ const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(() => t.hidden = true, 2200); }
+
+/* ============================================================
+   Backend: Google Apps Script (live) or browser-only demo mode
+   ============================================================ */
+const demoKey = () => "afAlgo.demo." + cfg.session;
+let bc = null; try { bc = new BroadcastChannel("afAlgo"); } catch(e) {}
+const Backend = {
+  isDemo(){ return !cfg.api; },
+  async submit(rec){
+    const body = Object.assign({session:cfg.session, clientId}, rec);
+    if (this.isDemo()){
+      const all = JSON.parse(LS.get(demoKey(), "{}"));
+      all[clientId] = Object.assign({t:new Date().toISOString(), id:clientId}, rec);
+      LS.set(demoKey(), JSON.stringify(all)); if (bc) bc.postMessage("update");
+      return {ok:true};
+    }
+    const r = await fetch(cfg.api, {method:"POST", body:JSON.stringify(body)}); // text/plain: no CORS preflight
+    const j = await r.json(); if (!j.ok) throw new Error(j.error || "Server refused the response");
+    return j;
+  },
+  async list(){
+    if (this.isDemo()) return Object.values(JSON.parse(LS.get(demoKey(), "{}")));
+    const r = await fetch(cfg.api + (cfg.api.includes("?") ? "&" : "?") + "action=results&session=" + encodeURIComponent(cfg.session) + "&_=" + Date.now());
+    const j = await r.json(); if (!j.ok) throw new Error(j.error || "Server error");
+    return j.responses || [];
+  }
+};
+
+/* ============================================================
+   Analysis engine
+   ============================================================ */
+function normWord(w){
+  w = String(w || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z\- ]/g, " ").trim();
+  const parts = w.split(/[\s\-]+/).filter(x => x && !STOP.has(x));
+  if (!parts.length) return "";
+  w = parts.join(" ");
+  if (w === "black box") w = "blackbox";
+  if (w === "over reliance") w = "overreliance";
+  return w;
+}
+function themeOf(word){
+  if (!word) return null;
+  const toks = [word, ...word.split(" ")];
+  for (const th of THEMES){
+    if (toks.some(t => th.words.includes(t) || th.words.includes(t.replace(/s$/, "")))) return th.name;
+  }
+  return "Other";
+}
+const Q = (id) => QUESTIONS.find(q => q.id === id);
+const optLabel = (qid, k) => { const q = Q(qid); return (q.short && q.short[k]) || (q.options.find(o => o.id === k) || {}).label || k; };
+function analyse(rows){
+  const n = rows.length;
+  const a = {n, byRole:{}, byCountry:{}, q:{}, words:{}, themes:{}, themeByQ3:{}, q3ByCountry:{}, q3ByRole:{}};
+  QUESTIONS.forEach(q => { if (!q.word){ a.q[q.id] = {answered:0}; q.options.forEach(o => a.q[q.id][o.id] = 0); } });
+  for (const r of rows){
+    a.byRole[r.role || ""] = (a.byRole[r.role || ""] || 0) + 1;
+    a.byCountry[r.country || ""] = (a.byCountry[r.country || ""] || 0) + 1;
+    QUESTIONS.forEach(q => { if (!q.word && r[q.id] && a.q[q.id][r[q.id]] != null){ a.q[q.id][r[q.id]]++; a.q[q.id].answered++; } });
+    const w = normWord(r.q4);
+    if (w){
+      a.words[w] = (a.words[w] || 0) + 1;
+      const th = themeOf(w); a.themes[th] = (a.themes[th] || 0) + 1;
+      const k = r.q3 || "none"; a.themeByQ3[k] = a.themeByQ3[k] || {}; a.themeByQ3[k][th] = (a.themeByQ3[k][th] || 0) + 1;
+    }
+    if (r.q3){
+      const c = r.country || ""; a.q3ByCountry[c] = a.q3ByCountry[c] || {a:0,b:0,c:0,d:0}; a.q3ByCountry[c][r.q3]++;
+      const ro = r.role || ""; a.q3ByRole[ro] = a.q3ByRole[ro] || {a:0,b:0,c:0,d:0}; a.q3ByRole[ro][r.q3]++;
+    }
+  }
+  a.correct = {};
+  QUESTIONS.filter(q => q.correct).forEach(q => a.correct[q.id] = pct(a.q[q.id][q.correct], a.q[q.id].answered));
+  const g = a.q.q3;
+  a.gapRank = ["a","b","c","d"].map(k => [k, g[k]]).sort((x, y) => y[1] - x[1]);
+  a.topGap = g.answered ? a.gapRank[0] : null;
+  a.wordCount = Object.values(a.words).reduce((s, x) => s + x, 0);
+  a.topWords = Object.entries(a.words).sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0]));
+  a.topThemes = Object.entries(a.themes).sort((x, y) => y[1] - x[1]);
+  // readiness band comparison: does the most urgent gap differ between higher- and lower-readiness settings?
+  const grp = (pred) => { const t = {a:0,b:0,c:0,d:0,n:0}; COUNTRIES.filter(pred).forEach(c => { const d = a.q3ByCountry[c.id]; if (d){ ["a","b","c","d"].forEach(k => t[k] += d[k]); t.n += d.a + d.b + d.c + d.d; } }); return t; };
+  a.hi = grp(c => c.score >= 2.5); a.lo = grp(c => c.score != null && c.score < 2.5);
+  return a;
+}
+const topOf = (t) => ["a","b","c","d"].map(k => [k, t[k]]).sort((x, y) => y[1] - x[1])[0];
+function narrative(a){
+  if (!a.n) return ["No responses yet. Once participants scan the QR code, a summary will appear here."];
+  const out = [];
+  const roleBits = ROLES.filter(r => a.byRole[r.id]).map(r => `${a.byRole[r.id]} ${r.label}`);
+  const nCountries = COUNTRIES.filter(c => a.byCountry[c.id] && c.id !== "xx" && c.id !== "af").length;
+  out.push(`<b>${a.n}</b> participant${a.n === 1 ? "" : "s"} responded${roleBits.length ? ` (${esc(roleBits.join(", "))})` : ""}${nCountries ? `, from ${nCountries} of the 8 settings in the Readiness Index` : ""}${a.byCountry.af ? ` and ${a.byCountry.af} from other African countries` : ""}.`);
+  if (a.q.q1.answered){
+    const wrong = ["a","c","d"].map(k => [k, a.q.q1[k]]).sort((x, y) => y[1] - x[1])[0];
+    out.push(`<b>Risk tier (Q1):</b> ${a.correct.q1}% placed mobile-money credit scoring in the <b>high-risk</b> tier. ` +
+      (a.correct.q1 >= 70 ? "Most of the room already sees the continent’s flagship innovation as regulated, high-risk AI."
+        : `The commonest other answer was “${esc(optLabel("q1", wrong[0]))}”, so the exposure of African credit AI is under-recognised in the room, which is the paper’s first finding.`));
+  }
+  if (a.q.q2.answered){
+    const early = pct(a.q.q2.a + a.q.q2.b, a.q.q2.answered);
+    out.push(`<b>Deadline (Q2):</b> ${a.correct.q2}% chose 2 December 2027. ` +
+      (early >= 30 ? `${early}% thought the date had already passed or falls in 2026, so the Digital Omnibus deferral is not widely known.` :
+       a.q.q2.d ? `${pct(a.q.q2.d, a.q.q2.answered)}% chose August 2028, the date for embedded (Annex I) systems.` : ""));
+  }
+  if (a.topGap){
+    const [k, c] = a.topGap;
+    let s = `<b>Most urgent gap (Q3):</b> <b>${esc(optLabel("q3", k))}</b> (${pct(c, a.q.q3.answered)}%), followed by ${esc(optLabel("q3", a.gapRank[1][0]).toLowerCase())} (${pct(a.gapRank[1][1], a.q.q3.answered)}%).`;
+    if (a.hi.n >= 3 && a.lo.n >= 3){
+      const h = topOf(a.hi), l = topOf(a.lo);
+      s += h[0] === l[0] ? ` Participants from higher- and lower-readiness settings agree on this priority.`
+        : ` Participants from higher-readiness settings (Index ≥ 2.5) put ${esc(optLabel("q3", h[0]).toLowerCase())} first, while those from lower-readiness settings put ${esc(optLabel("q3", l[0]).toLowerCase())} first.`;
+    }
+    out.push(s);
+  }
+  if (a.wordCount){
+    const [w, c] = a.topWords[0], [t, tc] = a.topThemes[0];
+    out.push(`<b>What AI must answer for (Q4):</b> the most frequent word was “${esc(w)}” (${c}); grouped into themes, <b>${esc(t)}</b> leads with ${pct(tc, a.wordCount)}% of ${a.wordCount} words.`);
+  }
+  return out;
+}
+const GAP_PROMPTS = {
+  a:"Who should build an Africa-contextual risk taxonomy, and how would it be validated across countries?",
+  b:"What evidence of seasonal, shared and mobile-money income should a credit decision be able to explain?",
+  c:"Should AI chatbots in banking and telecoms be required to disclose themselves, and in which languages?",
+  d:"Could a shared EAC or AU audit body give smaller states oversight capacity they cannot build alone?"
+};
+function prompts(a){
+  const list = [];
+  if (a.topGap) list.push(GAP_PROMPTS[a.topGap[0]]);
+  a.topThemes.filter(([t]) => t !== "Other").slice(0, 2).forEach(([t]) => { const th = THEMES.find(x => x.name === t); if (th) list.push(th.prompt); });
+  if (a.q.q1.answered && a.correct.q1 < 70) list.push("If many of us did not see credit scoring as high-risk, how prepared are African lenders for the December 2027 deadline?");
+  if (!list.length) list.push("Which of the three mechanisms would move fastest in your setting: research consortia, disciplined PPPs, or commercialising governance tools?");
+  return [...new Set(list)];
+}
+function summaryText(a){
+  const strip = (s) => s.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"").replace(/&#39;/g, "'");
+  const lines = [`ESAMI@50 Colloquium – Africa in the Algorithm audience poll (session ${cfg.session}, ${new Date().toLocaleString()})`, ""];
+  narrative(a).forEach(s => lines.push("• " + strip(s)));
+  lines.push("", "Question distributions:");
+  QUESTIONS.filter(q => !q.word).forEach((q, i) => {
+    lines.push(`Q${i + 1}. ${q.text}`);
+    q.options.forEach(o => lines.push(`   ${o.label}${q.correct === o.id ? " [correct]" : ""}: ${a.q[q.id][o.id]} (${pct(a.q[q.id][o.id], a.q[q.id].answered)}%)`));
+  });
+  lines.push("Q4. Themes: " + a.topThemes.map(([t, c]) => `${t} ${c}`).join("; "));
+  lines.push("Q4. Words: " + a.topWords.map(([w, c]) => `${w} (${c})`).join(", "));
+  lines.push("", "Most urgent gap by country (Readiness Index score in brackets):");
+  [...COUNTRIES, {id:"", label:"Not stated"}].filter(c => a.q3ByCountry[c.id]).forEach(c => { const d = a.q3ByCountry[c.id], t = d.a + d.b + d.c + d.d, top = topOf(d);
+    lines.push(`   ${c.label}${c.score != null ? ` (${c.score})` : ""}, n=${t}: ${optLabel("q3", top[0])} ${pct(top[1], t)}%`); });
+  lines.push("", "Discussion questions:"); prompts(a).forEach((p, i) => lines.push(`${i + 1}. ${p}`));
+  return lines.join("\n");
+}
+function download(name, text, type){
+  const blob = new Blob([text], {type}); const u = URL.createObjectURL(blob);
+  const el = document.createElement("a"); el.href = u; el.download = name; document.body.appendChild(el); el.click(); el.remove();
+  setTimeout(() => URL.revokeObjectURL(u), 1000);
+}
+function exportCsv(rows){
+  const head = ["timestamp","session","role","country","q1","q1_correct","q2","q2_correct","q3","q3_gap","q4_raw","q4_word","q4_theme"];
+  const cell = (v) => { v = String(v == null ? "" : v); if (/^[=+\-@]/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
+  const cname = (id) => (COUNTRIES.find(c => c.id === id) || {}).label || "";
+  const lines = [head.join(",")].concat(rows.map(r => { const w = normWord(r.q4);
+    return [r.t, cfg.session, r.role, cname(r.country), r.q1, r.q1 ? +(r.q1 === Q("q1").correct) : "", r.q2, r.q2 ? +(r.q2 === Q("q2").correct) : "", r.q3, r.q3 ? optLabel("q3", r.q3) : "", r.q4, w, w ? themeOf(w) : ""].map(cell).join(","); }));
+  download(`africa-algorithm-poll-${cfg.session}.csv`, lines.join("\n"), "text/csv");
+}
+
+/* ============================================================
+   Presenter deck
+   ============================================================ */
+let rows = [], idx = 0, revealed = {};
+{ const saved = parseInt(LS.get("afAlgo.slide", "0"), 10); if (saved >= 0 && saved < SLIDES.length) idx = saved; }
+
+function voteUrl(){
+  if (cfg.short) return cfg.short;
+  let base = cfg.base || (location.origin + location.pathname);
+  if (!/^https?:/.test(base)) base = location.href.split("#")[0].split("?")[0];
+  const p = new URLSearchParams(); p.set("s", cfg.session); if (cfg.api) p.set("api", cfg.api);
+  return base + "?" + p.toString() + "#vote";
+}
+let qrCache = {url:"", svg:""};
+function qrSvg(){
+  const url = voteUrl();
+  if (qrCache.url === url) return qrCache.svg;
+  let svg = "";
+  if (typeof qrcode !== "undefined"){
+    try { const q = qrcode(0, "L"); q.addData(url); q.make(); svg = q.createSvgTag({cellSize:8, margin:2, scalable:true}); } catch(e){}
+  }
+  if (!svg) svg = `<div class="dempty" style="font-size:18px;padding:20px">QR code unavailable. Share the link below.</div>`;
+  qrCache = {url, svg}; return svg;
+}
+const chrome = (eye, title) => `<img class="brand50" src="slides/brand-50.jpg" alt="ESAMI@50"><img class="footer" src="slides/brand-footer.jpg" alt="ESAMI · QMS certification ISO 9001:2015">
+  <div class="eye">${esc(eye)}</div><h2 class="ttl">${title}</h2>`;
+const sideJoin = (a) => `<div class="dcard qside"><div class="qrsmall">${qrSvg()}</div><div class="scan">Scan to vote</div>
+  <div class="cnt"><b>${a.n}</b> responses</div></div>`;
+
+function slideHTML(s, a){
+  if (s.type === "img") return `<img class="full" src="${s.src}" alt="${esc(s.alt)}">`;
+  if (s.type === "join"){
+    const cards = QUESTIONS.map((q, i) => `<div class="dcard jq"><div class="ic" style="background:${q.color}">Q${i + 1}</div>
+      <div><div class="k" style="color:${q.color}">Q${i + 1} · ${esc(q.kind)}</div><div class="t">${esc(q.text)}</div></div></div>`);
+    return `<div class="live">${chrome("Interactive session", "Your turn: four questions for the room")}
+      <div class="body"><div class="joingrid">
+        ${cards[0]}${cards[1]}
+        <div class="dcard jqr"><div class="qrbig">${qrSvg()}</div><div class="scan">Scan with your phone camera to vote</div>
+          <div class="lnk">${esc(voteUrl())}</div><div class="cnt"><b>${a.n}</b> responses so far</div></div>
+        ${cards[2]}${cards[3]}
+      </div></div></div>`;
+  }
+  if (s.type === "q"){
+    const q = QUESTIONS[s.q], n = s.q + 1;
+    if (q.word){
+      let cloud;
+      if (!a.topWords.length) cloud = `<div class="dcloud"><div class="dempty">Words will appear here as people answer.</div></div>`;
+      else {
+        const words = a.topWords.slice(0, 45), max = words[0][1], min = words[words.length - 1][1];
+        const colors = ["#0A1A8F","#0A8A0A","#F7931E","#C62828","#2E3192","#5A607A"];
+        const order = words.map((w, i) => [w, i]).sort((x, y) => ((x[1] * 7919) % 13) - ((y[1] * 7919) % 13));
+        cloud = `<div class="dcloud">` + order.map(([[w, c], i]) => {
+          const size = 30 + 70 * (max === min ? .6 : (c - min) / (max - min));
+          return `<span style="font-size:${size.toFixed(0)}px;color:${colors[i % colors.length]}">${esc(w)}</span>`; }).join("") + `</div>`;
+      }
+      const tot = a.wordCount || 1;
+      const themes = a.topThemes.slice(0, 6).map(([t, c]) => `<div class="thm"><span>${esc(t)}</span><span class="n">${c}</span>
+        <div class="tr"><div class="fl" style="width:${(100 * c / tot).toFixed(1)}%"></div></div></div>`).join("") || `<div class="dempty" style="font-size:20px">Themes appear as words arrive.</div>`;
+      return `<div class="live">${chrome(`Q${n} · ${q.kind}`, esc(q.text))}
+        <div class="body"><div class="q4grid">${cloud}
+          <div class="dcard" style="padding:22px 26px;display:flex;flex-direction:column">
+            <div class="panelh">What the words are about</div>${themes}
+            <div class="qmeta" style="display:flex;align-items:center;gap:16px"><div class="qrsmall" style="width:110px;height:110px;background:#FFFFFF;padding:6px;border-radius:8px;flex:none">${qrSvg()}</div>
+            <div><b style="font-size:34px;color:var(--d-green)">${a.n}</b> responses<br>${a.wordCount} words</div></div>
+          </div></div></div></div>`;
+    }
+    const d = a.q[q.id], tot = d.answered, max = Math.max(1, ...q.options.map(o => d[o.id])), show = revealed[q.id];
+    const bars = q.options.map(o => { const c = d[o.id], ok = show && q.correct === o.id, dim = show && q.correct && q.correct !== o.id;
+      return `<div class="dbar"><div class="lb">${ok ? '<span class="tick">✓ </span>' : ""}${esc(o.label)}</div>
+        <div class="nm">${pct(c, tot)}% <small>(${c})</small></div>
+        <div class="tr"><div class="fl ${ok ? "ok" : ""} ${dim ? "dim" : ""}" style="width:${(100 * c / max).toFixed(1)}%"></div></div></div>`; }).join("");
+    return `<div class="live">${chrome(`Q${n} · ${q.kind}`, esc(q.text))}
+      <div class="body"><div class="qgrid"><div class="qmain">
+        <div class="dbars">${bars}</div>
+        ${q.correct && show ? `<div class="dexplain">${q.explain}</div>` : ""}
+        <div class="qmeta">${tot} answer${tot === 1 ? "" : "s"}${q.correct ? " · press R to reveal the answer" : ""}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:18px">${sideJoin(a)}
+        ${q.correct ? `<button class="dbtn ${show ? "" : "fill"}" type="button" data-act="reveal" data-q="${q.id}">${show ? "Hide answer" : "Reveal answer"}</button>` : ""}
+      </div></div></div></div>`;
+  }
+  if (s.type === "analysis"){
+    const tot = a.wordCount || 1;
+    const themes = a.topThemes.slice(0, 6).map(([t, c]) => `<div class="thm"><span>${esc(t)}</span><span class="n">${c}</span>
+      <div class="tr"><div class="fl" style="width:${(100 * c / tot).toFixed(1)}%"></div></div></div>`).join("") || `<div class="dempty" style="font-size:20px">No words yet.</div>`;
+    return `<div class="live">${chrome("Live results · summary", "What the room told us")}
+      <div class="body">
+        <div class="kp">
+          <div class="dcard"><b>${a.n}</b><span>responses</span></div>
+          <div class="dcard"><b style="color:var(--d-navy)">${a.q.q1.answered ? a.correct.q1 + "%" : "–"}</b><span>Q1 correct (high risk)</span></div>
+          <div class="dcard"><b style="color:var(--d-orange)">${a.q.q2.answered ? a.correct.q2 + "%" : "–"}</b><span>Q2 correct (2 Dec 2027)</span></div>
+          <div class="dcard"><b class="txt" style="color:var(--d-green)">${a.topGap ? esc(optLabel("q3", a.topGap[0])) : "–"}</b><span>most urgent gap</span></div>
+          <div class="dcard"><b class="txt">${a.topThemes.length ? esc(a.topThemes[0][0]) : "–"}</b><span>what AI must answer for</span></div>
+        </div>
+        <div class="angrid"><div class="narr2">${narrative(a).map(x => `<p>${x}</p>`).join("")}</div>
+          <div class="dcard" style="padding:20px 24px"><div class="panelh">What AI must answer for (Q4)</div>${themes}</div></div>
+      </div></div>`;
+  }
+  if (s.type === "analysis2"){
+    const crow = [...COUNTRIES, {id:"", label:"Not stated"}].filter(c => a.q3ByCountry[c.id]).map(c => {
+      const d = a.q3ByCountry[c.id], t = d.a + d.b + d.c + d.d, top = topOf(d);
+      return `<tr><td>${esc(c.label)}</td><td class="n">${c.score != null ? c.score.toFixed(1) : "–"}</td><td class="n">${t}</td><td>${esc(optLabel("q3", top[0]))} <span style="color:var(--d-muted)">${pct(top[1], t)}%</span></td></tr>`; }).join("");
+    const words = a.topWords.slice(0, 8).map(([w, c]) => `<tr><td>${esc(w)}</td><td style="color:var(--d-muted)">${esc(themeOf(w))}</td><td class="n">${c}</td></tr>`).join("");
+    return `<div class="live">${chrome("Live results · for discussion", "Going deeper: where the gaps bite")}
+      <div class="body"><div class="an2" style="grid-template-columns:1.25fr 1fr 1fr">
+        <div class="dcard"><div class="panelh">Most urgent gap by country (Q3)</div>
+          ${crow ? `<table class="dt" style="font-size:18px"><thead><tr><th>Country</th><th class="n">Index</th><th class="n">n</th><th>Top gap</th></tr></thead><tbody>${crow}</tbody></table>` : `<div class="dempty" style="font-size:20px">No answers yet.</div>`}
+          <div class="exportrow">
+            <button class="dbtn" type="button" data-act="copy">Copy summary</button>
+            <button class="dbtn" type="button" data-act="csv">CSV</button>
+            <button class="dbtn" type="button" data-act="json">JSON</button>
+          </div></div>
+        <div class="dcard"><div class="panelh">Top words (Q4)</div>
+          ${words ? `<table class="dt"><thead><tr><th>Word</th><th>Theme</th><th class="n">n</th></tr></thead><tbody>${words}</tbody></table>` : `<div class="dempty" style="font-size:20px">No words yet.</div>`}</div>
+        <div class="dcard" style="background:#E5F3E5"><div class="panelh" style="color:var(--d-green)">Questions for discussion</div>
+          <ol class="dprompts">${prompts(a).slice(0, 4).map(p => `<li>${esc(p)}</li>`).join("")}</ol></div>
+      </div></div></div>`;
+  }
+  return "";
+}
+
+function isLive(s){ return s.type !== "img"; }
+function render(){
+  const s = SLIDES[idx], a = analyse(rows);
+  $("stage").innerHTML = `<div class="slide">${slideHTML(s, a)}</div>`;
+  $("counter").textContent = `${idx + 1} / ${SLIDES.length}`;
+  $("progress").style.width = (100 * (idx + 1) / SLIDES.length) + "%";
+  $("prevBtn").disabled = idx === 0; $("nextBtn").disabled = idx === SLIDES.length - 1;
+  // preload neighbours
+  [idx + 1, idx + 2, idx - 1].forEach(i => { const t = SLIDES[i]; if (t && t.type === "img"){ const im = new Image(); im.src = t.src; } });
+}
+function go(i){ idx = Math.max(0, Math.min(SLIDES.length - 1, i)); LS.set("afAlgo.slide", String(idx)); render(); }
+function fit(){
+  const W = window.innerWidth, H = window.innerHeight, sc = Math.min(W / 1920, H / 1080);
+  const st = $("stage"); st.style.transform = `translate(${(W - 1920 * sc) / 2}px, ${(H - 1080 * sc) / 2}px) scale(${sc})`;
+}
+function reveal(){ const s = SLIDES[idx]; if (s.type === "q" && QUESTIONS[s.q].correct){ const id = QUESTIONS[s.q].id; revealed[id] = !revealed[id]; render(); } }
+
+let lastSig = "";
+async function refresh(){
+  try {
+    const data = await Backend.list();
+    setStatus(Backend.isDemo() ? "warn" : "ok", Backend.isDemo() ? "Demo" : "Live");
+    const sig = JSON.stringify(data);
+    if (sig !== lastSig){ lastSig = sig; rows = data; if (isLive(SLIDES[idx])) render(); }
+  } catch(e){ setStatus("bad", "Offline"); }
+}
+function setStatus(kind, text){ $("statusDot").className = "dot " + kind; $("statusText").textContent = text; }
+
+function startPresenter(){
+  document.body.classList.add("deckmode");
+  $("deck").hidden = false; $("controls").hidden = false; $("progress").hidden = false;
+  fit(); render(); refresh();
+  window.addEventListener("resize", fit);
+  setInterval(() => { if (!document.hidden) refresh(); }, 4000);
+  if (bc) bc.onmessage = refresh;
+  window.addEventListener("storage", (e) => { if (e.key === demoKey()) refresh(); });
+
+  $("prevBtn").onclick = () => go(idx - 1);
+  $("nextBtn").onclick = () => go(idx + 1);
+  $("pollBtn").onclick = () => go(POLL_INDEX);
+  const fs = () => { const el = document.documentElement;
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else if (el.requestFullscreen) el.requestFullscreen().catch(() => toast("Full screen is not available here")); };
+  $("fsBtn").onclick = fs;
+
+  $("stage").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-act]"); if (!b) return;
+    const a = analyse(rows), act = b.dataset.act;
+    if (act === "reveal") reveal();
+    if (act === "copy"){ const txt = summaryText(a); try { await navigator.clipboard.writeText(txt); toast("Summary copied"); } catch(err){ download(`africa-algorithm-summary-${cfg.session}.txt`, txt, "text/plain"); } }
+    if (act === "csv") exportCsv(rows);
+    if (act === "json") download(`africa-algorithm-poll-${cfg.session}.json`, JSON.stringify({session:cfg.session, exported:new Date().toISOString(), questions:QUESTIONS.map(q => ({id:q.id, text:q.text, options:q.options, correct:q.correct})), responses:rows, analysis:a}, null, 2), "application/json");
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (!$("settings").hidden){ if (e.key === "Escape") $("settings").hidden = true; return; }
+    if (e.target.closest && e.target.closest("input,textarea")) return;
+    const k = e.key;
+    if (["ArrowRight","ArrowDown","PageDown"," ","Enter"].includes(k)){ e.preventDefault(); go(idx + 1); }
+    else if (["ArrowLeft","ArrowUp","PageUp","Backspace"].includes(k)){ e.preventDefault(); go(idx - 1); }
+    else if (k === "Home") go(0);
+    else if (k === "End") go(SLIDES.length - 1);
+    else if (k === "p" || k === "P") go(POLL_INDEX);
+    else if (k === "r" || k === "R") reveal();
+    else if (k === "f" || k === "F") fs();
+    else if (k === "s" || k === "S") openSettings();
+  });
+  // swipe on touch screens
+  let tx = null;
+  $("deck").addEventListener("touchstart", (e) => { tx = e.touches[0].clientX; }, {passive:true});
+  $("deck").addEventListener("touchend", (e) => { if (tx == null) return; const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) go(idx + (dx < 0 ? 1 : -1)); tx = null; });
+  // auto-hide controls
+  let idleT; const wake = () => { $("controls").classList.remove("idle"); clearTimeout(idleT); idleT = setTimeout(() => $("controls").classList.add("idle"), 3000); };
+  ["mousemove","touchstart","keydown"].forEach(ev => document.addEventListener(ev, wake, {passive:true})); wake();
+
+  // settings
+  function openSettings(){ $("setApi").value = cfg.api; $("setSession").value = cfg.session; $("setBase").value = cfg.base; $("setShort").value = cfg.short; $("testResult").textContent = ""; $("settings").hidden = false; $("setApi").focus(); }
+  $("openSettings").onclick = openSettings;
+  $("closeSettings").onclick = () => $("settings").hidden = true;
+  $("saveSettings").onclick = () => {
+    cfg.api = $("setApi").value.trim(); cfg.session = ($("setSession").value.trim() || "esami50-africa-algorithm").replace(/[^\w\-]/g, "-");
+    cfg.base = $("setBase").value.trim(); cfg.short = $("setShort").value.trim();
+    LS.set("afAlgo.api", cfg.api); LS.set("afAlgo.session", cfg.session); LS.set("afAlgo.base", cfg.base); LS.set("afAlgo.short", cfg.short);
+    lastSig = ""; rows = []; render(); refresh(); $("settings").hidden = true; toast("Settings saved");
+  };
+  $("testApi").onclick = async () => {
+    const url = $("setApi").value.trim(); if (!url){ $("testResult").textContent = "Enter a URL first."; return; }
+    $("testResult").textContent = "Testing…";
+    try { const r = await fetch(url + (url.includes("?") ? "&" : "?") + "action=ping"); const j = await r.json();
+      $("testResult").textContent = j.ok ? "Connected. The results server is answering." : "The server answered with an error: " + (j.error || "unknown");
+    } catch(e){ $("testResult").textContent = "Could not connect. Check the URL ends in /exec and the deployment allows access to Anyone."; }
+  };
+  $("loadSample").onclick = () => {
+    if (!Backend.isDemo()){ toast("Sample data is only available in demo mode"); return; }
+    const all = JSON.parse(LS.get(demoKey(), "{}"));
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const words = ["accountability","fairness","transparency","exclusion","privacy","sovereignty","justice","bias","trust","jobs","redress","context","dignity","inclusion","accountability","consent"];
+    for (let i = 0; i < 40; i++){
+      all["sample" + i + Math.random().toString(36).slice(2, 6)] = { t:new Date().toISOString(), id:"sample" + i, sample:true,
+        role:pick(["policy","policy","academic","academic","academic","industry","funder","other"]),
+        country:pick(["rw","za","ng","eg","ke","ke","sn","ug","ug","ug","tz","tz","af","xx",""]),
+        q1:pick(["a","b","b","b","c","c","d"]), q2:pick(["a","b","b","c","c","c","d"]), q3:pick(["a","b","b","c","d","d"]), q4:pick(words) };
+    }
+    LS.set(demoKey(), JSON.stringify(all)); if (bc) bc.postMessage("update"); refresh(); toast("40 sample responses added");
+  };
+  $("clearDemo").onclick = () => { LS.del(demoKey()); if (bc) bc.postMessage("update"); lastSig = ""; refresh(); toast("Demo responses cleared"); };
+}
+
+/* ============================================================
+   Participant view
+   ============================================================ */
+function startVoter(){
+  $("voter").hidden = false;
+  if (!cfg.api) $("notConfigured").hidden = false;
+  const roleBox = $("roleOpts");
+  ROLES.forEach(r => {
+    const l = document.createElement("label"); l.className = "opt";
+    l.innerHTML = `<input type="radio" name="role" value="${r.id}" id="role-${r.id}"><span>${esc(r.label)}</span>`;
+    roleBox.appendChild(l);
+  });
+  COUNTRIES.forEach(c => { const o = document.createElement("option"); o.value = c.id; o.textContent = c.label; $("country").appendChild(o); });
+  const qc = $("qCards");
+  QUESTIONS.forEach((q, i) => {
+    const card = document.createElement("div"); card.className = "card qcard";
+    if (q.word){
+      card.innerHTML = `<span class="qkind" style="color:var(--navy)">Q${i + 1} · ${esc(q.kind)}</span>
+        <label for="q4" style="font-weight:900;font-size:1.08rem;display:block;margin-bottom:10px">${esc(q.text)}</label>
+        <input class="wordin" id="q4" name="q4" type="text" maxlength="30" autocomplete="off" autocapitalize="none" placeholder="One word, e.g. bias">`;
+    } else {
+      card.innerHTML = `<fieldset><span class="qkind" style="color:${["var(--navy)","var(--orange)","var(--green)"][i]}">Q${i + 1} · ${esc(q.kind)}</span>
+        <legend>${esc(q.text)}</legend>` + q.options.map(o =>
+        `<label class="opt"><input type="radio" name="${q.id}" value="${o.id}" id="${q.id}-${o.id}"><span>${esc(o.label)}</span></label>`).join("") + `</fieldset>`;
+    }
+    qc.appendChild(card);
+  });
+  try { const prev = JSON.parse(LS.get("afAlgo.mine." + cfg.session, "null"));
+    if (prev){ ["role","q1","q2","q3"].forEach(k => { const el = document.querySelector(`input[name="${k}"][value="${prev[k]}"]`); if (el) el.checked = true; }); $("q4").value = prev.q4 || ""; $("country").value = prev.country || ""; }
+  } catch(e){}
+
+  $("voteForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const val = (n) => (document.querySelector(`input[name="${n}"]:checked`) || {}).value || "";
+    const rec = {role:val("role"), country:$("country").value, q1:val("q1"), q2:val("q2"), q3:val("q3"), q4:$("q4").value.trim().split(/\s+/).slice(0, 2).join(" ").slice(0, 30)};
+    const err = $("formErr");
+    if (!rec.q1 && !rec.q2 && !rec.q3 && !rec.q4){ err.textContent = "Answer at least one question before submitting."; err.hidden = false; return; }
+    err.hidden = true; const btn = $("submitBtn"); btn.disabled = true; btn.textContent = "Sending…";
+    try {
+      await Backend.submit(rec);
+      LS.set("afAlgo.mine." + cfg.session, JSON.stringify(rec));
+      showFeedback(rec);
+    } catch(ex){
+      err.textContent = "Your answers did not reach the screen. Check your connection and tap Submit again."; err.hidden = false;
+    } finally { btn.disabled = false; btn.textContent = "Submit my answers"; }
+  });
+  $("editAgain").onclick = () => { $("thanks").hidden = true; $("voteForm").hidden = false; window.scrollTo(0, 0); };
+}
+function showFeedback(rec){
+  const list = $("fbList"); list.innerHTML = "";
+  QUESTIONS.forEach((q, i) => {
+    const d = document.createElement("div"); d.className = "fbitem";
+    if (q.correct){
+      if (!rec[q.id]){ d.innerHTML = `<b>Q${i + 1}</b> <span class="muted">not answered</span><div class="muted" style="margin-top:4px">${q.explain}</div>`; }
+      else { const ok = rec[q.id] === q.correct;
+        d.innerHTML = `<b>Q${i + 1}</b> <span class="${ok ? "ok" : "no"}">${ok ? "Correct" : "Not quite"}</span><div style="margin-top:4px">${q.explain}</div>`; }
+    } else if (q.word){
+      d.innerHTML = `<b>Q${i + 1}</b> Your word: <b>${esc(rec.q4 || "not answered")}</b>. Watch it join the word cloud.`;
+    } else {
+      const o = q.options.find(x => x.id === rec[q.id]);
+      d.innerHTML = `<b>Q${i + 1}</b> Your view: <b>${esc(o ? o.label : "not answered")}</b>`;
+    }
+    list.appendChild(d);
+  });
+  $("voteForm").hidden = true; $("thanks").hidden = false; window.scrollTo(0, 0);
+}
+
+/* boot */
+if (isVoter) startVoter(); else startPresenter();
+window.addEventListener("hashchange", () => location.reload());
+</script>
+</body>
+</html>
